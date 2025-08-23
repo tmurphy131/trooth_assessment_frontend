@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "557349072084",
+    "project_id": "only-blv",
+    "storage_bucket": "only-blv.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:557349072084:android:c306d5e94598c9d1d79f41",
+        "android_client_info": {
+          "package_name": "com.example.flutter_trooth_assessment"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "557349072084-mrv2vcpgroue179src3hfd00emhvbo8a.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDq56oQMUrdLxJeENHTDxjNbHGlyOBKI6Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "557349072084-mrv2vcpgroue179src3hfd00emhvbo8a.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
