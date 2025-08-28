@@ -20,7 +20,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   
   // State management
   List<Map<String, dynamic>> _apprentices = [];
-  List<Map<String, dynamic>> _completedAssessments = [];
+  Map<String, List<Map<String, dynamic>>> _completedAssessmentsByApprentice = {};
   bool _isLoadingApprentices = true;
   bool _isLoadingAssessments = true;
   String? _error;
@@ -83,11 +83,16 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
     try {
       setState(() {
         _isLoadingAssessments = true;
+        _error = null;
       });
-
-      final assessments = await _apiService.getCompletedAssessments();
+      Map<String, List<Map<String, dynamic>>> grouped = {};
+      for (final apprentice in _apprentices) {
+        final apprenticeId = apprentice['id'] as String;
+        final assessments = await _apiService.getApprenticeSubmittedAssessments(apprenticeId, limit: 100);
+        grouped[apprenticeId] = assessments.cast<Map<String, dynamic>>();
+      }
       setState(() {
-        _completedAssessments = assessments.cast<Map<String, dynamic>>();
+        _completedAssessmentsByApprentice = grouped;
         _isLoadingAssessments = false;
       });
     } catch (e) {
@@ -219,12 +224,12 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
 
   Widget _buildStatsRow() {
     final totalApprentices = _apprentices.length;
-    final totalCompletedAssessments = _completedAssessments.length;
-    
+    final allAssessments = _completedAssessmentsByApprentice.values.expand((x) => x).toList();
+    final totalCompletedAssessments = allAssessments.length;
     // Calculate average score
     double averageScore = 0.0;
-    if (_completedAssessments.isNotEmpty) {
-      final scores = _completedAssessments
+    if (allAssessments.isNotEmpty) {
+      final scores = allAssessments
           .where((assessment) => assessment['scores']?['overall_score'] != null)
           .map((assessment) => (assessment['scores']['overall_score'] as num).toDouble())
           .toList();
@@ -497,13 +502,32 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                 ? const Center(
                     child: CircularProgressIndicator(color: Colors.amber),
                   )
-                : _completedAssessments.isEmpty
+                : _completedAssessmentsByApprentice.isEmpty
                     ? _buildEmptyAssessmentsState()
-                    : ListView.builder(
-                        itemCount: _completedAssessments.length,
-                        itemBuilder: (context, index) {
-                          return _buildCompletedAssessmentCard(_completedAssessments[index]);
-                        },
+                    : ListView(
+                        children: _apprentices.map((apprentice) {
+                          final apprenticeId = apprentice['id'] as String;
+                          final assessments = _completedAssessmentsByApprentice[apprenticeId] ?? [];
+                          if (assessments.isEmpty) return const SizedBox.shrink();
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text(
+                                  '${apprentice['name'] ?? 'Unknown'} (${apprentice['email'] ?? ''})',
+                                  style: const TextStyle(
+                                    color: Colors.amber,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Poppins',
+                                  ),
+                                ),
+                              ),
+                              ...assessments.map((assessment) => _buildCompletedAssessmentCard(assessment)).toList(),
+                            ],
+                          );
+                        }).toList(),
                       ),
           ),
         ],

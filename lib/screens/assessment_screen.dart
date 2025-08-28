@@ -24,7 +24,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
   Map<String, dynamic>? _currentDraft;
   List<Map<String, dynamic>> _questions = [];
   Map<String, String> _answers = {};
-  Map<String, TextEditingController> _textControllers = {}; // Add controllers map
+  final Map<String, TextEditingController> _textControllers = {}; // Add controllers map
   int _currentQuestionIndex = 0;
   bool _isLoading = true;
   bool _isSaving = false;
@@ -142,19 +142,33 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
             _questions = questionsFromDraft.cast<Map<String, dynamic>>();
             _isLoading = false; // Set loading to false since we loaded questions from draft
             print('📝 Loaded ${_questions.length} questions from draft ${widget.draftId}');
-            
             // Debug: Print first question to see structure
             if (_questions.isNotEmpty) {
               print('🔍 First question structure: ${_questions[0]}');
             }
-            
             // Update text controllers with existing answers
             _updateTextControllers();
+            // Set to first unanswered question
+            int firstUnanswered = 0;
+            for (int i = 0; i < _questions.length; i++) {
+              final qid = _questions[i]['id'].toString();
+              if (!_answers.containsKey(qid) || (_answers[qid]?.trim().isEmpty ?? true)) {
+                firstUnanswered = i;
+                break;
+              }
+            }
+            _currentQuestionIndex = firstUnanswered;
+            // Animate to the correct page if the PageController is ready
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_pageController.hasClients) {
+                _pageController.jumpToPage(_currentQuestionIndex);
+              }
+            });
           });
           return;
         } catch (e) {
           print('Failed to load draft ${widget.draftId}: $e');
-          throw e; // Re-throw to show error to user
+          rethrow; // Re-throw to show error to user
         }
       }
       

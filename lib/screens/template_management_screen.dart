@@ -728,7 +728,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
                     final index = entry.key;
                     final question = entry.value;
                     return _buildQuestionCard(question, index, templateQuestions, setDialogState, template['id'] as String);
-                  }).toList(),
+                  }),
                 ],
               ),
             ),
@@ -1388,7 +1388,7 @@ class _QuestionCreationDialogState extends State<_QuestionCreationDialog> {
                   final index = entry.key;
                   final option = entry.value;
                   return _buildOptionInput(index, option);
-                }).toList(),
+                }),
               ],
             ],
           ),

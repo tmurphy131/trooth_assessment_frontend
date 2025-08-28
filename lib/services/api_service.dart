@@ -14,7 +14,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 /// • Android emulator → 10.0.2.2
 /// • iOS sim / Flutter Web → use host machine IP for Docker
 /// • Host machine → localhost or 127.0.0.1
-const String _devBaseUrl = 'http://192.168.1.161:8000';
+const String _devBaseUrl = 'https://trooth-assessment-dev.onlyblv.com:8000';
 
 class ApiService {
   /* ── Singleton ────────────────────────────────────────────────────── */

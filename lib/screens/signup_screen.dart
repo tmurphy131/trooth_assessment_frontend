@@ -11,7 +11,8 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
-  final nameController = TextEditingController();
+  final firstNameController = TextEditingController();
+  final lastNameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   bool showPassword = false;
@@ -24,7 +25,8 @@ class _SignupScreenState extends State<SignupScreen> {
         password: passwordController.text.trim(),
       );
 
-      await credential.user?.updateDisplayName(nameController.text.trim());
+      final fullName = "${firstNameController.text.trim()} ${lastNameController.text.trim()}";
+      await credential.user?.updateDisplayName(fullName);
 
       if (mounted) {
         Navigator.of(context).pushReplacement(
@@ -47,7 +49,9 @@ class _SignupScreenState extends State<SignupScreen> {
           children: [
             const Text("Create Account", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
-            TextField(controller: nameController, decoration: const InputDecoration(labelText: "Full Name")),
+            TextField(controller: firstNameController, decoration: const InputDecoration(labelText: "First Name")),
+            const SizedBox(height: 12),
+            TextField(controller: lastNameController, decoration: const InputDecoration(labelText: "Last Name")),
             const SizedBox(height: 12),
             TextField(controller: emailController, decoration: const InputDecoration(labelText: "Email")),
             const SizedBox(height: 12),
