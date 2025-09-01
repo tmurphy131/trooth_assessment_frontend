@@ -1,0 +1,6 @@
+// Disable signing on SIMULATOR, and make the identity EMPTY so Flutter’s Thin Binary script skips it.
+CODE_SIGNING_ALLOWED[sdk=iphonesimulator*]=NO
+CODE_SIGNING_REQUIRED[sdk=iphonesimulator*]=NO
+CODE_SIGN_IDENTITY[sdk=iphonesimulator*]=
+EXPANDED_CODE_SIGN_IDENTITY[sdk=iphonesimulator*]=
+AD_HOC_CODE_SIGNING_ALLOWED[sdk=iphonesimulator*]=NO

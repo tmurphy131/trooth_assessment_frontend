@@ -1,0 +1,26 @@
+#!/bin/bash
+# Shim codesign: for iOS simulator builds on macOS 15/Xcode 16 where extended attributes
+# (FinderInfo/provenance) trigger "resource fork" errors. We strip xattrs and no-op.
+# Uses only bash 3 compatible constructs (macOS system bash).
+
+set -euo pipefail
+
+# Capture original args; last arg is the path being signed.
+TARGET="${!#}"  # portable way to get last positional parameter in bash 3
+
+# Helper: case-insensitive contains
+case "$TARGET" in
+  *Debug-iphonesimulator*|*.app|*.framework* )
+    if [[ -e "$TARGET" ]]; then
+      if command -v xattr >/dev/null 2>&1; then
+        # Recursively clear all extended attributes; ignore errors.
+        xattr -rc "$TARGET" 2>/dev/null || true
+      fi
+    fi
+    echo "[codesign shim] SKIP codesign for simulator artifact: $TARGET" >&2
+    exit 0
+    ;;
+esac
+
+# Fallback to real codesign for anything else
+exec /usr/bin/codesign "$@"

@@ -14,7 +14,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 /// • Android emulator → 10.0.2.2
 /// • iOS sim / Flutter Web → use host machine IP for Docker
 /// • Host machine → localhost or 127.0.0.1
-const String _devBaseUrl = 'https://trooth-assessment-dev.onlyblv.com:8000';
+const String _devBaseUrl = 'https://trooth-assessment-dev.onlyblv.com';
 
 class ApiService {
   /* ── Singleton ────────────────────────────────────────────────────── */
@@ -31,35 +31,46 @@ class ApiService {
   /// Set after Firebase sign-in:
   /// `ApiService().bearerToken = await user.getIdToken();`
   String? bearerToken;
+  DateTime? _tokenExpiry; // cached expiry for smarter refresh
 
   Map<String, String> _headers() {
     final headers = {
       'Content-Type': 'application/json',
       if (bearerToken != null) 'Authorization': 'Bearer $bearerToken',
     };
-    
-    // Debug headers
-    if (bearerToken != null) {
-      print('🔑 API Headers with token: ${bearerToken?.substring(0, 20)}...');
-      print('🔑 Full token length: ${bearerToken?.length}');
-    } else {
-      print('⚠️ API Headers without token');
+    // (Token value intentionally not logged for security.)
+    if (bearerToken == null) {
+      dev.log('Headers without auth token');
     }
-    
     return headers;
   }
 
-  // Helper method to refresh token before API calls
-  Future<void> _ensureFreshToken() async {
+  // Helper method to refresh token only when needed (Option C optimization)
+  // Refresh conditions:
+  // • No token yet
+  // • Expiry unknown
+  // • Expiring within next 2 minutes
+  // Reduces per-call forced refresh overhead from Option B.
+  Future<void> _ensureFreshToken({bool force = false}) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
-      
-      if (user != null) {
-        final token = await user.getIdToken(true); // Force refresh
+      if (user == null) return; // nothing to do if not signed in
+
+      final now = DateTime.now();
+      final needsRefresh = force ||
+          bearerToken == null ||
+          _tokenExpiry == null ||
+          _tokenExpiry!.isBefore(now.add(const Duration(minutes: 2)));
+
+      if (!needsRefresh) return; // still fresh
+
+      // Use non-forced refresh first; if still null attempt forced
+      final result = await user.getIdTokenResult(!force && needsRefresh ? false : true);
+      final token = result.token;
+      if (token != null && token.isNotEmpty) {
         bearerToken = token;
-        if (token != null && token.isNotEmpty) {
-          print('🔄 Refreshed token: ${token.substring(0, 20)}...');
-        }
+        _tokenExpiry = result.expirationTime; // may be null on some platforms
+  dev.log('Token refreshed (exp: ${_tokenExpiry?.toIso8601String()})');
       }
     } catch (e) {
       print('❌ Error refreshing token: $e');
@@ -119,6 +130,7 @@ class ApiService {
     String? displayName,
   }) async {
     const tag = 'API-createUser';
+  await _ensureFreshToken();
     final payload = {
       'id': uid,
       'email': email,
@@ -143,6 +155,7 @@ class ApiService {
     required String apprenticeId,
   }) async {
     const tag = 'API-assignApprentice';
+  await _ensureFreshToken();
     final p = {'mentor_id': mentorId, 'apprentice_id': apprenticeId};
 
     _logReq(tag, 'POST', '/users/assign-apprentice', p);
@@ -159,6 +172,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> getUserProfile(String uid) async {
     const tag = 'API-getUserProfile';
+  await _ensureFreshToken();
     _logReq(tag, 'GET', '/users/$uid');
     final r = await http.get(
       Uri.parse('$_base/users/$uid'),
@@ -176,6 +190,7 @@ class ApiService {
   Future<Map<String, dynamic>> createAssessment(
       Map<String, dynamic> payload) async {
     const tag = 'API-createAsmt';
+  await _ensureFreshToken();
     _logReq(tag, 'POST', '/assessments', payload);
     final r = await http.post(
       Uri.parse('$_base/assessments'),
@@ -230,6 +245,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> getDraftById(String draftId) async {
     const tag = 'API-getDraftById';
+  await _ensureFreshToken();
     _logReq(tag, 'GET', '/assessment-drafts/$draftId');
     final r = await http.get(
       Uri.parse('$_base/assessment-drafts/$draftId'),
@@ -255,6 +271,7 @@ class ApiService {
 
   Future<List<dynamic>> getQuestions() async {
     const tag = 'API-getQuestions';
+  await _ensureFreshToken();
     _logReq(tag, 'GET', '/question/questions');
     final r = await http.get(
       Uri.parse('$_base/question/questions'),
@@ -271,6 +288,7 @@ class ApiService {
 
   Future<List<dynamic>> listApprentices() async {
     const tag = 'API-listApprentices';
+  await _ensureFreshToken();
     _logReq(tag, 'GET', '/mentor/my-apprentices');
     final r = await http.get(
       Uri.parse('$_base/mentor/my-apprentices'),
@@ -283,6 +301,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> getApprenticeDraft(String apprenticeId) async {
     const tag = 'API-getApprenticeDraft';
+  await _ensureFreshToken();
     _logReq(tag, 'GET', '/mentor/apprentice/$apprenticeId/draft');
     final r = await http.get(
       Uri.parse('$_base/mentor/apprentice/$apprenticeId/draft'),
@@ -301,6 +320,7 @@ class ApiService {
     int limit = 10,
   }) async {
     const tag = 'API-getApprenticeSubmittedAssessments';
+  await _ensureFreshToken();
     final queryParams = <String, String>{
       'skip': skip.toString(),
       'limit': limit.toString(),
@@ -320,6 +340,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> getAssessmentDetail(String assessmentId) async {
     const tag = 'API-getAssessmentDetail';
+  await _ensureFreshToken();
     _logReq(tag, 'GET', '/mentor/assessment/$assessmentId');
     final r = await http.get(
       Uri.parse('$_base/mentor/assessment/$assessmentId'),
@@ -333,6 +354,7 @@ class ApiService {
   /// Get completed assessments with AI scoring results
   Future<List<dynamic>> getCompletedAssessments() async {
     const tag = 'API-getCompletedAssessments';
+  await _ensureFreshToken();
     _logReq(tag, 'GET', '/assessment-drafts/completed');
     final r = await http.get(
       Uri.parse('$_base/assessment-drafts/completed'),
@@ -346,6 +368,7 @@ class ApiService {
   /// Get detailed assessment results with AI feedback
   Future<Map<String, dynamic>> getAssessmentResults(String assessmentId) async {
     const tag = 'API-getAssessmentResults';
+  await _ensureFreshToken();
     _logReq(tag, 'GET', '/assessments/$assessmentId');
     final r = await http.get(
       Uri.parse('$_base/assessments/$assessmentId'),
@@ -362,6 +385,7 @@ class ApiService {
     DateTime? endDate,
   }) async {
     const tag = 'API-getSubmittedDrafts';
+  await _ensureFreshToken();
     final queryParams = <String, String>{};
     if (apprenticeId != null) queryParams['apprentice_id'] = apprenticeId;
     if (startDate != null) queryParams['start_date'] = startDate.toIso8601String();
@@ -378,6 +402,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> getSubmittedDraft(String draftId) async {
     const tag = 'API-getSubmittedDraft';
+  await _ensureFreshToken();
     _logReq(tag, 'GET', '/mentor/submitted-drafts/$draftId');
     final r = await http.get(
       Uri.parse('$_base/mentor/submitted-drafts/$draftId'),
@@ -390,6 +415,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> getApprenticeProfile(String apprenticeId) async {
     const tag = 'API-getApprenticeProfile';
+  await _ensureFreshToken();
     _logReq(tag, 'GET', '/mentor/my-apprentices/$apprenticeId');
     final r = await http.get(
       Uri.parse('$_base/mentor/my-apprentices/$apprenticeId'),
@@ -406,6 +432,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> startDraft(String templateId) async {
     const tag = 'API-startDraft';
+  await _ensureFreshToken();
     _logReq(tag, 'POST', '/assessment-drafts/start?template_id=$templateId', {});
     final r = await http.post(
       Uri.parse('$_base/assessment-drafts/start?template_id=$templateId'),
@@ -418,6 +445,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> getDraft() async {
     const tag = 'API-getDraft';
+  await _ensureFreshToken();
     _logReq(tag, 'GET', '/assessment-drafts');
     final r = await http.get(
       Uri.parse('$_base/assessment-drafts'),
@@ -461,6 +489,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> resumeDraft() async {
     const tag = 'API-resumeDraft';
+  await _ensureFreshToken();
     _logReq(tag, 'GET', '/assessment-drafts/resume');
     final r = await http.get(
       Uri.parse('$_base/assessment-drafts/resume'),
@@ -473,6 +502,7 @@ class ApiService {
 
   Future<List<dynamic>> getSubmittedAssessments(String apprenticeId) async {
     const tag = 'API-getSubmittedAssessments';
+  await _ensureFreshToken();
     _logReq(tag, 'GET', '/assessment-drafts/submitted-assessments/$apprenticeId');
     final r = await http.get(
       Uri.parse('$_base/assessment-drafts/submitted-assessments/$apprenticeId'),
@@ -489,6 +519,7 @@ class ApiService {
 
   Future<List<dynamic>> getPublishedTemplates() async {
     const tag = 'API-getPublishedTemplates';
+  await _ensureFreshToken();
     _logReq(tag, 'GET', '/templates/published');
     final r = await http.get(
       Uri.parse('$_base/templates/published'),
@@ -503,6 +534,7 @@ class ApiService {
   Future<Map<String, dynamic>> createTemplate(Map<String, dynamic> payload) async {
     const tag = 'API-createTemplate';
     try {
+  await _ensureFreshToken();
       print('🔍 $tag Starting request...');
       print('🔍 Base URL: $_base');
       print('🔍 Full URL: $_base/admin/templates');
@@ -538,6 +570,7 @@ class ApiService {
   Future<Map<String, dynamic>> updateTemplate(String templateId, Map<String, dynamic> payload) async {
     const tag = 'API-updateTemplate';
     try {
+  await _ensureFreshToken();
       print('🔍 $tag Starting request...');
       print('🔍 Template ID: $templateId');
       print('🔍 Full URL: $_base/admin/templates/$templateId');
@@ -569,6 +602,7 @@ class ApiService {
   Future<void> deleteTemplate(String templateId) async {
     const tag = 'API-deleteTemplate';
     try {
+  await _ensureFreshToken();
       print('🔍 $tag Starting request...');
       print('🔍 Template ID: $templateId');
       print('🔍 Full URL: $_base/admin/templates/$templateId');
@@ -597,6 +631,7 @@ class ApiService {
   Future<List<dynamic>> getAllTemplates() async {
     const tag = 'API-getAllTemplates';
     try {
+  await _ensureFreshToken();
       _logReq(tag, 'GET', '/admin/templates');
       final r = await http.get(
         Uri.parse('$_base/admin/templates'),
@@ -613,6 +648,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> getTemplate(String templateId) async {
     const tag = 'API-getTemplate';
+  await _ensureFreshToken();
     _logReq(tag, 'GET', '/admin/templates/$templateId');
     final r = await http.get(
       Uri.parse('$_base/admin/templates/$templateId'),
@@ -625,6 +661,7 @@ class ApiService {
 
   Future<void> addQuestionToTemplate(String templateId, String questionId, int order) async {
     const tag = 'API-addQuestionToTemplate';
+  await _ensureFreshToken();
     final payload = {'question_id': questionId, 'order': order};
     _logReq(tag, 'POST', '/admin/templates/$templateId/questions', payload);
     final r = await http.post(
@@ -640,6 +677,7 @@ class ApiService {
 
   Future<void> removeQuestionFromTemplate(String templateId, String questionId) async {
     const tag = 'API-removeQuestionFromTemplate';
+  await _ensureFreshToken();
     _logReq(tag, 'DELETE', '/admin/templates/$templateId/questions/$questionId');
     final r = await http.delete(
       Uri.parse('$_base/admin/templates/$templateId/questions/$questionId'),
@@ -653,6 +691,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> cloneTemplate(String templateId) async {
     const tag = 'API-cloneTemplate';
+  await _ensureFreshToken();
     _logReq(tag, 'POST', '/admin/templates/$templateId/clone');
     final r = await http.post(
       Uri.parse('$_base/admin/templates/$templateId/clone'),
@@ -665,6 +704,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> publishTemplate(String templateId) async {
     const tag = 'API-publishTemplate';
+  await _ensureFreshToken();
     _logReq(tag, 'POST', '/admin/templates/$templateId/publish');
     final r = await http.post(
       Uri.parse('$_base/admin/templates/$templateId/publish'),
@@ -677,6 +717,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> unpublishTemplate(String templateId) async {
     const tag = 'API-unpublishTemplate';
+  await _ensureFreshToken();
     _logReq(tag, 'POST', '/admin/templates/$templateId/unpublish');
     final r = await http.post(
       Uri.parse('$_base/admin/templates/$templateId/unpublish'),
@@ -694,6 +735,7 @@ class ApiService {
   Future<Map<String, dynamic>> createQuestion(Map<String, dynamic> payload) async {
     const tag = 'API-createQuestion';
     try {
+  await _ensureFreshToken();
       print('🔍 $tag Starting request...');
       print('🔍 Payload: $payload');
       
@@ -718,6 +760,7 @@ class ApiService {
   Future<Map<String, dynamic>> updateQuestion(String questionId, Map<String, dynamic> payload) async {
     const tag = 'API-updateQuestion';
     try {
+  await _ensureFreshToken();
       print('🔍 $tag Starting request...');
       print('🔍 Question ID: $questionId');
       print('🔍 Payload: $payload');
@@ -743,6 +786,7 @@ class ApiService {
   Future<void> deleteQuestion(String questionId) async {
     const tag = 'API-deleteQuestion';
     try {
+  await _ensureFreshToken();
       print('🔍 $tag Starting request...');
       print('🔍 Question ID: $questionId');
       
@@ -769,6 +813,7 @@ class ApiService {
 
   Future<void> sendInvite(Map<String, dynamic> payload) async {
     const tag = 'API-sendInvite';
+  await _ensureFreshToken();
     _logReq(tag, 'POST', '/invitations/invite-apprentice', payload);
     final r = await http.post(
       Uri.parse('$_base/invitations/invite-apprentice'),
@@ -783,6 +828,7 @@ class ApiService {
 
   Future<List<dynamic>> getPendingInvites() async {
     const tag = 'API-getPendingInvites';
+  await _ensureFreshToken();
     _logReq(tag, 'GET', '/invitations/pending-invites');
     final r = await http.get(
       Uri.parse('$_base/invitations/pending-invites'),
@@ -795,6 +841,7 @@ class ApiService {
 
   Future<void> revokeInvite(String invitationId) async {
     const tag = 'API-revokeInvite';
+  await _ensureFreshToken();
     _logReq(tag, 'DELETE', '/invitations/revoke-invite/$invitationId');
     final r = await http.delete(
       Uri.parse('$_base/invitations/revoke-invite/$invitationId'),
@@ -808,6 +855,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> validateInviteToken(String token) async {
     const tag = 'API-validateInviteToken';
+  await _ensureFreshToken();
     _logReq(tag, 'GET', '/invitations/validate-token/$token');
     final r = await http.get(
       Uri.parse('$_base/invitations/validate-token/$token'),
@@ -820,6 +868,7 @@ class ApiService {
 
   Future<void> acceptInvite(Map<String, dynamic> payload) async {
     const tag = 'API-acceptInvite';
+  await _ensureFreshToken();
     _logReq(tag, 'POST', '/invitations/accept-invite', payload);
     final r = await http.post(
       Uri.parse('$_base/invitations/accept-invite'),
@@ -834,6 +883,7 @@ class ApiService {
 
   Future<List<dynamic>> getApprenticeInvites(String email) async {
     const tag = 'API-getApprenticeInvites';
+  await _ensureFreshToken();
     _logReq(tag, 'GET', '/invitations/apprentice-invites?email=$email');
     final r = await http.get(
       Uri.parse('$_base/invitations/apprentice-invites?email=$email'),
@@ -850,6 +900,7 @@ class ApiService {
 
   Future<List<Map<String, dynamic>>> getCategories() async {
     const tag = 'API-getCategories';
+  await _ensureFreshToken();
     _logReq(tag, 'GET', '/categories/');
     final r = await http.get(
       Uri.parse('$_base/categories/'),
@@ -862,6 +913,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> createCategory(String name) async {
     const tag = 'API-createCategory';
+  await _ensureFreshToken();
     final body = {'name': name};
     _logReq(tag, 'POST', '/categories/', body);
     final r = await http.post(
@@ -876,6 +928,7 @@ class ApiService {
 
   Future<void> deleteCategory(String categoryId) async {
     const tag = 'API-deleteCategory';
+  await _ensureFreshToken();
     _logReq(tag, 'DELETE', '/categories/$categoryId');
     final r = await http.delete(
       Uri.parse('$_base/categories/$categoryId'),
