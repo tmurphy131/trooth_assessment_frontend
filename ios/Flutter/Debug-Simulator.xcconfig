@@ -1,7 +1,2 @@
 #include "Generated.xcconfig"
-CODE_SIGNING_ALLOWED=NO
-CODE_SIGNING_REQUIRED=NO
-CODE_SIGN_IDENTITY=""
-DEVELOPMENT_TEAM=""
-PROVISIONING_PROFILE=""
-PROVISIONING_PROFILE_SPECIFIER=""
+// Removed forced signing disable block; allow normal entitlements for Keychain.

@@ -200,6 +200,7 @@
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				A1F7D2C728F64D6B00ABCDE0 /* Pre-Embed Env Patch */,
 				40334E560E087A53FCAEA61A /* [CP] Embed Pods Frameworks */,
+				A73C41BB7B1DFCED564A5BE1 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -361,7 +362,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "export PATH=\"$SRCROOT/../scripts/shim:$PATH\"\n: ${CODE_SIGNING_ALLOWED:=NO}\nexport CODE_SIGNING_ALLOWED\n/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build";
+			shellScript = "export PATH=\"$SRCROOT/../scripts/shim:$PATH\"\n/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build";
 		};
 		A1F7D2C628F64D6B00ABCDEF /* Strip Xattrs (Simulator) */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -400,7 +401,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Ensure CODE_SIGNING_ALLOWED defined to avoid 'unbound variable' in CocoaPods embed script under 'set -u'\n: ${CODE_SIGNING_ALLOWED:=NO}\nexport CODE_SIGNING_ALLOWED\n# Defensive: strip any lingering extended attributes in Pods before embed (fast)\nif [ -n \"$PODS_ROOT\" ] && [ -d \"$PODS_ROOT\" ]; then\n  /usr/bin/xattr -cr \"$PODS_ROOT\" || true\nfi\n";
+			shellScript = "# Strip any lingering extended attributes in Pods before embed (fast)\nif [ -n \"$PODS_ROOT\" ] && [ -d \"$PODS_ROOT\" ]; then\n  /usr/bin/xattr -cr \"$PODS_ROOT\" || true\nfi\n";
+			showEnvVarsInLog = 0;
+		};
+		A73C41BB7B1DFCED564A5BE1 /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Copy Pods Resources";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -742,11 +760,9 @@
 				CODE_SIGNING_ALLOWED = "";
 				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				CODE_SIGN_STYLE = Manual;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
-				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 69DZGC7C98;
+				DEVELOPMENT_TEAM = 69DZGC7C98;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Trooth Assessment";
@@ -759,7 +775,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.trooth.flutterTroothAssessment;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Taylor Pro";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
