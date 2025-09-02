@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'mentor_dashboard_new.dart';
 import 'apprentice_dashboard_new.dart';
-import 'onboarding_screen.dart';
+import 'signup_screen.dart';
 
 class SimpleLoginScreen extends StatefulWidget {
   const SimpleLoginScreen({super.key});
@@ -17,7 +17,6 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLogin = true;
   bool _isLoading = false;
 
   @override
@@ -26,76 +25,40 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
     _passwordController.dispose();
     super.dispose();
   }
-
-  Future<void> _submit() async {
+  Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
-
     try {
-      UserCredential cred;
-      if (_isLogin) {
-        cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
+      final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+      if (!mounted) return;
+      final doc = await FirebaseFirestore.instance.collection('users').doc(cred.user!.uid).get();
+      final data = doc.data();
+      final role = data?['role'] as String?; // could be null for legacy users
+      if (role == 'mentor') {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MentorDashboardNew()),
+        );
+      } else if (role == 'apprentice') {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const ApprenticeDashboardNew()),
         );
       } else {
-        cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
+        // Legacy user missing profile; send to signup to complete
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const SignupScreen()),
         );
-
-        // Create user document for new users
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(cred.user!.uid)
-            .set({
-          'email': _emailController.text.trim(),
-          'onboarded': false,
-        });
-      }
-
-      if (mounted) {
-        // Check user state and navigate accordingly
-        final doc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(cred.user!.uid)
-            .get();
-        final data = doc.data();
-
-        if (data == null || data['onboarded'] != true) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-          );
-        } else {
-          final role = data['role'];
-          if (role == 'mentor') {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const MentorDashboardNew()),
-            );
-          } else if (role == 'apprentice') {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const ApprenticeDashboardNew()),
-            );
-          }
-        }
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message ?? 'Authentication failed')),
+          SnackBar(content: Text(e.message ?? 'Login failed')),
         );
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
-      }
-    }
-
-    if (mounted) {
-      setState(() => _isLoading = false);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -145,8 +108,8 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
                 const SizedBox(height: 32),
 
                 // Title
-                Text(
-                  _isLogin ? 'Welcome Back' : 'Create Account',
+                const Text(
+                  'Welcome Back',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 32,
@@ -168,29 +131,13 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
                 ),
                 const SizedBox(height: 32),
 
+                // Extra fields for sign up
+                // (Sign up fields removed; dedicated signup screen now handles account creation.)
+
                 // Email field
                 TextFormField(
                   controller: _emailController,
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    labelStyle: TextStyle(
-                      color: Colors.grey.shade300,
-                      fontFamily: 'Poppins',
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.grey.shade600),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(color: Colors.amber, width: 2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey.shade900,
-                  ),
+                  decoration: _fieldDecoration('Email'),
                   style: const TextStyle(
                     color: Colors.white,
                     fontFamily: 'Poppins',
@@ -211,26 +158,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
                 // Password field
                 TextFormField(
                   controller: _passwordController,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    labelStyle: TextStyle(
-                      color: Colors.grey.shade300,
-                      fontFamily: 'Poppins',
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.grey.shade600),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(color: Colors.amber, width: 2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey.shade900,
-                  ),
+                  decoration: _fieldDecoration('Password'),
                   style: const TextStyle(
                     color: Colors.white,
                     fontFamily: 'Poppins',
@@ -253,7 +181,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _submit,
+                    onPressed: _isLoading ? null : _login,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.amber,
                       foregroundColor: Colors.black,
@@ -272,7 +200,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
                             ),
                           )
                         : Text(
-                            _isLogin ? 'Sign In' : 'Sign Up',
+                            'Sign In',
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -285,11 +213,11 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
 
                 // Toggle button
                 TextButton(
-                  onPressed: () => setState(() => _isLogin = !_isLogin),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SignupScreen()),
+                  ),
                   child: Text(
-                    _isLogin
-                        ? "Don't have an account? Sign up"
-                        : "Already have an account? Sign in",
+                    "Don't have an account? Sign up",
                     style: TextStyle(
                       color: Colors.grey.shade400,
                       fontFamily: 'Poppins',
@@ -303,4 +231,27 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
       ),
     );
   }
+}
+
+// Shared decoration builder
+InputDecoration _fieldDecoration(String label) {
+  return InputDecoration(
+    labelText: label,
+    labelStyle: TextStyle(
+      color: Colors.grey.shade300,
+      fontFamily: 'Poppins',
+    ),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderSide: BorderSide(color: Colors.grey.shade600),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    focusedBorder: const OutlineInputBorder(
+      borderSide: BorderSide(color: Colors.amber, width: 2),
+    ),
+    filled: true,
+    fillColor: Colors.grey.shade900,
+  );
 }

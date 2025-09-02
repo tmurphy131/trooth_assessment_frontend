@@ -1,2 +1,0 @@
-#include "Generated.xcconfig"
-// Removed forced signing disable block; allow normal entitlements for Keychain.

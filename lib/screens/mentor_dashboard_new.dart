@@ -157,6 +157,11 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
               Row(
                 children: [
                   IconButton(
+                    onPressed: _navigateToInviteApprentices,
+                    icon: const Icon(Icons.person_add_alt_1, color: Colors.amber),
+                    tooltip: 'Invite Apprentice',
+                  ),
+                  IconButton(
                     onPressed: () {
                       Navigator.push(
                         context,

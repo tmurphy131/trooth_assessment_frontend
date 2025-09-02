@@ -124,29 +124,44 @@ class ApiService {
   /* ─────────────────────────────────────────────────────────────────── */
 
   Future<void> createUser({
-    required String uid,
-    required String email,
-    required String role, // mentor | apprentice
-    String? displayName,
+  required String uid, // Firebase UID (may be ignored by backend schema)
+  required String email,
+  required String role, // mentor | apprentice
+  String? displayName,  // full name; backend actually requires 'name'
   }) async {
     const tag = 'API-createUser';
   await _ensureFreshToken();
+    final effectiveName = (displayName != null && displayName.trim().isNotEmpty)
+        ? displayName.trim()
+        : (email.contains('@') ? email.split('@').first : email);
+
     final payload = {
+      // Backend Pydantic model UserCreate requires: name, email, role
+      // Extra fields (like id) are ignored; we still send Firebase UID for potential future use.
       'id': uid,
+      'name': effectiveName,
       'email': email,
       'role': role,
-      if (displayName != null) 'display_name': displayName,
     };
 
-    _logReq(tag, 'POST', '/users', payload);
+    // NOTE: Backend route is defined with a trailing slash (@router.post("/")) under prefix '/users'.
+    // Calling '/users' triggers an automatic 307 redirect to '/users/'. We call the canonical path directly.
+    const path = '/users/';
+    _logReq(tag, 'POST', path, payload);
     final r = await http.post(
-      Uri.parse('$_base/users'),
+      Uri.parse('$_base$path'),
       headers: _headers(),
       body: jsonEncode(payload),
     );
     _logRes(tag, r);
-    if (r.statusCode != 200) {
-      throw Exception('createUser failed (${r.statusCode})');
+    // Accept 200 OK or 201 Created (some deployments may return 201)
+    if (r.statusCode == 307 || r.statusCode == 308) {
+      // Unexpected redirect even with trailing slash; surface detail for diagnosis.
+      throw Exception('createUser unexpected redirect (${r.statusCode}) location=${r.headers['location']}');
+    }
+    if (r.statusCode != 200 && r.statusCode != 201) {
+      // Include body snippet for easier debugging of 422 validation errors
+      throw Exception('createUser failed (${r.statusCode}) body=${r.body}');
     }
   }
 

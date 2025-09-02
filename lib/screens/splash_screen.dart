@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'simple_login_screen.dart';
 import 'mentor_dashboard_new.dart';
 import 'apprentice_dashboard_new.dart';
-import 'onboarding_screen.dart';
+import 'signup_screen.dart';
 
 /// Minimal placeholder that matches the native (flutter_native_splash) screen.
 /// Shows black background with logo only while auth / profile resolution runs.
@@ -15,16 +15,17 @@ class SplashScreen extends StatelessWidget {
   Future<Widget> _resolveStart() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return const SimpleLoginScreen();
-
     try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      final data = doc.data();
-      if (data == null || data['onboarded'] != true) return const OnboardingScreen();
-      final role = data['role'];
+      final snap = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final data = snap.data();
+      final role = data?['role'];
       if (role == 'mentor') return const MentorDashboardNew();
       if (role == 'apprentice') return const ApprenticeDashboardNew();
-    } catch (_) {}
-    return const SimpleLoginScreen();
+      // Missing or legacy profile → sign up to complete
+      return const SignupScreen();
+    } catch (_) {
+      return const SimpleLoginScreen();
+    }
   }
 
   @override
