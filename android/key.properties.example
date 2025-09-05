@@ -1,0 +1,6 @@
+# Copy to key.properties (DO NOT COMMIT REAL SECRETS)
+# Then run a release build. Ensure android/.gitignore already ignores key.properties.
+storeFile=keystore.jks
+storePassword=CHANGE_ME_STRONG
+keyAlias=troothRelease
+keyPassword=CHANGE_ME_STRONG

@@ -314,6 +314,16 @@ class ApiService {
     throw Exception('listApprentices failed (${r.statusCode})');
   }
 
+  Future<List<dynamic>> listInactiveApprentices() async {
+    const tag = 'API-listInactiveApprentices';
+    await _ensureFreshToken();
+    _logReq(tag, 'GET', '/mentor/inactive-apprentices');
+    final r = await http.get(Uri.parse('$_base/mentor/inactive-apprentices'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
+    throw Exception('listInactiveApprentices failed (${r.statusCode})');
+  }
+
   Future<Map<String, dynamic>> getApprenticeDraft(String apprenticeId) async {
     const tag = 'API-getApprenticeDraft';
   await _ensureFreshToken();
@@ -951,5 +961,180 @@ class ApiService {
     );
     _logRes(tag, r);
     if (r.statusCode != 200) throw Exception('deleteCategory failed (${r.statusCode}): ${r.body}');
+  }
+
+  // ───────────────────────────────────────────────────────────────────
+  //  🤝 Agreements
+  // ───────────────────────────────────────────────────────────────────
+
+  Future<List<dynamic>> listAgreementTemplates() async {
+    const tag = 'API-agreementTemplates';
+    await _ensureFreshToken();
+    _logReq(tag, 'GET', '/agreements/templates');
+    final r = await http.get(Uri.parse('$_base/agreements/templates'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
+    throw Exception('listAgreementTemplates failed (${r.statusCode})');
+  }
+
+  Future<Map<String, dynamic>> createAgreement({
+    required int templateVersion,
+    required String apprenticeEmail,
+    required Map<String, dynamic> fields,
+    bool apprenticeIsMinor = false,
+    bool parentRequired = false,
+    String? parentEmail,
+  }) async {
+    const tag = 'API-createAgreement';
+    await _ensureFreshToken();
+    final payload = {
+      'template_version': templateVersion,
+      'apprentice_email': apprenticeEmail,
+      'apprentice_is_minor': apprenticeIsMinor,
+      'parent_required': parentRequired,
+      if (parentEmail != null) 'parent_email': parentEmail,
+      'fields': fields,
+    };
+    _logReq(tag, 'POST', '/agreements', payload);
+    final r = await http.post(Uri.parse('$_base/agreements'), headers: _headers(), body: jsonEncode(payload));
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body);
+    throw Exception('createAgreement failed (${r.statusCode})');
+  }
+
+  Future<List<dynamic>> listAgreements({int skip = 0, int limit = 50}) async {
+    const tag = 'API-listAgreements';
+    await _ensureFreshToken();
+    final uri = Uri.parse('$_base/agreements?skip=$skip&limit=$limit');
+    _logReq(tag, 'GET', uri.path);
+    final r = await http.get(uri, headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
+    throw Exception('listAgreements failed (${r.statusCode})');
+  }
+
+  Future<Map<String, dynamic>> submitAgreement(String agreementId) async {
+    const tag = 'API-submitAgreement';
+    await _ensureFreshToken();
+    final path = '/agreements/$agreementId/submit';
+    _logReq(tag, 'POST', path);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body);
+    throw Exception('submitAgreement failed (${r.statusCode})');
+  }
+
+  Future<Map<String, dynamic>> getAgreement(String agreementId) async {
+    const tag = 'API-getAgreement';
+    await _ensureFreshToken();
+    final path = '/agreements/$agreementId';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body);
+    throw Exception('getAgreement failed (${r.statusCode})');
+  }
+
+  Future<Map<String, dynamic>> apprenticeSignAgreement({
+    required String agreementId,
+    required String typedName,
+  }) async {
+    const tag = 'API-apprenticeSign';
+    await _ensureFreshToken();
+    final path = '/agreements/$agreementId/sign/apprentice';
+    final payload = { 'typed_name': typedName };
+    _logReq(tag, 'POST', path, payload);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body);
+    throw Exception('apprenticeSignAgreement failed (${r.statusCode})');
+  }
+
+  Future<Map<String, dynamic>> parentSignAgreement({
+    required String agreementId,
+    required String typedName,
+  }) async {
+    const tag = 'API-parentSign';
+    await _ensureFreshToken();
+    final path = '/agreements/$agreementId/sign/parent';
+    final payload = { 'typed_name': typedName };
+    _logReq(tag, 'POST', path, payload);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body);
+    throw Exception('parentSignAgreement failed (${r.statusCode})');
+  }
+
+  Future<Map<String, dynamic>> resendParentToken({
+    required String agreementId,
+    String? reason,
+  }) async {
+    const tag = 'API-resendParentToken';
+    await _ensureFreshToken();
+    final path = '/agreements/$agreementId/resend/parent-token';
+    final payload = { if (reason != null) 'reason': reason };
+    _logReq(tag, 'POST', path, payload.isEmpty ? null : payload);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body);
+    if (r.statusCode == 429) {
+      final remaining = r.headers['x-rate-limit-remaining'];
+      final reset = r.headers['x-rate-limit-reset'];
+      throw Exception('Rate limit: too many resends.${remaining != null ? ' Remaining: $remaining' : ''}${reset != null ? ' Reset: $reset' : ''}');
+    }
+    throw Exception('resendParentToken failed (${r.statusCode})');
+  }
+
+  Future<Map<String, dynamic>> revokeAgreement(String agreementId) async {
+    const tag = 'API-revokeAgreement';
+    await _ensureFreshToken();
+    final path = '/agreements/$agreementId/revoke';
+    _logReq(tag, 'POST', path);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body);
+    throw Exception('revokeAgreement failed (${r.statusCode})');
+  }
+
+  Future<Map<String, dynamic>> terminateApprenticeship(String apprenticeId, String reason) async {
+    const tag = 'API-terminateApprenticeship';
+    await _ensureFreshToken();
+    final path = '/mentor/apprentice/$apprenticeId/terminate';
+    // Debug instrumentation
+    // (Will print once per attempt; safe for temporary troubleshooting.)
+    // Shows token presence but not the token value.
+    print('[terminateApprenticeship] path=$path reasonLen=${reason.length} tokenSet=${bearerToken != null}');
+    _logReq(tag, 'POST', path, { 'reason': reason });
+    http.Response r;
+    try {
+      r = await http.post(
+        Uri.parse('$_base$path'),
+        headers: _headers(),
+        body: jsonEncode({ 'reason': reason }),
+      );
+    } catch (e) {
+      print('[terminateApprenticeship][network_error] $e');
+      rethrow;
+    }
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body);
+    print('[terminateApprenticeship][failure] code=${r.statusCode} body=${r.body}');
+    throw Exception('terminateApprenticeship failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<Map<String, dynamic>> reinstateApprenticeship(String apprenticeId, {String? reason}) async {
+    const tag = 'API-reinstateApprenticeship';
+    await _ensureFreshToken();
+    final path = '/mentor/apprentice/$apprenticeId/reinstate';
+    final payload = reason == null ? null : { 'reason': reason };
+    _logReq(tag, 'POST', path, payload);
+    final r = await http.post(
+      Uri.parse('$_base$path'),
+      headers: _headers(),
+      body: payload == null ? null : jsonEncode(payload),
+    );
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body);
+    throw Exception('reinstateApprenticeship failed (${r.statusCode}) ${r.body}');
   }
 }

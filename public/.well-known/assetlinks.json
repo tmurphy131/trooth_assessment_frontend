@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.example.trooth_assessment",
+      "sha256_cert_fingerprints": [
+        "A8:52:1B:34:00:14:64:01:3F:F2:35:C8:39:E3:97:0F:8C:EC:21:1F:A2:7F:59:CE:9A:C7:24:88:89:C4:4D:0C"
+      ]
+    }
+  }
+]

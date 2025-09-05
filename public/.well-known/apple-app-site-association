@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "69DZGC7C98.com.trooth.flutterTroothAssessment",
+        "paths": [ "/agreements/sign/*" ]
+      }
+    ]
+  }
+}

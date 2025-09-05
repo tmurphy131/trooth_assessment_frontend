@@ -45,5 +45,23 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+		<!-- URL Schemes for custom fallback (optional) -->
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleURLName</key>
+				<string>trooth-custom</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>trooth</string>
+				</array>
+			</dict>
+		</array>
+		<!-- Associated Domains (enable capability in Xcode) -->
+		<key>com.apple.developer.associated-domains</key>
+		<array>
+			<!-- Replace with your verified domain -->
+			<string>applinks:links.onlyblv.com</string>
+		</array>
 </dict>
 </plist>
