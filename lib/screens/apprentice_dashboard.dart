@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/base_dashboard.dart';
 import '../services/api_service.dart';
 import 'assessment_screen.dart';
+import 'agreement_preview_screen.dart';
 
 class ApprenticeDashboard extends StatefulWidget {
   const ApprenticeDashboard({super.key});
@@ -15,6 +16,7 @@ class _ApprenticeDashboardState extends State<ApprenticeDashboard> {
   final user = FirebaseAuth.instance.currentUser;
   final _apiService = ApiService();
   List<Map<String, dynamic>> _assessments = [];
+  List<Map<String, dynamic>> _agreements = [];
   bool _isLoading = true;
   String? _error;
 
@@ -32,12 +34,25 @@ class _ApprenticeDashboardState extends State<ApprenticeDashboard> {
         _apiService.bearerToken = token;
       }
       
-      await _loadAssessments();
+      await Future.wait([
+        _loadAssessments(),
+        _loadAgreements(),
+      ]);
     } catch (e) {
       setState(() {
         _error = 'Failed to initialize: $e';
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadAgreements() async {
+    try {
+      final list = await _apiService.listMyAgreements();
+      setState(() { _agreements = list.cast<Map<String, dynamic>>(); });
+    } catch (e) {
+      // Soft-fail; keep dashboard usable
+      debugPrint('Failed to load agreements: $e');
     }
   }
 
@@ -80,6 +95,10 @@ class _ApprenticeDashboardState extends State<ApprenticeDashboard> {
             _buildQuickActions(),
             const SizedBox(height: 24),
             
+            // Mentorship Agreements (only when present)
+            if (_agreements.isNotEmpty) _buildAgreementsSection(),
+            if (_agreements.isNotEmpty) const SizedBox(height: 24),
+
             // Recent Assessments
             Expanded(
               child: _buildRecentAssessments(),
@@ -87,6 +106,111 @@ class _ApprenticeDashboardState extends State<ApprenticeDashboard> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAgreementsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Mentorship Agreements',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Poppins',
+              ),
+            ),
+            IconButton(
+              onPressed: _loadAgreements,
+              icon: const Icon(Icons.refresh, color: Colors.amber),
+              tooltip: 'Refresh',
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Column(
+          children: _agreements.map(_buildAgreementRow).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAgreementRow(Map<String, dynamic> ag) {
+    final status = ag['status'] as String? ?? 'unknown';
+    final mentorName = ag['mentor_name'] ?? 'Mentor';
+    final createdAt = ag['created_at'] as String?;
+    return Card(
+      color: Colors.grey[850],
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Icon(Icons.assignment, color: _statusColor(status)),
+        title: Text('With $mentorName', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+        subtitle: Text(
+          '${_statusLabel(status)}${createdAt != null ? ' • ${_shortDate(createdAt)}' : ''}',
+          style: TextStyle(color: Colors.grey[400], fontFamily: 'Poppins'),
+        ),
+        trailing: TextButton(
+          onPressed: () => _openAgreement(ag),
+          child: const Text('Open', style: TextStyle(color: Colors.amber, fontFamily: 'Poppins')),
+        ),
+      ),
+    );
+  }
+
+  void _openAgreement(Map<String, dynamic> ag) {
+    final markdown = ag['content_rendered'] as String?;
+    if (markdown == null || markdown.isEmpty) {
+      _showSnack('No preview available');
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AgreementPreviewScreen(
+          markdown: markdown,
+          status: ag['status'] ?? 'draft',
+          apprenticeEmail: ag['apprentice_email'],
+          parentEmail: ag['parent_email'],
+        ),
+      ),
+    );
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'awaiting_apprentice': return Colors.orange;
+      case 'awaiting_parent': return Colors.purple;
+      case 'fully_signed': return Colors.green;
+      case 'revoked': return Colors.red;
+      default: return Colors.grey;
+    }
+  }
+
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'awaiting_apprentice': return 'Awaiting you';
+      case 'awaiting_parent': return 'Awaiting parent';
+      case 'fully_signed': return 'Completed';
+      case 'revoked': return 'Revoked';
+      default: return status;
+    }
+  }
+
+  String _shortDate(String iso) {
+    try {
+      final d = DateTime.parse(iso);
+      return '${d.month}/${d.day}/${d.year}';
+    } catch (_) { return iso; }
+  }
+
+  void _showSnack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: Colors.orange, behavior: SnackBarBehavior.floating),
     );
   }
 

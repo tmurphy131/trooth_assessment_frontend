@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../services/api_service.dart';
 import 'agreement_preview_screen.dart';
+import 'apprentice_invite_screen.dart';
 
 class MentorAgreementsScreen extends StatefulWidget {
   const MentorAgreementsScreen({super.key});
@@ -459,6 +460,23 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
                     onPressed: _revoking ? null : _revokeAgreement,
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
                     label: Text(_revoking ? 'Revoking...' : 'Revoke'),
+                  ),
+                if (status == 'fully_signed')
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.person_add_alt_1),
+                    onPressed: () {
+                      // Navigate to ApprenticeInviteScreen and prefill apprentice info if available
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ApprenticeInviteScreen(
+                            prefillEmail: ag['apprentice_email'],
+                            prefillName: ag['apprentice_name'],
+                          ),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, foregroundColor: Colors.white),
+                    label: const Text('Send Apprentice Invite'),
                   ),
               ],
             ),

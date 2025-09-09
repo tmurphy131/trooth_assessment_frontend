@@ -1015,6 +1015,17 @@ class ApiService {
     throw Exception('listAgreements failed (${r.statusCode})');
   }
 
+  Future<List<dynamic>> listMyAgreements({int skip = 0, int limit = 50}) async {
+    const tag = 'API-listMyAgreements';
+    await _ensureFreshToken();
+    final uri = Uri.parse('$_base/agreements/my?skip=$skip&limit=$limit');
+    _logReq(tag, 'GET', uri.path);
+    final r = await http.get(uri, headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
+    throw Exception('listMyAgreements failed (${r.statusCode})');
+  }
+
   Future<Map<String, dynamic>> submitAgreement(String agreementId) async {
     const tag = 'API-submitAgreement';
     await _ensureFreshToken();
