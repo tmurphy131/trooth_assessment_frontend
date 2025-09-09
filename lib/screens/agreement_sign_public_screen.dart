@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import 'agreement_signed_success_screen.dart';
 
 /// Screen that allows an apprentice or parent to sign via a deep link token.
 /// Expect navigation with: AgreementSignPublicScreen(token: 'uuid', tokenType: 'apprentice'|'parent')
@@ -52,7 +53,11 @@ class _AgreementSignPublicScreenState extends State<AgreementSignPublicScreen> {
       final r = await ApiServiceHttpShim.post(uri, {'typed_name': _typedNameCtrl.text.trim()});
       if (r.statusCode == 200) {
         setState(() { _agreement = r.jsonBody; });
-        _showSnack('Signed successfully');
+        if (!mounted) return;
+        // Navigate to success screen for a clear confirmation UX
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const AgreementSignedSuccessScreen()),
+        );
       } else {
         setState(() { _error = 'Sign failed (${r.statusCode}): ${r.bodySnippet}'; });
       }
@@ -61,13 +66,6 @@ class _AgreementSignPublicScreenState extends State<AgreementSignPublicScreen> {
     } finally {
       setState(() { _signing = false; });
     }
-  }
-
-  void _showSnack(String msg) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating),
-    );
   }
 
   @override

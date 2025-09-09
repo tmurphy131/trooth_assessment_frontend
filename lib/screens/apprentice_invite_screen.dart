@@ -4,8 +4,10 @@ import '../services/api_service.dart';
 
 class ApprenticeInviteScreen extends StatefulWidget {
   final User? user;
+  final String? prefillName;
+  final String? prefillEmail;
   
-  const ApprenticeInviteScreen({super.key, this.user});
+  const ApprenticeInviteScreen({super.key, this.user, this.prefillName, this.prefillEmail});
 
   @override
   State<ApprenticeInviteScreen> createState() => _ApprenticeInviteScreenState();
@@ -93,13 +95,13 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.error_outline,
                         color: Colors.red,
                         size: 64,
                       ),
                       const SizedBox(height: 16),
-                      Text(
+                      const Text(
                         'Error',
                         style: TextStyle(
                           color: Colors.red,
@@ -172,7 +174,7 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Send invitations to connect with apprentices',
+                  'Tap Send Invite to invite an apprentice',
                   style: TextStyle(
                     color: Colors.grey[500],
                     fontSize: 14,
@@ -338,8 +340,8 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
   }
 
   void _showInviteDialog() {
-    final nameController = TextEditingController();
-    final emailController = TextEditingController();
+  final nameController = TextEditingController(text: widget.prefillName ?? '');
+  final emailController = TextEditingController(text: widget.prefillEmail ?? '');
 
     showDialog(
       context: context,

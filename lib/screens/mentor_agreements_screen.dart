@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../services/api_service.dart';
+import 'agreement_preview_screen.dart';
+import 'apprentice_invite_screen.dart';
 
 class MentorAgreementsScreen extends StatefulWidget {
   const MentorAgreementsScreen({super.key});
@@ -11,6 +13,8 @@ class MentorAgreementsScreen extends StatefulWidget {
 
 class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
   final _api = ApiService();
+  final _scrollController = ScrollController();
+  final _statusCardKey = GlobalKey();
   bool _loadingTemplates = true;
   bool _creating = false;
   String? _error;
@@ -18,9 +22,15 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
 
   // Form fields
   int? _selectedVersion;
+  final _apprenticeNameCtrl = TextEditingController();
   final _apprenticeEmailCtrl = TextEditingController();
   final _meetingLocationCtrl = TextEditingController();
   final _meetingDurationCtrl = TextEditingController(text: '60');
+  final _meetingDayCtrl = TextEditingController();
+  final _meetingTimeCtrl = TextEditingController();
+  final _meetingFrequencyCtrl = TextEditingController();
+  final _startDateCtrl = TextEditingController();
+  final _additionalNotesCtrl = TextEditingController();
   bool _apprenticeIsMinor = false;
   bool _parentRequired = false;
   final _parentEmailCtrl = TextEditingController();
@@ -28,6 +38,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
   // Created agreement state
   Map<String, dynamic>? _currentAgreement; // draft / awaiting_apprentice / etc
   bool _submitting = false;
+  bool _regenerating = false;
   bool _resendingParent = false;
   bool _revoking = false;
   bool _loadingExisting = false;
@@ -39,7 +50,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
   void initState() {
     super.initState();
     _loadTemplates();
-  _loadExisting();
+    _loadExisting();
   }
 
   Future<void> _loadTemplates() async {
@@ -65,21 +76,55 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
       final ag = await _api.createAgreement(
         templateVersion: _selectedVersion!,
         apprenticeEmail: _apprenticeEmailCtrl.text.trim(),
+        apprenticeName: _apprenticeNameCtrl.text.trim().isEmpty ? null : _apprenticeNameCtrl.text.trim(),
         fields: {
           'meeting_location': _meetingLocationCtrl.text.trim().isEmpty ? 'TBD' : _meetingLocationCtrl.text.trim(),
           'meeting_duration_minutes': int.tryParse(_meetingDurationCtrl.text.trim()) ?? 60,
+          if (_meetingDayCtrl.text.trim().isNotEmpty) 'meeting_day': _meetingDayCtrl.text.trim(),
+          if (_meetingTimeCtrl.text.trim().isNotEmpty) 'meeting_time': _meetingTimeCtrl.text.trim(),
+          if (_meetingFrequencyCtrl.text.trim().isNotEmpty) 'meeting_frequency': _meetingFrequencyCtrl.text.trim(),
+          if (_startDateCtrl.text.trim().isNotEmpty) 'start_date': _startDateCtrl.text.trim(),
+          if (_additionalNotesCtrl.text.trim().isNotEmpty) 'additional_notes': _additionalNotesCtrl.text.trim(),
         },
         apprenticeIsMinor: _apprenticeIsMinor,
         parentRequired: _parentRequired,
         parentEmail: _parentRequired ? _parentEmailCtrl.text.trim() : null,
       );
-      setState(() { _currentAgreement = ag; });
+  setState(() { _currentAgreement = ag; });
+  _resetForm();
       await _loadExisting(refresh: true);
+      // Auto scroll to status card
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_statusCardKey.currentContext != null) {
+          Scrollable.ensureVisible(
+            _statusCardKey.currentContext!,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeInOut,
+          );
+        }
+      });
     } catch (e) {
       setState(() { _error = 'Create failed: $e'; });
     } finally {
       setState(() { _creating = false; });
     }
+  }
+
+  void _resetForm() {
+    setState(() {
+      _apprenticeNameCtrl.clear();
+      _apprenticeEmailCtrl.clear();
+      _meetingLocationCtrl.clear();
+      _meetingDurationCtrl.text = '60';
+      _meetingDayCtrl.clear();
+      _meetingTimeCtrl.clear();
+      _meetingFrequencyCtrl.clear();
+      _startDateCtrl.clear();
+      _additionalNotesCtrl.clear();
+      _apprenticeIsMinor = false;
+      _parentRequired = false;
+      _parentEmailCtrl.clear();
+    });
   }
 
   Future<void> _loadExisting({bool refresh = false}) async {
@@ -111,6 +156,32 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
       setState(() { _error = 'Submit failed: $e'; });
     } finally {
       setState(() { _submitting = false; });
+    }
+  }
+
+  Future<void> _regeneratePreview() async {
+    if (_currentAgreement == null) return;
+    if (_currentAgreement!['status'] != 'draft') return;
+    setState(() { _regenerating = true; });
+    try {
+      final partial = <String, dynamic>{};
+      void addIf(String key, TextEditingController c) { if (c.text.trim().isNotEmpty) partial[key] = c.text.trim(); }
+      addIf('meeting_location', _meetingLocationCtrl);
+      final dur = int.tryParse(_meetingDurationCtrl.text.trim());
+      if (dur != null && dur > 0) partial['meeting_duration_minutes'] = dur;
+      addIf('meeting_day', _meetingDayCtrl);
+      addIf('meeting_time', _meetingTimeCtrl);
+      addIf('meeting_frequency', _meetingFrequencyCtrl);
+      addIf('start_date', _startDateCtrl);
+      addIf('additional_notes', _additionalNotesCtrl);
+      if (partial.isEmpty) { _showSnack('No changes to apply'); return; }
+      final updated = await _api.updateAgreementFields(_currentAgreement!['id'], partial);
+      setState(() { _currentAgreement = updated; });
+      _showSnack('Preview updated');
+    } catch (e) {
+      _showSnack('Failed to regenerate: $e');
+    } finally {
+      setState(() { _regenerating = false; });
     }
   }
 
@@ -179,6 +250,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
       body: _loadingTemplates
           ? const Center(child: CircularProgressIndicator(color: Colors.amber))
           : SingleChildScrollView(
+              controller: _scrollController,
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -215,7 +287,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
           children: [
             DropdownButtonFormField<int>(
               value: _selectedVersion,
-              decoration: const InputDecoration(labelText: 'Template Version'),
+              decoration: const InputDecoration(labelText: 'Template Version', labelStyle: TextStyle(color: Colors.white70)),
               dropdownColor: Colors.grey[900],
               items: _templates.map((t) => DropdownMenuItem<int>(
                 value: t['version'] as int?,
@@ -225,20 +297,70 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
             ),
             const SizedBox(height: 12),
             TextFormField(
+              controller: _apprenticeNameCtrl,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(labelText: 'Apprentice Full Name', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white38)),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
               controller: _apprenticeEmailCtrl,
-              decoration: const InputDecoration(labelText: 'Apprentice Email'),
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(labelText: 'Apprentice Email', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white38)),
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _meetingLocationCtrl,
-              decoration: const InputDecoration(labelText: 'Meeting Location (token: {{meeting_location}})'),
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(labelText: 'Meeting Location', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white38)),
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _meetingDurationCtrl,
-              decoration: const InputDecoration(labelText: 'Meeting Duration (minutes)'),
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(labelText: 'Meeting Duration (minutes)', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white38)),
               keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 12),
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              collapsedIconColor: Colors.amber,
+              iconColor: Colors.amber,
+              title: const Text('Optional Details', style: TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+              children: [
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _meetingDayCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Meeting Day (e.g. Tuesdays)', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white38)),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _meetingTimeCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Meeting Time (e.g. 4:00 PM PST)', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white38)),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _meetingFrequencyCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Meeting Frequency (e.g. Weekly)', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white38)),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _startDateCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Start Date (e.g. 2025-09-15)', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white38)),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _additionalNotesCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  maxLines: 3,
+                  decoration: const InputDecoration(labelText: 'Additional Notes', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white38)),
+                ),
+                const SizedBox(height: 8),
+              ],
             ),
             const SizedBox(height: 12),
             SwitchListTile(
@@ -259,7 +381,8 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
             if (_parentRequired)
               TextFormField(
                 controller: _parentEmailCtrl,
-                decoration: const InputDecoration(labelText: 'Parent Email'),
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(labelText: 'Parent Email', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white38)),
                 keyboardType: TextInputType.emailAddress,
               ),
             const SizedBox(height: 16),
@@ -282,6 +405,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
     final ag = _currentAgreement!;
     final status = ag['status'];
     return Card(
+      key: _statusCardKey,
       color: Colors.grey[850],
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
@@ -316,6 +440,13 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
                     child: Text(_submitting ? 'Submitting...' : 'Submit to Apprentice'),
                   ),
+                if (status == 'draft')
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: _regenerating ? null : _regeneratePreview,
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
+                    label: Text(_regenerating ? 'Updating...' : 'Regenerate Preview'),
+                  ),
                 if (status == 'awaiting_parent')
                   ElevatedButton.icon(
                     icon: const Icon(Icons.send),
@@ -330,10 +461,29 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
                     label: Text(_revoking ? 'Revoking...' : 'Revoke'),
                   ),
+                if (status == 'fully_signed')
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.person_add_alt_1),
+                    onPressed: () {
+                      // Navigate to ApprenticeInviteScreen and prefill apprentice info if available
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ApprenticeInviteScreen(
+                            prefillEmail: ag['apprentice_email'],
+                            prefillName: ag['apprentice_name'],
+                          ),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, foregroundColor: Colors.white),
+                    label: const Text('Send Apprentice Invite'),
+                  ),
               ],
             ),
             const SizedBox(height: 12),
             Text('Apprentice Email: ${ag['apprentice_email']}', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+            if (ag['apprentice_name'] != null)
+              Text('Apprentice Name: ${ag['apprentice_name']}', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
             if (ag['parent_email'] != null) Text('Parent Email: ${ag['parent_email']}', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
             if (ag['apprentice_signature_name'] != null) Text('Apprentice Signed: ${ag['apprentice_signature_name']}', style: const TextStyle(color: Colors.greenAccent, fontFamily: 'Poppins')),
             if (ag['parent_signature_name'] != null) Text('Parent Signed: ${ag['parent_signature_name']}', style: const TextStyle(color: Colors.greenAccent, fontFamily: 'Poppins')),
@@ -362,8 +512,26 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () => _showFullMarkdown(ag['content_rendered']),
-                  child: const Text('Expand', style: TextStyle(color: Colors.amber, fontFamily: 'Poppins')),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => AgreementPreviewScreen(
+                          markdown: ag['content_rendered'],
+                          apprenticeEmail: ag['apprentice_email'],
+                          parentEmail: ag['parent_email'],
+                          status: ag['status'],
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.open_in_full, color: Colors.amber, size: 18),
+                      SizedBox(width: 6),
+                      Text('Full Screen Preview', style: TextStyle(color: Colors.amber, fontFamily: 'Poppins')),
+                    ],
+                  ),
                 ),
               )
             ],
@@ -420,7 +588,16 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
           try {
             final full = await _api.getAgreement(ag['id']);
             setState(() { _currentAgreement = full; });
-            _showSnack('Loaded agreement');
+            // After selecting, scroll preview into view
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_statusCardKey.currentContext != null) {
+                Scrollable.ensureVisible(
+                  _statusCardKey.currentContext!,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              }
+            });
           } catch (e) {
             _showSnack('Failed to fetch agreement');
           }
@@ -429,43 +606,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
     );
   }
 
-  void _showFullMarkdown(String markdown) {
-    showDialog(
-      context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.grey[900],
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          constraints: const BoxConstraints(maxHeight: 600, maxWidth: 600),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  const Text('Agreement Content', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
-                  const Spacer(),
-                  IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close, color: Colors.amber))
-                ],
-              ),
-              const Divider(color: Colors.grey),
-              Expanded(
-                child: Markdown(
-                  data: markdown,
-                  selectable: true,
-                  styleSheet: MarkdownStyleSheet(
-                    p: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontSize: 14, height: 1.3),
-                    h1: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.bold),
-                    h2: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.bold),
-                    h3: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.bold),
-                    code: const TextStyle(fontFamily: 'monospace', color: Colors.lightBlueAccent),
-                  ),
-                ),
-              )
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  // Removed old dialog-based markdown preview (replaced by full-screen page)
 
   Color _statusColor(String status) {
     switch (status) {
@@ -484,6 +625,12 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
     _meetingLocationCtrl.dispose();
     _meetingDurationCtrl.dispose();
     _parentEmailCtrl.dispose();
+  _meetingDayCtrl.dispose();
+  _meetingTimeCtrl.dispose();
+  _meetingFrequencyCtrl.dispose();
+  _startDateCtrl.dispose();
+  _additionalNotesCtrl.dispose();
+  _scrollController.dispose();
     super.dispose();
   }
 }

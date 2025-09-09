@@ -980,6 +980,7 @@ class ApiService {
   Future<Map<String, dynamic>> createAgreement({
     required int templateVersion,
     required String apprenticeEmail,
+    String? apprenticeName,
     required Map<String, dynamic> fields,
     bool apprenticeIsMinor = false,
     bool parentRequired = false,
@@ -990,6 +991,7 @@ class ApiService {
     final payload = {
       'template_version': templateVersion,
       'apprentice_email': apprenticeEmail,
+      if (apprenticeName != null && apprenticeName.trim().isNotEmpty) 'apprentice_name': apprenticeName.trim(),
       'apprentice_is_minor': apprenticeIsMinor,
       'parent_required': parentRequired,
       if (parentEmail != null) 'parent_email': parentEmail,
@@ -1011,6 +1013,17 @@ class ApiService {
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
     throw Exception('listAgreements failed (${r.statusCode})');
+  }
+
+  Future<List<dynamic>> listMyAgreements({int skip = 0, int limit = 50}) async {
+    const tag = 'API-listMyAgreements';
+    await _ensureFreshToken();
+    final uri = Uri.parse('$_base/agreements/my?skip=$skip&limit=$limit');
+    _logReq(tag, 'GET', uri.path);
+    final r = await http.get(uri, headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
+    throw Exception('listMyAgreements failed (${r.statusCode})');
   }
 
   Future<Map<String, dynamic>> submitAgreement(String agreementId) async {
@@ -1096,6 +1109,16 @@ class ApiService {
     throw Exception('revokeAgreement failed (${r.statusCode})');
   }
 
+    Future<Map<String, dynamic>> updateAgreementFields(String agreementId, Map<String, dynamic> partialFields) async {
+      const tag = 'API-updateAgreementFields';
+      await _ensureFreshToken();
+      final path = '/agreements/$agreementId/fields';
+      _logReq(tag, 'PATCH', path, partialFields);
+      final r = await http.patch(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(partialFields));
+      _logRes(tag, r);
+      if (r.statusCode == 200) return jsonDecode(r.body);
+      throw Exception('updateAgreementFields failed (${r.statusCode})');
+    }
   Future<Map<String, dynamic>> terminateApprenticeship(String apprenticeId, String reason) async {
     const tag = 'API-terminateApprenticeship';
     await _ensureFreshToken();
