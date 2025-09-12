@@ -44,3 +44,44 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# ─────────────────────────────────────────────
+# Additional Flutter / Tooling
+# ─────────────────────────────────────────────
+.packages
+coverage/
+*.lcov
+flutter_*.png
+fvm_config.json
+melos_workspace.yaml
+.fvm/
+
+# Optional: ignore desktop platforms if not in active use (uncomment as needed)
+# linux/
+# macos/
+# windows/
+
+# Web build output (keep web/ source)
+web/build/
+web/.dart_tool/
+
+# VSCode settings (uncomment to ignore) and common editor caches
+.vscode/
+.idea/
+.fleet/
+
+# Firebase / secrets (uncomment if you do NOT want to commit these)
+# **/google-services.json
+# **/GoogleService-Info.plist
+
+# Fastlane / CI artifacts
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+
+# Crash / symbol outputs
+*.symbols
+*.map
+
+# Generated plugin registrant (already caught but explicit for clarity)
+**/GeneratedPluginRegistrant.*

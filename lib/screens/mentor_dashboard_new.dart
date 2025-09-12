@@ -6,6 +6,10 @@ import 'template_management_screen.dart';
 import 'apprentice_invite_screen.dart';
 import 'assessment_results_screen.dart';
 import 'mentor_agreements_screen.dart';
+import 'mentor_notifications_screen.dart';
+import 'dart:async';
+import 'mentor_profile_screen.dart';
+import 'mentor_resources_screen.dart';
 
 class MentorDashboardNew extends StatefulWidget {
   const MentorDashboardNew({super.key});
@@ -27,19 +31,16 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   bool _isLoadingAssessments = true;
   bool _loadingInactive = false;
   String? _error;
+  int _activeNotificationCount = 0;
+  Timer? _notifTimer;
 
   @override
   void initState() {
     super.initState();
-  _tabController = TabController(length: 5, vsync: this);
+  _tabController = TabController(length: 5, vsync: this); // Removed History tab; Resources now a tab
     _initializeAndLoadData();
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
 
   Future<void> _initializeAndLoadData() async {
     try {
@@ -53,7 +54,9 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
         _loadApprentices(),
         _loadCompletedAssessments(),
         _loadInactiveApprentices(),
+        _refreshNotificationCount(),
       ]);
+      _startNotificationPolling();
     } catch (e) {
       setState(() {
         _error = 'Failed to initialize: $e';
@@ -61,6 +64,27 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
         _isLoadingAssessments = false;
       });
     }
+  }
+
+  Future<void> _refreshNotificationCount() async {
+    try {
+      final list = await _apiService.mentorNotifications();
+      if (mounted) setState(() { _activeNotificationCount = list.length; });
+    } catch (_) {
+      // silent
+    }
+  }
+
+  void _startNotificationPolling() {
+    _notifTimer?.cancel();
+    _notifTimer = Timer.periodic(const Duration(seconds: 60), (_) => _refreshNotificationCount());
+  }
+
+  @override
+  void dispose() {
+    _notifTimer?.cancel();
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadApprentices() async {
@@ -252,6 +276,18 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   @override
   Widget build(BuildContext context) {
     return BaseDashboard(
+      logoHeight: 64,
+      additionalActions: [
+        IconButton(
+          icon: const Icon(Icons.account_circle, color: Color(0xFFFFD700)),
+          tooltip: 'My Profile',
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const MentorProfileScreen()),
+            );
+          },
+        ),
+      ],
       bottom: TabBar(
         controller: _tabController,
         indicatorColor: Colors.amber,
@@ -261,12 +297,35 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
           fontFamily: 'Poppins',
           fontWeight: FontWeight.bold,
         ),
-        tabs: const [
-          Tab(icon: Icon(Icons.people), text: 'Apprentices'),
-          Tab(icon: Icon(Icons.assignment), text: 'Assessments'),
-          Tab(icon: Icon(Icons.description), text: 'Agreements'),
-          Tab(icon: Icon(Icons.note), text: 'Notes'),
-          Tab(icon: Icon(Icons.history), text: 'History'),
+        tabs: [
+          const Tab(icon: Icon(Icons.people), text: 'Apprentices'),
+          const Tab(icon: Icon(Icons.assignment), text: 'Assessments'),
+          const Tab(icon: Icon(Icons.description), text: 'Agreements'),
+          const Tab(icon: Icon(Icons.link), text: 'Resources'),
+          Tab(
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.notifications),
+                if (_activeNotificationCount > 0) Positioned(
+                  right: -6,
+                  top: -4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      _activeNotificationCount > 99 ? '99+' : _activeNotificationCount.toString(),
+                      style: const TextStyle(color: Colors.white, fontSize: 10, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            text: 'Alerts',
+          ),
         ],
       ),
       body: TabBarView(
@@ -274,9 +333,11 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
         children: [
           _buildApprenticesTab(),
           _buildAssessmentsTab(),
-          const MentorAgreementsScreen(),
-          _buildNotesTab(),
-          _buildHistoryTab(),
+            const MentorAgreementsScreen(),
+          const MentorResourcesScreen(),
+          MentorNotificationsScreen(
+            onActivity: () async { await _refreshNotificationCount(); },
+          ),
         ],
       ),
     );
@@ -304,6 +365,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
               ),
               Row(
                 children: [
+                  // Resources button removed; Resources now accessible via main tab bar
                   IconButton(
                     onPressed: _navigateToInviteApprentices,
                     icon: const Icon(Icons.person_add_alt_1, color: Colors.amber),
@@ -590,6 +652,9 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
               case 'draft':
                 await _showApprenticeDraft(apprenticeId);
                 break;
+              case 'meeting':
+                await _showMeetingInfo(apprenticeId, email, name);
+                break;
               case 'terminate':
                 await _showTerminateDialog(apprenticeId, name);
                 break;
@@ -627,6 +692,16 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
               ),
             ),
             const PopupMenuItem(
+              value: 'meeting',
+              child: Row(
+                children: [
+                  Icon(Icons.event, color: Colors.amber),
+                  SizedBox(width: 8),
+                  Text('Meeting Info', style: TextStyle(color: Colors.white)),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
               value: 'terminate',
               child: Row(
                 children: [
@@ -641,6 +716,152 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
       ),
     );
   }
+
+  Future<void> _showMeetingInfo(String apprenticeId, String apprenticeEmail, String apprenticeName) async {
+    // Strategy: fetch mentor-scoped agreements first; fallback to broad list if needed.
+    List<dynamic> agreements = [];
+    try {
+      agreements = await _apiService.listMyAgreements(limit: 100);
+    } catch (_) {
+      try { agreements = await _apiService.listAgreements(limit: 100); } catch (_) {}
+    }
+
+    Map<String,dynamic>? primary;
+    for (final a in agreements) {
+      if (a is Map && (
+          a['apprentice_id'] == apprenticeId ||
+          a['apprenticeEmail'] == apprenticeId ||
+          a['apprentice_email'] == apprenticeEmail ||
+          a['apprentice_email'] == apprenticeId // in case id used as email placeholder earlier
+        )) {
+        if (primary == null) primary = a.cast<String,dynamic>();
+        if (a['status'] != 'revoked') { primary = a.cast<String,dynamic>(); break; }
+      }
+    }
+
+    Map<String,dynamic> fields = {};
+    if (primary != null) {
+      if (primary['fields_json'] is Map) {
+        fields = (primary['fields_json'] as Map).cast<String,dynamic>();
+      } else if (primary['fields'] is Map) { // some endpoints may serialize as 'fields'
+        fields = (primary['fields'] as Map).cast<String,dynamic>();
+      }
+    }
+
+    // Also tolerate camelCase keys if they slipped through from a different client version.
+    if (fields.isEmpty && primary != null) {
+      final camel = <String, dynamic>{};
+      for (final e in primary.entries) {
+        if (e.key.toString().toLowerCase().contains('meeting')) camel[e.key] = e.value;
+      }
+      if (camel.isNotEmpty) fields = camel;
+    }
+    final location = fields['meeting_location'];
+    final duration = fields['meeting_duration_minutes'];
+    final day = fields['meeting_day'];
+    final time = fields['meeting_time'];
+    final frequency = fields['meeting_frequency'];
+    final startDate = fields['start_date'];
+    final nextMeeting = _computeNextMeetingDate(day?.toString(), time?.toString(), frequency?.toString(), startDate?.toString());
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: Text('Meeting Info', style: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+        content: SizedBox(
+          width: 320,
+          child: (primary == null) ? const Text('No agreement found for this apprentice.', style: TextStyle(color: Colors.white70, fontFamily: 'Poppins'))
+            : (location == null && time == null && day == null && frequency == null)
+            ? const Text('No meeting information set for this apprentice.', style: TextStyle(color: Colors.white70, fontFamily: 'Poppins'))
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(apprenticeName, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 12),
+                  if (day != null) Text('Day: $day', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+                  if (time != null) Text('Time: $time', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+                  if (location != null) Text('Location: $location', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+                  if (frequency != null) Text('Frequency: $frequency', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+                  if (duration != null) Text('Duration: ${duration}m', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+                  if (startDate != null) Text('Start: $startDate', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+                  if (nextMeeting != null) ...[
+                    const SizedBox(height: 8),
+                    Text('Next: ${_formatFriendly(nextMeeting)}', style: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                  ],
+                ],
+              ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close', style: TextStyle(color: Colors.grey)),
+          )
+        ],
+      )
+    );
+  }
+
+  DateTime? _computeNextMeetingDate(String? day, String? time, String? frequency, String? startDate) {
+    if (day == null || time == null) return null;
+  int? wd = _parseWeekday(day);
+  final hm = _parseTime(time);
+  if (wd == null) return null;
+    final now = DateTime.now();
+    final start = _parseDate(startDate) ?? now;
+    final base = now.isAfter(start) ? now : start;
+    String f = (frequency ?? 'weekly').toLowerCase();
+    DateTime nextWeekly(DateTime from) {
+      final fromAtTime = DateTime(from.year, from.month, from.day, hm.h, hm.m);
+      final deltaDays = (wd - from.weekday + 7) % 7;
+      var cand = fromAtTime.add(Duration(days: deltaDays));
+      if (deltaDays == 0 && cand.isBefore(from)) cand = cand.add(const Duration(days: 7));
+      return cand;
+    }
+    DateTime nextKWeekly(int k) {
+      var first = nextWeekly(start);
+      if (first.isBefore(start)) first = first.add(const Duration(days: 7));
+      while (first.isBefore(base)) { first = first.add(Duration(days: 7 * k)); }
+      return first;
+    }
+    final everyNWeeks = RegExp(r'every\s+(\d+)\s*weeks?');
+    final m = everyNWeeks.firstMatch(f);
+    if (m != null) { final n = int.tryParse(m.group(1)! ) ?? 1; return nextKWeekly(n.clamp(1, 52)); }
+    if (f.contains('biweek') || f.contains('every other week') || f.contains('fortnight')) return nextKWeekly(2);
+    return nextKWeekly(1);
+  }
+
+  int? _parseWeekday(String input) {
+    final s = input.trim().toLowerCase();
+    const map = {'mon':1,'monday':1,'tue':2,'tues':2,'tuesday':2,'wed':3,'weds':3,'wednesday':3,'thu':4,'thur':4,'thurs':4,'thursday':4,'fri':5,'friday':5,'sat':6,'saturday':6,'sun':7,'sunday':7};
+    if (map.containsKey(s)) return map[s];
+    for (final e in map.entries) { if (s.startsWith(e.key)) return e.value; }
+    return null;
+  }
+  _MeetingHM _parseTime(String input) {
+    var s = input.trim().toLowerCase();
+    s = s.replaceAll('.', '').replaceAll(' ', '');
+    final am = s.endsWith('am');
+    final pm = s.endsWith('pm');
+    if (am || pm) s = s.substring(0, s.length - 2);
+    final parts = s.split(':');
+    int h = int.tryParse(parts[0]) ?? 0; int m = parts.length>1 ? int.tryParse(parts[1].replaceAll(RegExp(r'[^0-9]'),'')) ?? 0 : 0;
+    if (am) { if (h==12) h=0; }
+    if (pm) { if (h<12) h+=12; }
+    return _MeetingHM(h,m);
+  }
+  DateTime? _parseDate(String? input) { if (input==null||input.isEmpty) return null; return DateTime.tryParse(input); }
+  String _formatFriendly(DateTime dt) {
+    const dows=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const mos=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    final dow=dows[(dt.weekday-1).clamp(0,6)];
+    final mon=mos[(dt.month-1).clamp(0,11)];
+    final h24=dt.hour; final isPM=h24>=12; final h12raw=h24%12; final h12=h12raw==0?12:h12raw; final mm=dt.minute.toString().padLeft(2,'0'); final ap=isPM?'PM':'AM';
+    return '$dow, $mon ${dt.day}, ${dt.year} · $h12:$mm $ap';
+  }
+
+  // Local minimal time holder (avoid importing apprentice screen private class)
 
   Widget _buildAssessmentsTab() {
     return Padding(
@@ -843,31 +1064,6 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
     return Colors.red;
   }
 
-  Widget _buildNotesTab() {
-    return const Center(
-      child: Text(
-        'Notes functionality coming soon',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 18,
-          fontFamily: 'Poppins',
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHistoryTab() {
-    return const Center(
-      child: Text(
-        'History functionality coming soon',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 18,
-          fontFamily: 'Poppins',
-        ),
-      ),
-    );
-  }
 
 
   Future<void> _showApprenticeProfile(String apprenticeId) async {
@@ -1158,4 +1354,11 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
       ),
     );
   }
+}
+
+// Helper struct for meeting hour/minute used in meeting info calculations.
+class _MeetingHM {
+  final int h;
+  final int m;
+  const _MeetingHM(this.h, this.m);
 }
