@@ -4,6 +4,8 @@ import '../widgets/base_dashboard.dart';
 import '../services/api_service.dart';
 import 'assessment_screen.dart';
 import 'apprentice_invites_screen.dart';
+// Use the unified mentor & agreements screen (overview merged in)
+import 'apprentice_mentor_screen.dart';
 
 class ApprenticeDashboardNew extends StatefulWidget {
   const ApprenticeDashboardNew({super.key});
@@ -18,11 +20,20 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
   List<Map<String, dynamic>> _assessments = [];
   bool _isLoading = true;
   String? _error;
+  String? _name; // backend 'name' field
 
   @override
   void initState() {
     super.initState();
     _initializeAndLoadData();
+  }
+
+  String _deriveDisplayName() {
+    final n = _name?.trim();
+    if (n != null && n.isNotEmpty) return n;
+    final email = user?.email;
+    if (email != null && email.contains('@')) return email.split('@')[0];
+    return 'Apprentice';
   }
 
   Future<void> _initializeAndLoadData() async {
@@ -33,12 +44,29 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
         _apiService.bearerToken = token;
       }
       
-      await _loadAssessments();
+      // In parallel: user profile + assessments
+      await Future.wait([
+        _loadUserProfile(),
+        _loadAssessments(),
+      ]);
     } catch (e) {
       setState(() {
         _error = 'Failed to initialize: $e';
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      final uid = user?.uid;
+      if (uid == null) return;
+  final profile = await _apiService.getUserProfile(uid);
+  final name = (profile['name'] as String?)?.trim();
+  if (mounted) setState(() { _name = (name == null || name.isEmpty) ? null : name; });
+    } catch (e) {
+      // Silent fail; fall back to email prefix
+      debugPrint('Failed to load apprentice profile name: $e');
     }
   }
 
@@ -75,6 +103,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
   @override
   Widget build(BuildContext context) {
     return BaseDashboard(
+      logoHeight: 64,
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -134,7 +163,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
                     ),
                   ),
                   Text(
-                    user?.email?.split('@')[0] ?? 'Apprentice',
+                    _deriveDisplayName(),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 20,
@@ -213,10 +242,12 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
             Expanded(
               child: _buildActionCard(
                 icon: Icons.people,
-                title: 'Mentors',
-                subtitle: 'View your mentors',
+                title: 'Mentor',
+                subtitle: 'Mentor & Agreements',
                 color: Colors.purple,
-                onTap: () => _showComingSoon('Mentor Management'),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ApprenticeMentorScreen()),
+                ),
               ),
             ),
           ],

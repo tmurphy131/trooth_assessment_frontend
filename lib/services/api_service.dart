@@ -189,13 +189,24 @@ class ApiService {
     const tag = 'API-getUserProfile';
   await _ensureFreshToken();
     _logReq(tag, 'GET', '/users/$uid');
-    final r = await http.get(
+    final primary = await http.get(
       Uri.parse('$_base/users/$uid'),
       headers: _headers(),
     );
-    _logRes(tag, r);
-    if (r.statusCode == 200) return jsonDecode(r.body);
-    throw Exception('getUserProfile failed (${r.statusCode})');
+    _logRes(tag, primary);
+    if (primary.statusCode == 200) return jsonDecode(primary.body);
+    if (primary.statusCode == 404) {
+      // Fallback to /users/me (some deployments may restrict direct ID lookups)
+      _logReq(tag, 'GET', '/users/me');
+      final me = await http.get(
+        Uri.parse('$_base/users/me'),
+        headers: _headers(),
+      );
+      _logRes(tag, me);
+      if (me.statusCode == 200) return jsonDecode(me.body);
+      throw Exception('getUserProfile failed 404 primary; fallback /users/me => ${me.statusCode}');
+    }
+    throw Exception('getUserProfile failed (${primary.statusCode})');
   }
 
   /* ─────────────────────────────────────────────────────────────────── */
@@ -215,6 +226,52 @@ class ApiService {
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body);
     throw Exception('createAssessment failed (${r.statusCode})');
+  }
+
+  /* ─────────────────────────────────────────────────────────────────── */
+  /*  🤝  Mentorship (Apprentice)                                        */
+  /* ─────────────────────────────────────────────────────────────────── */
+
+  Future<Map<String, dynamic>> getMentorStatus() async {
+    const tag = 'API-getMentorStatus';
+    await _ensureFreshToken();
+    const path = '/apprentice/mentor/status';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('getMentorStatus failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<List<dynamic>> listPendingAgreements() async {
+    const tag = 'API-listPendingAgreements';
+    await _ensureFreshToken();
+    const path = '/apprentice/agreements/pending';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
+    throw Exception('listPendingAgreements failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<Map<String, dynamic>> revokeMentor({String? reason}) async {
+    const tag = 'API-revokeMentor';
+    await _ensureFreshToken();
+    const path = '/apprentice/mentor/revoke';
+    final payload = reason == null || reason.trim().isEmpty ? {} : { 'reason': reason.trim() };
+    _logReq(tag, 'POST', path, payload);
+    final r = await http.post(
+      Uri.parse('$_base$path'),
+      headers: _headers(),
+      body: jsonEncode(payload),
+    );
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    // Surface 409 specially
+    if (r.statusCode == 409) {
+      throw Exception('Cannot revoke: pending agreement (409)');
+    }
+    throw Exception('revokeMentor failed (${r.statusCode}) ${r.body}');
   }
 
   Future<Map<String, dynamic>> saveAssessmentDraft(
@@ -363,6 +420,56 @@ class ApiService {
     throw Exception('getApprenticeSubmittedAssessments failed (${r.statusCode})');
   }
 
+  /* ─────────────────────────────────────────────────────────────────── */
+  /*  🧑‍🏫  Mentor Profile                                               */
+  /* ─────────────────────────────────────────────────────────────────── */
+
+  Future<Map<String, dynamic>> getMyMentorProfile() async {
+    const tag = 'API-getMyMentorProfile';
+    await _ensureFreshToken();
+    const path = '/mentor-profile/me';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('getMyMentorProfile failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<Map<String, dynamic>> updateMyMentorProfile({
+    String? avatarUrl,
+    String? roleTitle,
+    String? organization,
+    String? phone,
+    String? bio,
+  }) async {
+    const tag = 'API-updateMyMentorProfile';
+    await _ensureFreshToken();
+    const path = '/mentor-profile/me';
+    final payload = {
+      if (avatarUrl != null) 'avatar_url': avatarUrl,
+      if (roleTitle != null) 'role_title': roleTitle,
+      if (organization != null) 'organization': organization,
+      if (phone != null) 'phone': phone,
+      if (bio != null) 'bio': bio,
+    };
+    _logReq(tag, 'PUT', path, payload);
+    final r = await http.put(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('updateMyMentorProfile failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<Map<String, dynamic>> getActiveMentorProfileForApprentice() async {
+    const tag = 'API-getMentorProfileForApprentice';
+    await _ensureFreshToken();
+    const path = '/mentor-profile/for-apprentice';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('getMentorProfileForApprentice failed (${r.statusCode}) ${r.body}');
+  }
+
   Future<Map<String, dynamic>> getAssessmentDetail(String assessmentId) async {
     const tag = 'API-getAssessmentDetail';
   await _ensureFreshToken();
@@ -402,6 +509,98 @@ class ApiService {
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body);
     throw Exception('getAssessmentResults failed (${r.statusCode})');
+  }
+
+  /* ─────────────────────────────────────────────────────────────────── */
+  /*  🔗  Mentor Resources (links only)                                   */
+  /* ─────────────────────────────────────────────────────────────────── */
+
+  // Apprentice: list shared resources targeted to me
+  Future<List<dynamic>> listMySharedResources() async {
+    const tag = 'API-listMySharedResources';
+    await _ensureFreshToken();
+    const path = '/apprentice/resources';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
+    throw Exception('listMySharedResources failed (${r.statusCode}) ${r.body}');
+  }
+
+  // Mentor: list my resources (optionally filter by apprentice)
+  Future<List<dynamic>> listMentorResources({String? apprenticeId}) async {
+    const tag = 'API-listMentorResources';
+    await _ensureFreshToken();
+    var uri = Uri.parse('$_base/mentor/resources');
+    if (apprenticeId != null && apprenticeId.isNotEmpty) {
+      uri = uri.replace(queryParameters: {'apprentice_id': apprenticeId});
+    }
+    _logReq(tag, 'GET', uri.path + (uri.query.isNotEmpty ? '?'+uri.query : ''));
+    final r = await http.get(uri, headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
+    throw Exception('listMentorResources failed (${r.statusCode}) ${r.body}');
+  }
+
+  // Mentor: create a resource
+  Future<Map<String, dynamic>> createMentorResource({
+    String? apprenticeId,
+    required String title,
+    String? description,
+    String? linkUrl,
+    bool isShared = true,
+  }) async {
+    const tag = 'API-createMentorResource';
+    await _ensureFreshToken();
+    const path = '/mentor/resources';
+    final payload = {
+      if (apprenticeId != null && apprenticeId.isNotEmpty) 'apprentice_id': apprenticeId,
+      'title': title,
+      if (description != null) 'description': description,
+      if (linkUrl != null) 'link_url': linkUrl,
+      'is_shared': isShared,
+    };
+    _logReq(tag, 'POST', path, payload);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    _logRes(tag, r);
+    if (r.statusCode == 200 || r.statusCode == 201) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('createMentorResource failed (${r.statusCode}) ${r.body}');
+  }
+
+  // Mentor: update a resource
+  Future<Map<String, dynamic>> updateMentorResource({
+    required String resourceId,
+    String? title,
+    String? description,
+    String? linkUrl,
+    bool? isShared,
+  }) async {
+    const tag = 'API-updateMentorResource';
+    await _ensureFreshToken();
+    final path = '/mentor/resources/$resourceId';
+    final payload = <String, dynamic>{
+      if (title != null) 'title': title,
+      if (description != null) 'description': description,
+      if (linkUrl != null) 'link_url': linkUrl,
+      if (isShared != null) 'is_shared': isShared,
+    };
+    _logReq(tag, 'PATCH', path, payload);
+    final r = await http.patch(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('updateMentorResource failed (${r.statusCode}) ${r.body}');
+  }
+
+  // Mentor: delete a resource
+  Future<bool> deleteMentorResource(String resourceId) async {
+    const tag = 'API-deleteMentorResource';
+    await _ensureFreshToken();
+    final path = '/mentor/resources/$resourceId';
+    _logReq(tag, 'DELETE', path);
+    final r = await http.delete(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return (jsonDecode(r.body) as Map<String, dynamic>)['deleted'] == true;
+    throw Exception('deleteMentorResource failed (${r.statusCode}) ${r.body}');
   }
 
   Future<List<dynamic>> getSubmittedDrafts({
@@ -1119,6 +1318,21 @@ class ApiService {
       if (r.statusCode == 200) return jsonDecode(r.body);
       throw Exception('updateAgreementFields failed (${r.statusCode})');
     }
+  
+  /// Apprentice requests mentor to resend parent link (no token generation here)
+  Future<Map<String, dynamic>> requestParentResendRequest(String agreementId, {String? reason}) async {
+    const tag = 'API-requestParentResendRequest';
+    await _ensureFreshToken();
+    final path = '/agreements/$agreementId/request-resend-parent';
+    final payload = <String, dynamic>{ if (reason != null && reason.isNotEmpty) 'reason': reason };
+    _logReq(tag, 'POST', path, payload.isEmpty ? null : payload);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body);
+    if (r.statusCode == 409) throw Exception('Not awaiting parent signature');
+    if (r.statusCode == 429) throw Exception('Too many requests; try later');
+    throw Exception('requestParentResendRequest failed (${r.statusCode})');
+  }
   Future<Map<String, dynamic>> terminateApprenticeship(String apprenticeId, String reason) async {
     const tag = 'API-terminateApprenticeship';
     await _ensureFreshToken();
@@ -1145,6 +1359,43 @@ class ApiService {
     throw Exception('terminateApprenticeship failed (${r.statusCode}) ${r.body}');
   }
 
+  /// Apprentice meeting reschedule request (emails mentor)
+  Future<Map<String, dynamic>> requestMeetingReschedule(String agreementId, {String? reason, List<String>? proposals}) async {
+    const tag = 'API-requestMeetingReschedule';
+    await _ensureFreshToken();
+    final path = '/agreements/$agreementId/request-reschedule';
+    final payload = <String, dynamic>{
+      if (reason != null && reason.isNotEmpty) 'reason': reason,
+      if (proposals != null && proposals.isNotEmpty) 'proposals': proposals,
+    };
+    // Add a lightweight correlation id to trace in server logs.
+    final correlationId = 'resched-${DateTime.now().millisecondsSinceEpoch}-${(1000 + (DateTime.now().microsecondsSinceEpoch % 8999))}';
+    final headers = _headers();
+    headers['x-correlation-id'] = correlationId;
+    _logReq(tag, 'POST', path, payload.isEmpty ? null : payload);
+    http.Response r;
+    try {
+      r = await http.post(Uri.parse('$_base$path'), headers: headers, body: jsonEncode(payload));
+    } catch (e) {
+      // Network / transport error – expose correlation id for cross-reference
+      throw Exception('requestMeetingReschedule network error correlation=$correlationId err=$e');
+    }
+    _logRes(tag, r);
+    if (r.statusCode == 200) {
+      try {
+        return jsonDecode(r.body) as Map<String,dynamic>;
+      } catch (e) {
+        throw Exception('requestMeetingReschedule parse error status=200 correlation=$correlationId bodyPreview=${r.body.substring(0, r.body.length > 180 ? 180 : r.body.length)} err=$e');
+      }
+    }
+    if (r.statusCode == 409) {
+      throw Exception('Agreement inactive (409) correlation=$correlationId');
+    }
+    // Provide status + compact body snippet for faster debugging.
+    final snippet = r.body.isEmpty ? '<empty>' : r.body.substring(0, r.body.length > 300 ? 300 : r.body.length);
+    throw Exception('requestMeetingReschedule failed status=${r.statusCode} correlation=$correlationId body=$snippet');
+  }
+
   Future<Map<String, dynamic>> reinstateApprenticeship(String apprenticeId, {String? reason}) async {
     const tag = 'API-reinstateApprenticeship';
     await _ensureFreshToken();
@@ -1159,5 +1410,95 @@ class ApiService {
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body);
     throw Exception('reinstateApprenticeship failed (${r.statusCode}) ${r.body}');
+  }
+
+  // ───────────────────────────────────────────────────────────────────
+  //  🔔 Notifications (Mentor)
+  // ───────────────────────────────────────────────────────────────────
+  Future<List<dynamic>> mentorNotifications() async {
+    const tag = 'API-mentorNotifications';
+    await _ensureFreshToken();
+    final path = '/mentor/notifications';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
+    throw Exception('mentorNotifications failed (${r.statusCode}): ${r.body}');
+  }
+
+  Future<List<dynamic>> mentorNotificationsHistory() async {
+    const tag = 'API-mentorNotificationsHistory';
+    await _ensureFreshToken();
+    final path = '/mentor/notifications/history';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
+    if (r.statusCode == 404) {
+      // Deployed backend likely not updated yet with history endpoint.
+      // Fail soft: treat as empty history so UI still works.
+      dev.log('$tag endpoint missing on server (404). Returning empty list fallback.');
+      return const [];
+    }
+    throw Exception('mentorNotificationsHistory failed (${r.statusCode}): ${r.body}');
+  }
+
+  Future<Map<String, dynamic>> dismissNotification(String notificationId) async {
+    const tag = 'API-dismissNotification';
+    await _ensureFreshToken();
+    final path = '/mentor/notifications/$notificationId/dismiss';
+    _logReq(tag, 'POST', path);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    if (r.statusCode == 404) {
+      // Distinguish between endpoint missing vs domain notification not found.
+      // Server-side function returns detail "Notification not found" when route exists.
+      // Generic {"detail":"Not Found"} means path missing in deployed build.
+      try {
+        final body = jsonDecode(r.body);
+        if (body is Map && body['detail'] == 'Not Found') {
+          dev.log('$tag endpoint missing (404). Simulating client-side dismiss.');
+          // Simulate successful dismissal so UI removes the item.
+          return {'id': notificationId, 'is_read': true};
+        }
+      } catch (_) {}
+    }
+    throw Exception('dismissNotification failed (${r.statusCode}): ${r.body}');
+  }
+
+  Future<int> dismissAllNotifications() async {
+    const tag = 'API-dismissAllNotifications';
+    await _ensureFreshToken();
+    const path = '/mentor/notifications/dismiss-all';
+    _logReq(tag, 'POST', path);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) {
+      final body = jsonDecode(r.body) as Map<String, dynamic>;
+      return (body['dismissed'] ?? 0) as int;
+    }
+    throw Exception('dismissAllNotifications failed (${r.statusCode}): ${r.body}');
+  }
+
+  // Mentor respond to a reschedule request
+  Future<Map<String, dynamic>> respondReschedule(String agreementId, {
+    required String decision, // accepted | declined | proposed
+    String? selectedTime,
+    String? note,
+  }) async {
+    const tag = 'API-respondReschedule';
+    await _ensureFreshToken();
+    final path = '/agreements/$agreementId/reschedule/respond';
+    final payload = <String, dynamic>{
+      'decision': decision,
+      if (selectedTime != null && selectedTime.isNotEmpty) 'selected_time': selectedTime,
+      if (note != null && note.isNotEmpty) 'note': note,
+    };
+    _logReq(tag, 'POST', path, payload);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body);
+    throw Exception('respondReschedule failed (${r.statusCode}): ${r.body}');
   }
 }

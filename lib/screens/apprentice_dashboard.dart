@@ -82,6 +82,7 @@ class _ApprenticeDashboardState extends State<ApprenticeDashboard> {
   @override
   Widget build(BuildContext context) {
     return BaseDashboard(
+      logoHeight: 64,
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
