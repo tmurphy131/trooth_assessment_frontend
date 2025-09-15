@@ -4,6 +4,7 @@ import '../widgets/base_dashboard.dart';
 import '../services/api_service.dart';
 import 'assessment_screen.dart';
 import 'agreement_preview_screen.dart';
+import 'spiritual_gifts_results_screen.dart';
 
 class ApprenticeDashboard extends StatefulWidget {
   const ApprenticeDashboard({super.key});
@@ -94,6 +95,10 @@ class _ApprenticeDashboardState extends State<ApprenticeDashboard> {
             
             // Quick Actions
             _buildQuickActions(),
+            const SizedBox(height: 24),
+
+            // Spiritual Gifts Progress Card (preview of latest)
+            _SpiritualGiftsProgressCard(api: _apiService, onStart: _startNewAssessment, onView: _openSpiritualGiftsResults),
             const SizedBox(height: 24),
             
             // Mentorship Agreements (only when present)
@@ -669,6 +674,15 @@ class _ApprenticeDashboardState extends State<ApprenticeDashboard> {
       _showMessage('Failed to start assessment: $e', isError: true);
     }
   }
+
+  void _openSpiritualGiftsResults() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const SpiritualGiftsResultsScreen(),
+      ),
+    );
+  }
   
   Future<String?> _showAssessmentSelectionDialog(List<dynamic> templates) async {
     return showDialog<String>(
@@ -925,5 +939,174 @@ class _ApprenticeDashboardState extends State<ApprenticeDashboard> {
     } catch (e) {
       _showMessage('Failed to delete draft: $e', isError: true);
     }
+  }
+}
+
+class _SpiritualGiftsProgressCard extends StatefulWidget {
+  final ApiService api;
+  final VoidCallback onStart;
+  final VoidCallback onView;
+  const _SpiritualGiftsProgressCard({required this.api, required this.onStart, required this.onView});
+
+  @override
+  State<_SpiritualGiftsProgressCard> createState() => _SpiritualGiftsProgressCardState();
+}
+
+class _SpiritualGiftsProgressCardState extends State<_SpiritualGiftsProgressCard> {
+  bool _loading = true;
+  Map<String, dynamic>? _result;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final json = await widget.api.getSpiritualGiftsLatest();
+      if (!mounted) return;
+      if (json.isEmpty) {
+        setState(() { _loading = false; _result = null; });
+      } else {
+        setState(() { _loading = false; _result = json; });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _loading = false; _error = e.toString(); });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Colors.grey[900],
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(18.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.auto_awesome, color: Colors.amber, size: 26),
+                const SizedBox(width: 10),
+                const Text('Spiritual Gifts', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.bold)),
+                const Spacer(),
+                IconButton(
+                  onPressed: _loading ? null : _load,
+                  icon: const Icon(Icons.refresh, color: Colors.amber, size: 20),
+                  tooltip: 'Refresh',
+                )
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (_loading)
+              const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 12), child: CircularProgressIndicator(color: Colors.amber, strokeWidth: 2)))
+            else if (_error != null)
+              _buildError()
+            else if (_result == null)
+              _buildEmpty()
+            else
+              _buildPreview(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildError() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Failed to load: $_error', style: const TextStyle(color: Colors.redAccent, fontFamily: 'Poppins', fontSize: 12)),
+        const SizedBox(height: 8),
+        ElevatedButton(
+          onPressed: _load,
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black),
+          child: const Text('Retry', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+        )
+      ],
+    );
+  }
+
+  Widget _buildEmpty() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Text(
+            'Discover how God has uniquely gifted you. Take the Spiritual Gifts Assessment to see your top gifts.',
+            style: TextStyle(color: Colors.white.withOpacity(0.75), fontFamily: 'Poppins', fontSize: 13, height: 1.3),
+          ),
+        ),
+        const SizedBox(width: 12),
+        ElevatedButton(
+          onPressed: widget.onStart,
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
+          child: const Text('Start', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+        )
+      ],
+    );
+  }
+
+  Widget _buildPreview() {
+    final createdAt = _result!['created_at'] as String?;
+    final truncated = (_result!['top_gifts_truncated'] ?? _result!['top_gifts'] ?? []) as List<dynamic>;
+    final gifts = truncated.take(3).map((g) => g['gift'] ?? g['gift_name'] ?? g['name'] ?? 'Gift').cast<String>().toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (createdAt != null)
+          Text(_friendlyDate(createdAt), style: TextStyle(color: Colors.grey[400], fontSize: 12, fontFamily: 'Poppins')),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: gifts.map((g) => _GiftChip(label: g)).toList(),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            ElevatedButton(
+              onPressed: widget.onView,
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12)),
+              child: const Text('View Report', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(width: 12),
+            OutlinedButton(
+              onPressed: widget.onStart,
+              style: OutlinedButton.styleFrom(foregroundColor: Colors.amber, side: const BorderSide(color: Colors.amber), padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12)),
+              child: const Text('Retake', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+            )
+          ],
+        )
+      ],
+    );
+  }
+
+  String _friendlyDate(String iso) {
+    try {
+      final d = DateTime.parse(iso);
+      return '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
+    } catch (_) { return iso; }
+  }
+}
+
+class _GiftChip extends StatelessWidget {
+  final String label;
+  const _GiftChip({required this.label});
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.amber.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.amber.withOpacity(0.45)),
+      ),
+      child: Text(label, style: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
+    );
   }
 }

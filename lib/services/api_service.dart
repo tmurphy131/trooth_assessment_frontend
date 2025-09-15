@@ -1501,4 +1501,178 @@ class ApiService {
     if (r.statusCode == 200) return jsonDecode(r.body);
     throw Exception('respondReschedule failed (${r.statusCode}): ${r.body}');
   }
+
+  /* ─────────────────────────────────────────────────────────────────── */
+  /*  🌟  Spiritual Gifts Assessment                                    */
+  /* ─────────────────────────────────────────────────────────────────── */
+
+  static const String _spiritualGiftsTemplateKey = 'spiritual_gifts_v1';
+
+  Future<Map<String, dynamic>> getSpiritualGiftsQuestions() async {
+    const tag = 'API-getSpiritualGiftsQuestions';
+    await _ensureFreshToken();
+    const path = '/assessments/spiritual-gifts/questions';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('getSpiritualGiftsQuestions failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<Map<String, dynamic>> submitSpiritualGifts(Map<String, int> answers) async {
+    const tag = 'API-submitSpiritualGifts';
+    await _ensureFreshToken();
+    // Backend router prefix is /assessments/spiritual-gifts
+    const path = '/assessments/spiritual-gifts/submit';
+    final payload = { 'template_key': _spiritualGiftsTemplateKey, 'answers': answers };
+    _logReq(tag, 'POST', path, payload);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('submitSpiritualGifts failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<Map<String, dynamic>> getSpiritualGiftsLatest() async {
+    const tag = 'API-getSpiritualGiftsLatest';
+    await _ensureFreshToken();
+    const path = '/assessments/spiritual-gifts/latest';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) {
+      final data = jsonDecode(r.body) as Map<String, dynamic>;
+      return _normalizeSpiritualGiftsResult(data);
+    }
+    if (r.statusCode == 404) return {}; // no submission yet
+    throw Exception('getSpiritualGiftsLatest failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<Map<String, dynamic>> mentorGetApprenticeSpiritualGiftsLatest(String apprenticeId) async {
+    const tag = 'API-mentorGetApprenticeSpiritualGiftsLatest';
+    await _ensureFreshToken();
+    final path = '/assessments/spiritual-gifts/$apprenticeId/latest';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) {
+      final data = jsonDecode(r.body) as Map<String, dynamic>;
+      return _normalizeSpiritualGiftsResult(data);
+    }
+    if (r.statusCode == 404) return {}; // none yet
+    throw Exception('mentorGetApprenticeSpiritualGiftsLatest failed (${r.statusCode}) ${r.body}');
+  }
+
+  Map<String, dynamic> _normalizeSpiritualGiftsResult(Map<String, dynamic> data) {
+    // If backend already supplies the full contract, return early.
+  final hasTruncated = data.containsKey('top_gifts_truncated');
+  final hasExpanded = data.containsKey('top_gifts_expanded');
+
+    // Accept legacy shape with 'top_gifts' + 'scores'
+    if (!hasTruncated || !hasExpanded) {
+      final List<dynamic> scores = (data['all_scores'] ?? data['scores'] ?? []) as List<dynamic>;
+      final List<dynamic> tops = (data['top_gifts'] ?? []) as List<dynamic>;
+      // Build deterministic ordering by score desc then gift asc
+      List<Map<String, dynamic>> all = scores.cast<Map<String, dynamic>>();
+      if (all.isEmpty && tops.isNotEmpty) {
+        // If only tops exist, treat as all (fallback)
+        all = tops.cast<Map<String, dynamic>>();
+      }
+      all.sort((a,b){
+        final sa = (a['score'] ?? 0) as num;
+        final sb = (b['score'] ?? 0) as num;
+        if (sb.compareTo(sa) != 0) return sb.compareTo(sa);
+        final ga = (a['gift'] ?? a['gift_name'] ?? a['name'] ?? '').toString();
+        final gb = (b['gift'] ?? b['gift_name'] ?? b['name'] ?? '').toString();
+        return ga.compareTo(gb);
+      });
+      // Determine top truncated (first 3) and expanded (ties at 3rd)
+      final truncated = all.take(3).toList();
+      int? thirdScore = truncated.length == 3 ? (truncated[2]['score'] ?? 0) as int : null;
+      final expanded = thirdScore == null ? truncated : all.where((m) => (m['score'] ?? 0) >= thirdScore).toList();
+      data['top_gifts_truncated'] = truncated;
+      data['top_gifts_expanded'] = expanded;
+      if (!data.containsKey('rank_meta') && thirdScore != null) {
+        data['rank_meta'] = { 'third_place_score': thirdScore };
+      }
+      if (!data.containsKey('all_scores')) {
+        data['all_scores'] = all;
+      }
+    }
+    return data;
+  }
+
+  Future<Map<String, dynamic>> mentorGetApprenticeSpiritualGiftsHistory(String apprenticeId, {String? cursor, int? limit}) async {
+    const tag = 'API-mentorGetApprenticeSpiritualGiftsHistory';
+    await _ensureFreshToken();
+    final qp = <String,String>{};
+    if (cursor != null) qp['cursor'] = cursor;
+    if (limit != null) qp['limit'] = limit.toString();
+    final base = '/assessments/spiritual-gifts/$apprenticeId/history';
+    final uri = Uri.parse('$_base$base').replace(queryParameters: qp.isEmpty ? null : qp);
+    _logReq(tag, 'GET', uri.path + (uri.query.isNotEmpty ? '?'+uri.query : ''));
+    final r = await http.get(uri, headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('mentorGetApprenticeSpiritualGiftsHistory failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<bool> emailMySpiritualGiftsReport() async {
+    const tag = 'API-emailMySpiritualGiftsReport';
+    await _ensureFreshToken();
+    const path = '/assessments/spiritual-gifts/email-report';
+    _logReq(tag, 'POST', path, {});
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return true;
+    if (r.statusCode == 429) {
+      throw Exception('RATE_LIMIT: ${r.body}');
+    }
+    throw Exception('emailMySpiritualGiftsReport failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<bool> mentorEmailSpiritualGiftsReport(String apprenticeId) async {
+    const tag = 'API-mentorEmailSpiritualGiftsReport';
+    await _ensureFreshToken();
+    final path = '/assessments/spiritual-gifts/$apprenticeId/email-report';
+    _logReq(tag, 'POST', path, {});
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return true;
+    if (r.statusCode == 429) {
+      throw Exception('RATE_LIMIT: ${r.body}');
+    }
+    throw Exception('mentorEmailSpiritualGiftsReport failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<Map<String, dynamic>> getSpiritualGiftsTemplateMetadata() async {
+    const tag = 'API-getSpiritualGiftsTemplateMetadata';
+    await _ensureFreshToken();
+    const path = '/spiritual-gifts/template/metadata';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('getSpiritualGiftsTemplateMetadata failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<List<Map<String, dynamic>>> getSpiritualGiftsDefinitions() async {
+    const tag = 'API-getSpiritualGiftsDefinitions';
+    await _ensureFreshToken();
+    const path = '/spiritual-gifts/definitions';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) {
+      final decoded = jsonDecode(r.body);
+      if (decoded is List) {
+        return decoded.map((e) => (e as Map).map((k, v) => MapEntry(k.toString(), v))).cast<Map<String,dynamic>>().toList();
+      }
+      if (decoded is Map && decoded['items'] is List) {
+        return (decoded['items'] as List).map((e) => (e as Map).map((k, v) => MapEntry(k.toString(), v))).cast<Map<String,dynamic>>().toList();
+      }
+      throw Exception('Unexpected definitions payload shape');
+    }
+    if (r.statusCode == 404) return [];
+    throw Exception('getSpiritualGiftsDefinitions failed (${r.statusCode}) ${r.body}');
+  }
 }

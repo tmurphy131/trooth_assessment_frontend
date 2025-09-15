@@ -1,0 +1,8 @@
+// Release.xcconfig restored
+// Include CocoaPods configuration
+#include "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"
+
+// Include Flutter generated values
+#include "Generated.xcconfig"
+
+// You can add custom release overrides below this line

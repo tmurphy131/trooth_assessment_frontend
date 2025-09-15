@@ -6,6 +6,7 @@ import 'assessment_screen.dart';
 import 'apprentice_invites_screen.dart';
 // Use the unified mentor & agreements screen (overview merged in)
 import 'apprentice_mentor_screen.dart';
+import 'spiritual_gifts_assessment_screen.dart';
 
 class ApprenticeDashboardNew extends StatefulWidget {
   const ApprenticeDashboardNew({super.key});
@@ -21,11 +22,31 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
   bool _isLoading = true;
   String? _error;
   String? _name; // backend 'name' field
+  int _inviteCount = 0;
 
   @override
   void initState() {
     super.initState();
     _initializeAndLoadData();
+  }
+
+  Future<void> _initializeAndLoadData() async {
+    await Future.wait([
+      _loadUserProfile(),
+      _loadAssessments(),
+      _loadInviteCount(),
+    ]);
+  }
+
+  Future<void> _loadInviteCount() async {
+    final email = user?.email;
+    if (email == null) return;
+    try {
+      final invites = await _apiService.getApprenticeInvites(email);
+      if (mounted) setState(() { _inviteCount = invites.length; });
+    } catch (e) {
+      debugPrint('Failed to load invites: $e');
+    }
   }
 
   String _deriveDisplayName() {
@@ -36,94 +57,85 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
     return 'Apprentice';
   }
 
-  Future<void> _initializeAndLoadData() async {
-    try {
-      // Set the bearer token for API calls
-      if (user != null) {
-        final token = await user!.getIdToken();
-        _apiService.bearerToken = token;
-      }
-      
-      // In parallel: user profile + assessments
-      await Future.wait([
-        _loadUserProfile(),
-        _loadAssessments(),
-      ]);
-    } catch (e) {
-      setState(() {
-        _error = 'Failed to initialize: $e';
-        _isLoading = false;
-      });
-    }
-  }
-
   Future<void> _loadUserProfile() async {
     try {
       final uid = user?.uid;
       if (uid == null) return;
-  final profile = await _apiService.getUserProfile(uid);
-  final name = (profile['name'] as String?)?.trim();
-  if (mounted) setState(() { _name = (name == null || name.isEmpty) ? null : name; });
+      final profile = await _apiService.getUserProfile(uid);
+      final name = (profile['name'] as String?)?.trim();
+      if (mounted) setState(() { _name = (name == null || name.isEmpty) ? null : name; });
     } catch (e) {
-      // Silent fail; fall back to email prefix
       debugPrint('Failed to load apprentice profile name: $e');
     }
   }
 
   Future<void> _loadAssessments() async {
     try {
-      setState(() {
-        _isLoading = true;
-        _error = null;
-      });
-
-      if (user?.uid != null) {
-        // Get all drafts (both in progress and submitted)
-        final allDrafts = await _apiService.getAllDrafts();
-        print('=== API RESPONSE DEBUG ===');
-        print('Number of drafts received: ${allDrafts.length}');
-        for (int i = 0; i < allDrafts.length; i++) {
-          print('Draft $i: ${allDrafts[i]}');
-        }
-        print('=== END API RESPONSE DEBUG ===');
-        
-        setState(() {
-          _assessments = allDrafts.cast<Map<String, dynamic>>();
-          _isLoading = false;
-        });
-      }
+      setState(() { _isLoading = true; _error = null; });
+      // TODO: Replace with actual backend endpoint listing assessments for apprentice
+      // Placeholder: reuse drafts endpoint for now
+      final drafts = await _apiService.getCompletedAssessments();
+      // Ensure list of maps
+      final items = drafts.map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e as Map)).toList();
+      if (mounted) setState(() { _assessments = items; _isLoading = false; });
     } catch (e) {
-      setState(() {
-        _error = 'Failed to load assessments: $e';
-        _isLoading = false;
-      });
+      if (mounted) setState(() { _error = 'Failed to load assessments: $e'; _isLoading = false; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return BaseDashboard(
-      logoHeight: 64,
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Welcome Section
             _buildWelcomeCard(),
             const SizedBox(height: 24),
-            
-            // Quick Actions
             _buildQuickActions(),
             const SizedBox(height: 24),
-            
-            // Recent Assessments
-            Expanded(
-              child: _buildRecentAssessments(),
-            ),
+            Expanded(child: _buildRecentAssessments()),
           ],
         ),
       ),
+      additionalActions: [
+        // Invitations icon with badge (badge hidden automatically when count == 0)
+        Stack(
+          alignment: Alignment.topRight,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.mail_outline, color: Color(0xFFFFD700)),
+              tooltip: 'Invitations',
+              onPressed: () async {
+                _viewInvitations();
+                await _loadInviteCount();
+              },
+            ),
+            if (_inviteCount > 0)
+              Positioned(
+                right: 6,
+                top: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    _inviteCount.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -135,6 +147,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
               width: 60,
@@ -143,11 +156,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
                 color: Colors.amber.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(30),
               ),
-              child: const Icon(
-                Icons.person,
-                color: Colors.amber,
-                size: 30,
-              ),
+              child: const Icon(Icons.person, color: Colors.amber, size: 30),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -203,6 +212,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
           ),
         ),
         const SizedBox(height: 12),
+        // First row: New Assessment + Spiritual Gifts
         Row(
           children: [
             Expanded(
@@ -211,22 +221,30 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
                 title: 'New Assessment',
                 subtitle: 'Start a spiritual assessment',
                 color: Colors.amber,
-                onTap: () => _startNewAssessment(),
+                onTap: _startNewAssessment,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _buildActionCard(
-                icon: Icons.mail_outline,
-                title: 'Invitations',
-                subtitle: 'View mentor invites',
-                color: Colors.green,
-                onTap: () => _viewInvitations(),
+                icon: Icons.auto_awesome,
+                title: 'Spiritual Gifts',
+                subtitle: 'Discover your gifts',
+                color: Colors.tealAccent.shade700,
+                onTap: () async {
+                  final proceed = await _showSpiritualGiftsDisclaimer();
+                  if (proceed == true && mounted) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SpiritualGiftsAssessmentScreen()),
+                    );
+                  }
+                },
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
+        // Second row: View Progress + Mentor
         Row(
           children: [
             Expanded(
@@ -757,6 +775,60 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
               style: TextStyle(
                 color: Colors.amber,
                 fontFamily: 'Poppins',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool?> _showSpiritualGiftsDisclaimer() {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text(
+          'Before You Begin',
+          style: TextStyle(
+            color: Colors.amber,
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const SingleChildScrollView(
+          child: Text(
+            'This assessment works best when you respond based on your current reality, not your aspirations. If asked about prayer, answer how you actually pray now, not how you wish you prayed. Choose responses that reflect what comes naturally to you, not what you think sounds more spiritual. Avoid "should" thinking—focus on your genuine patterns and experiences. There are no right or wrong answers, only an opportunity to discover how God has uniquely gifted you.',
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Poppins',
+              fontSize: 14,
+              height: 1.35,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: Colors.grey,
+                fontFamily: 'Poppins',
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber,
+              foregroundColor: Colors.black,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text(
+              'Begin',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
