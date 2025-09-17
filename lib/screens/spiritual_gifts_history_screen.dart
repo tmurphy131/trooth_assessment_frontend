@@ -35,6 +35,16 @@ class _SpiritualGiftsHistoryScreenState extends State<SpiritualGiftsHistoryScree
         _nextCursor = page.nextCursor;
         _initialLoading = false;
       });
+      // If history is empty but user has a latest submission (possible backend not returning self history yet), fallback to latest.
+      if (_items.isEmpty) {
+        try {
+          final latestJson = await _api.getSpiritualGiftsLatest();
+          if (latestJson.isNotEmpty) {
+            final latest = SpiritualGiftsResult.fromJson(latestJson);
+            setState(() { _items.add(latest); });
+          }
+        } catch (_) {/* silent fallback */}
+      }
     } catch (e) {
       setState(() { _initialLoading = false; _error = true; _errorMsg = 'Failed to load history: $e'; });
     }
@@ -139,9 +149,9 @@ class _SpiritualGiftsHistoryScreenState extends State<SpiritualGiftsHistoryScree
           physics: const AlwaysScrollableScrollPhysics(),
           children: const [
             SizedBox(height: 160),
-            Center(
-              child: Text('No submissions yet.', style: TextStyle(color: Colors.white70, fontFamily: 'Poppins')),
-            ),
+            Center(child: Text('No submissions yet.', style: TextStyle(color: Colors.white70, fontFamily: 'Poppins'))),
+            SizedBox(height: 40),
+            Center(child: Text('If you recently completed an assessment, pull to refresh.', style: TextStyle(color: Colors.white38, fontFamily: 'Poppins', fontSize: 12))),
           ],
         ),
       );
@@ -309,7 +319,9 @@ class _HistoryDetailSheet extends StatelessWidget {
               runSpacing: 10,
               children: result.topGifts.map((g) => _GiftChip(gift: g)).toList(),
             ),
-            const SizedBox(height: 26),
+      const SizedBox(height: 26),
+      _EmailReportSection(submissionId: result.submissionId),
+      const SizedBox(height: 26),
             const Text('Full Ranking',
                 style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 10),
@@ -334,7 +346,7 @@ class _HistoryDetailSheet extends StatelessWidget {
                     style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'),
                   ),
                   subtitle: Text(
-                    '${(g.normalized * 100).toStringAsFixed(1)}% • Raw ${g.rawScore.toStringAsFixed(1)}',
+                    '${(g.normalized * 100).toStringAsFixed(1)}% • Score ${g.rawScore.toStringAsFixed(1)}',
                     style: TextStyle(color: Colors.grey[400], fontFamily: 'Poppins', fontSize: 12),
                   ),
                 );
@@ -387,4 +399,74 @@ class _GiftChip extends StatelessWidget {
       .split('_')
       .map((e) => e.isEmpty ? e : e[0].toUpperCase() + e.substring(1))
       .join(' ');
+}
+
+class _EmailReportSection extends StatefulWidget {
+  final String submissionId;
+  const _EmailReportSection({required this.submissionId});
+
+  @override
+  State<_EmailReportSection> createState() => _EmailReportSectionState();
+}
+
+class _EmailReportSectionState extends State<_EmailReportSection> {
+  bool _sending = false;
+  String? _message; // success or error
+
+  Future<void> _send() async {
+    if (_sending) return;
+    setState(() { _sending = true; _message = null; });
+    final api = ApiService();
+    try {
+      await api.emailMySpiritualGiftsReportForSubmission(widget.submissionId);
+      if (!mounted) return;
+      setState(() { _message = 'Report email requested. Check your inbox shortly.'; });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _message = e.toString(); });
+    } finally {
+      if (mounted) setState(() { _sending = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Actions', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _sending ? null : _send,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                ),
+                icon: _sending ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black)) : const Icon(Icons.email_outlined),
+                label: Text(
+                  _sending ? 'Sending...' : 'Email this report',
+                  style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (_message != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            _message!,
+            style: TextStyle(
+              color: _message!.startsWith('Report email') ? Colors.greenAccent : Colors.redAccent,
+              fontFamily: 'Poppins',
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
 }

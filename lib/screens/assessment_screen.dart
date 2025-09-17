@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/api_service.dart';
+import 'assessment_results_screen.dart';
 
 class AssessmentScreen extends StatefulWidget {
   final String? templateId;
@@ -476,7 +477,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
               setState(() {
                 _answers[questionId] = value!;
               });
-              _saveProgress();
+              // Do not save while selecting; we'll persist on Next or explicit Save Draft
             },
           );
         },
@@ -511,7 +512,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
           setState(() {
             _answers[questionId] = value;
           });
-          _saveProgress();
+          // Do not save while typing; we'll persist on Next or explicit Save Draft
         },
       ),
     );
@@ -645,6 +646,8 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
 
   void _nextQuestion() {
     if (_currentQuestionIndex < _questions.length - 1) {
+      // Persist draft silently on navigation to Next
+      _persistDraftSilently();
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -652,40 +655,50 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
     }
   }
 
-  Future<void> _saveProgress() async {
+  Future<void> _persistDraftSilently() async {
     if (_isSaving) return;
-    
     try {
       setState(() {
         _isSaving = true;
       });
 
-      // Get the first available template ID
-      // In a real app, this would be passed from the calling screen
-      final templates = await _apiService.getPublishedTemplates();
-      String templateId = widget.templateId ?? 'default-template';
-      
-      if (templates.isNotEmpty) {
-        templateId = templates.first['id'] as String;
-      }
-
+      // Prepare payload
       final payload = {
-        'template_id': templateId,
         'answers': _answers,
-        'last_question_id': _questions[_currentQuestionIndex]['id'],
+        'last_question_id': _questions.isNotEmpty ? _questions[_currentQuestionIndex]['id'] : null,
       };
 
-      await _apiService.saveAssessmentDraft(payload);
-      
+      if (_currentDraft != null && _currentDraft!['id'] != null) {
+        await _apiService.updateDraft(payload, draftId: _currentDraft!['id']);
+      } else {
+        // Create or fetch a draft first
+        String? templateId = widget.templateId;
+        if (templateId == null) {
+          final templates = await _apiService.getPublishedTemplates();
+          if (templates.isNotEmpty) {
+            templateId = templates.first['id'] as String;
+          }
+        }
+        if (templateId == null) return; // cannot create without template id
+        final newDraft = await _apiService.startDraft(templateId);
+        await _apiService.updateDraft(payload, draftId: newDraft['id']);
+        setState(() {
+          _currentDraft = newDraft;
+        });
+      }
     } catch (e) {
-      print('Failed to save progress: $e');
-      // Don't show error to user for auto-save failures
+      // Silent failure; avoid disrupting the user while navigating
+      // Optionally log: print('Silent draft save failed: $e');
     } finally {
-      setState(() {
-        _isSaving = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
     }
   }
+
+  // Removed auto-save progress; draft persists only on Next or explicit Save Draft
 
   Future<void> _saveDraft() async {
     if (_answers.isEmpty) {
@@ -801,11 +814,11 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
       }
 
       // Then submit the draft using the proper endpoint
-      await _apiService.submitDraft();
-      
-      if (mounted) {
-        _showSuccessMessage('Final assessment submitted successfully! Your mentor will receive a notification and can now review your completed assessment.');
-      }
+      final submission = await _apiService.submitDraft();
+
+  // Show submitted snackbar and kick off status polling (stay on this screen)
+  if (!mounted) return;
+  _showSubmittedSnackAndPoll(submission);
       
     } catch (e) {
       _showMessage('Failed to submit assessment: $e', isError: true);
@@ -814,6 +827,124 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
         _isSaving = false;
       });
     }
+  }
+
+  void _showSubmittedSnackAndPoll(Map<String, dynamic> submission) {
+    final assessmentId = submission['id']?.toString();
+    if (assessmentId == null || assessmentId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Submitted. Preparing results...')),
+      );
+      return;
+    }
+
+    // Initial info snackbar
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Assessment submitted. Scoring in progress...')),
+    );
+
+    // Poll every 10 seconds until done or error
+    Future<void>.delayed(const Duration(seconds: 2), () async {
+      bool done = false;
+      while (!done && mounted) {
+        try {
+          final status = await _apiService.getAssessmentStatus(assessmentId);
+          final s = (status['status'] ?? (status['has_scores'] == true ? 'done' : 'processing')).toString();
+          if (s == 'done') {
+            done = true;
+            // Show snackbar with View Results action
+            if (!mounted) break;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Your assessment results are ready.'),
+                action: SnackBarAction(
+                  label: 'VIEW RESULTS',
+                  onPressed: () async {
+                    // Fetch full results then navigate
+                    try {
+                      final full = await _apiService.getAssessmentResults(assessmentId);
+                      if (!mounted) return;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AssessmentResultsScreen(assessment: full),
+                        ),
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to open results: $e')),
+                      );
+                    }
+                  },
+                ),
+                duration: const Duration(seconds: 6),
+              ),
+            );
+            break;
+          }
+          if (s == 'error') {
+            done = true;
+            if (!mounted) break;
+            _showScoringErrorDialog(assessmentId);
+            break;
+          }
+        } catch (e) {
+          // transient backend/network issue; continue polling
+        }
+        await Future<void>.delayed(const Duration(seconds: 10));
+      }
+    });
+  }
+
+  void _showScoringErrorDialog(String assessmentId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text(
+          'Scoring Delayed',
+          style: TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'We hit a snag while scoring your assessment. You can retry shortly. Your draft can be saved to revisit later.',
+          style: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close', style: TextStyle(color: Colors.grey, fontFamily: 'Poppins')),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              // Save as draft again to ensure user doesn’t lose work (no-op if already saved)
+              try {
+                if (_currentDraft != null && _currentDraft!['id'] != null) {
+                  final payload = {
+                    'answers': _answers,
+                    'last_question_id': _questions.isNotEmpty ? _questions[_currentQuestionIndex]['id'] : null,
+                  };
+                  await _apiService.updateDraft(payload, draftId: _currentDraft!['id']);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Draft saved. You can retry submission later.')),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Could not save draft: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Save as Draft', style: TextStyle(color: Colors.amber, fontFamily: 'Poppins')),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<bool> _showConfirmationDialog() async {
@@ -894,45 +1025,4 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
     );
   }
 
-  void _showSuccessMessage(String message) {
-    showDialog(
-      context: context,
-      barrierDismissible: false, // Prevent dismissing by tapping outside
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text(
-          'Assessment Submitted!',
-          style: TextStyle(
-            color: Colors.green,
-            fontFamily: 'Poppins',
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          message,
-          style: const TextStyle(
-            color: Colors.white,
-            fontFamily: 'Poppins',
-          ),
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context); // Close dialog
-              Navigator.pop(context, true); // Return to dashboard with success result
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text(
-              'Return to Dashboard',
-              style: TextStyle(
-                color: Colors.white,
-                fontFamily: 'Poppins',
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

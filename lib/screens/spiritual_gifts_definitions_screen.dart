@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../data/spiritual_gift_definitions.dart';
 
 /// Placeholder list of spiritual gift definitions.
 /// Later this can be fetched from backend metadata endpoint.
@@ -15,80 +16,12 @@ class _SpiritualGiftsDefinitionsScreenState extends State<SpiritualGiftsDefiniti
   List<Map<String, String>> _all = [];
   bool _loading = true;
   bool _error = false;
-  static final List<Map<String, String>> _fallback = [
-    {
-      'slug': 'teaching',
-      'name': 'Teaching',
-      'desc': 'Ability to explain and clarify truth so others grow in understanding and obedience.',
-      'refs': 'Acts 18:24-28; Romans 12:7'
-    },
-    {
-      'slug': 'leadership',
-      'name': 'Leadership',
-      'desc': 'Capacity to cast vision, mobilize, and guide people toward God-honoring goals.',
-      'refs': 'Romans 12:8; Hebrews 13:7'
-    },
-    {
-      'slug': 'mercy',
-      'name': 'Mercy',
-      'desc': 'Gifted empathy and compassion that moves to restorative action for the hurting.',
-      'refs': 'Romans 12:8; Luke 10:33-37'
-    },
-    {
-      'slug': 'service',
-      'name': 'Service',
-      'desc': 'Joyful capacity to meet practical needs and free others to function effectively.',
-      'refs': 'Romans 12:7; Acts 6:1-7'
-    },
-    {
-      'slug': 'encouragement',
-      'name': 'Encouragement',
-      'desc': 'Ability to strengthen, comfort, and urge others toward faithfulness.',
-      'refs': 'Romans 12:8; Acts 14:21-22'
-    },
-    {
-      'slug': 'giving',
-      'name': 'Giving',
-      'desc': 'Spirit-led impulse to generously resource kingdom work with unusual joy and sacrifice.',
-      'refs': 'Romans 12:8; 2 Corinthians 8:1-5'
-    },
-    {
-      'slug': 'wisdom',
-      'name': 'Wisdom',
-      'desc': 'Insight to apply knowledge and scripture to complex, gray, or pivotal situations.',
-      'refs': '1 Corinthians 12:8; James 3:17'
-    },
-    {
-      'slug': 'knowledge',
-      'name': 'Knowledge',
-      'desc': 'Ability to grasp, synthesize, or recall spiritual truth for timely use.',
-      'refs': '1 Corinthians 12:8; Colossians 1:9-10'
-    },
-    {
-      'slug': 'shepherding',
-      'name': 'Shepherding',
-      'desc': 'Capacity to guide, guard, and grow a group toward maturity over time.',
-      'refs': 'Ephesians 4:11-12; 1 Peter 5:2'
-    },
-    {
-      'slug': 'evangelism',
-      'name': 'Evangelism',
-      'desc': 'Spirit-empowered ability to communicate the gospel clearly and fruitfully.',
-      'refs': 'Ephesians 4:11; Acts 8:5-12'
-    },
-    {
-      'slug': 'faith',
-      'name': 'Faith',
-      'desc': 'Extraordinary confidence in God’s promises that inspires bold steps of obedience.',
-      'refs': '1 Corinthians 12:9; Hebrews 11'
-    },
-    {
-      'slug': 'hospitality',
-      'name': 'Hospitality',
-      'desc': 'Capacity to create welcoming spaces that foster kingdom relational growth.',
-      'refs': '1 Peter 4:9-10; Romans 12:13'
-    },
-  ];
+  static List<Map<String, String>> get _fallback => kCanonicalSpiritualGiftDefinitions.entries.map((e) => {
+    'slug': e.key,
+    'name': e.value['name'] ?? e.key,
+    'desc': e.value['desc'] ?? '',
+    'refs': e.value['refs'] ?? '',
+  }).toList();
 
   String _query = '';
 
@@ -118,14 +51,32 @@ class _SpiritualGiftsDefinitionsScreenState extends State<SpiritualGiftsDefiniti
       if (!mounted) return;
       if (defs.isEmpty) {
         // 404 or empty -> fallback
-        _all = _fallback;
+  _all = _fallback; // full canonical fallback
       } else {
-        _all = defs.map((d) => {
+        final parsed = defs.map((d) => {
           'slug': (d['slug'] ?? d['gift_slug'] ?? '').toString(),
           'name': (d['name'] ?? d['display_name'] ?? d['gift_name'] ?? d['slug'] ?? 'Gift').toString(),
           'desc': (d['description'] ?? d['desc'] ?? 'No description provided.').toString(),
           'refs': (d['scripture_refs'] ?? d['refs'] ?? '').toString(),
         }).cast<Map<String,String>>().toList();
+        // Merge with canonical to ensure we display ALL gifts even if backend sent subset.
+        final canonical = { for (final m in _fallback) m['slug']!: m };
+        for (final m in parsed) {
+          final slug = m['slug'] ?? '';
+            if (slug.isNotEmpty) {
+              canonical[slug] = {
+                'slug': slug,
+                'name': m['name']!.isNotEmpty ? m['name']! : (canonical[slug]?['name'] ?? slug),
+                'desc': m['desc'] == 'No description provided.' && (canonical[slug]?['desc']?.isNotEmpty ?? false)
+                    ? canonical[slug]!['desc']!
+                    : m['desc']!,
+                'refs': (m['refs']!.isEmpty && (canonical[slug]?['refs']?.isNotEmpty ?? false))
+                    ? canonical[slug]!['refs']!
+                    : m['refs']!,
+              };
+            }
+        }
+        _all = canonical.values.toList();
         // Attempt ordering if full set present.
         _applyCanonicalOrdering();
         _cached = _all;
@@ -133,7 +84,7 @@ class _SpiritualGiftsDefinitionsScreenState extends State<SpiritualGiftsDefiniti
       setState(() { _loading = false; });
     } catch (e) {
       if (!mounted) return;
-      _all = _fallback;
+  _all = _fallback; // fallback to full canonical list
       setState(() { _loading = false; _error = true; });
     }
   }

@@ -7,6 +7,7 @@ import '../services/api_service.dart';
 import '../widgets/version_badge.dart';
 import 'spiritual_gifts_definitions_screen.dart';
 import '../utils/haptics.dart';
+import 'spiritual_gifts_full_report_screen.dart';
 
 /// Mentor view: pick an apprentice, view latest gifts result, navigate to history.
 class MentorSpiritualGiftsScreen extends StatefulWidget {
@@ -793,6 +794,35 @@ class _MentorHistoryDetail extends StatelessWidget {
                   subtitle: Text('${(g.normalized * 100).toStringAsFixed(1)}% • Raw ${g.rawScore.toStringAsFixed(1)}', style: TextStyle(color: Colors.grey[400], fontFamily: 'Poppins', fontSize: 12)),
                 );
               },
+            ),
+            const SizedBox(height: 26),
+            Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context); // close sheet
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SpiritualGiftsFullReportScreen(
+                        result: result,
+                        apprenticeId: null, // historical specific result already provided
+                        readOnly: true,
+                        allowDefinitions: true,
+                        showActionsSection: false,
+                      ),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('View Full Report', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+              ),
             )
           ],
         ),

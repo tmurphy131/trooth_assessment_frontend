@@ -711,6 +711,20 @@ class ApiService {
     throw Exception('submitDraft failed (${r.statusCode})');
   }
 
+  Future<Map<String, dynamic>> getAssessmentStatus(String assessmentId) async {
+    const tag = 'API-getAssessmentStatus';
+    await _ensureFreshToken();
+    final path = '/assessments/$assessmentId/status';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(
+      Uri.parse('$_base$path'),
+      headers: _headers(),
+    );
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('getAssessmentStatus failed (${r.statusCode})');
+  }
+
   Future<Map<String, dynamic>> resumeDraft() async {
     const tag = 'API-resumeDraft';
   await _ensureFreshToken();
@@ -950,6 +964,186 @@ class ApiService {
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body);
     throw Exception('unpublishTemplate failed (${r.statusCode})');
+  }
+
+  /* ─────────────────────────────────────────────────────────────────── */
+  /*  ⭐  Master T[root]H (self)                                         */
+  /* ─────────────────────────────────────────────────────────────────── */
+
+  Future<Map<String, dynamic>> getMasterTroothLatest() async {
+    const tag = 'API-masterLatest';
+    await _ensureFreshToken();
+    const path = '/assessments/master-trooth/latest';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    if (r.statusCode == 404) return {};
+    throw Exception('getMasterTroothLatest failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<Map<String, dynamic>> getMasterTroothHistory({String? cursor, int? limit}) async {
+    const tag = 'API-masterHistory';
+    await _ensureFreshToken();
+    final qp = <String, String>{};
+    if (cursor != null) qp['cursor'] = cursor;
+    if (limit != null) qp['limit'] = limit.toString();
+    const base = '/assessments/master-trooth/history';
+    final uri = Uri.parse('$_base$base').replace(queryParameters: qp.isEmpty ? null : qp);
+    _logReq(tag, 'GET', uri.path + (uri.query.isNotEmpty ? '?'+uri.query : ''));
+    final r = await http.get(uri, headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    if (r.statusCode == 404) return {'items': [], 'next_cursor': null};
+    throw Exception('getMasterTroothHistory failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<bool> emailMyMasterTroothReport({String? assessmentId, String? toEmail, bool includePdf = true, bool includeHtml = false}) async {
+    const tag = 'API-masterEmailReport';
+    await _ensureFreshToken();
+    const path = '/assessments/master-trooth/email-report';
+    final payload = <String, dynamic>{
+      if (assessmentId != null) 'assessment_id': assessmentId,
+      'to_email': toEmail ?? FirebaseAuth.instance.currentUser?.email ?? '',
+      'include_pdf': includePdf,
+      'include_html': includeHtml,
+    };
+    _logReq(tag, 'POST', path, payload);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    _logRes(tag, r);
+    if (r.statusCode == 200) return true;
+    if (r.statusCode == 429) throw Exception('RATE_LIMIT: ${r.body}');
+    if (r.statusCode == 404) throw Exception('Submission not found');
+    throw Exception('emailMyMasterTroothReport failed (${r.statusCode}) ${r.body}');
+  }
+
+  /* ─────────────────────────────────────────────────────────────────── */
+  /*  📦  Generic Assessments (self)                                     */
+  /* ─────────────────────────────────────────────────────────────────── */
+
+  Future<Map<String, dynamic>> getGenericLatest(String templateId) async {
+    const tag = 'API-genericLatest';
+    await _ensureFreshToken();
+    final path = '/templates/$templateId/latest';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    if (r.statusCode == 404) return {};
+    throw Exception('getGenericLatest failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<Map<String, dynamic>> getGenericHistory(String templateId, {String? cursor, int? limit}) async {
+    const tag = 'API-genericHistory';
+    await _ensureFreshToken();
+    final qp = <String, String>{};
+    if (cursor != null) qp['cursor'] = cursor;
+    if (limit != null) qp['limit'] = limit.toString();
+    final base = '/templates/$templateId/history';
+    final uri = Uri.parse('$_base$base').replace(queryParameters: qp.isEmpty ? null : qp);
+    _logReq(tag, 'GET', uri.path + (uri.query.isNotEmpty ? '?'+uri.query : ''));
+    final r = await http.get(uri, headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    if (r.statusCode == 404) return {'items': [], 'next_cursor': null};
+    throw Exception('getGenericHistory failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<bool> emailMyGenericReport(String templateId, {String? assessmentId, String? toEmail, bool includePdf = true, bool includeHtml = false}) async {
+    const tag = 'API-genericEmailReport';
+    await _ensureFreshToken();
+    final path = '/templates/$templateId/email-report';
+    final payload = <String, dynamic>{
+      if (assessmentId != null) 'assessment_id': assessmentId,
+      'to_email': toEmail ?? FirebaseAuth.instance.currentUser?.email ?? '',
+      'include_pdf': includePdf,
+      'include_html': includeHtml,
+    };
+    _logReq(tag, 'POST', path, payload);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    _logRes(tag, r);
+    if (r.statusCode == 200) return true;
+    if (r.statusCode == 429) throw Exception('RATE_LIMIT: ${r.body}');
+    if (r.statusCode == 404) throw Exception('Submission not found');
+    throw Exception('emailMyGenericReport failed (${r.statusCode}) ${r.body}');
+  }
+
+  /* ─────────────────────────────────────────────────────────────────── */
+  /*  🧑‍🏫  Mentor endpoints for assessments                              */
+  /* ─────────────────────────────────────────────────────────────────── */
+
+  Future<Map<String, dynamic>> mentorGetMasterTroothLatest(String apprenticeId) async {
+    const tag = 'API-mentorMasterLatest';
+    await _ensureFreshToken();
+    final path = '/assessments/master-trooth/$apprenticeId/latest';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    if (r.statusCode == 404) return {};
+    throw Exception('mentorGetMasterTroothLatest failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<Map<String, dynamic>> mentorGetMasterTroothHistory(String apprenticeId, {String? cursor, int? limit}) async {
+    const tag = 'API-mentorMasterHistory';
+    await _ensureFreshToken();
+    final qp = <String,String>{};
+    if (cursor != null) qp['cursor'] = cursor;
+    if (limit != null) qp['limit'] = limit.toString();
+    final base = '/assessments/master-trooth/$apprenticeId/history';
+    final uri = Uri.parse('$_base$base').replace(queryParameters: qp.isEmpty ? null : qp);
+    _logReq(tag, 'GET', uri.path + (uri.query.isNotEmpty ? '?'+uri.query : ''));
+    final r = await http.get(uri, headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    if (r.statusCode == 404) return {'items': [], 'next_cursor': null};
+    throw Exception('mentorGetMasterTroothHistory failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<Map<String, dynamic>> mentorGetGenericLatest(String templateId, String apprenticeId) async {
+    const tag = 'API-mentorGenericLatest';
+    await _ensureFreshToken();
+    final path = '/templates/$templateId/$apprenticeId/latest';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    if (r.statusCode == 404) return {};
+    throw Exception('mentorGetGenericLatest failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<Map<String, dynamic>> mentorGetGenericHistory(String templateId, String apprenticeId, {String? cursor, int? limit}) async {
+    const tag = 'API-mentorGenericHistory';
+    await _ensureFreshToken();
+    final qp = <String,String>{};
+    if (cursor != null) qp['cursor'] = cursor;
+    if (limit != null) qp['limit'] = limit.toString();
+    final base = '/templates/$templateId/$apprenticeId/history';
+    final uri = Uri.parse('$_base$base').replace(queryParameters: qp.isEmpty ? null : qp);
+    _logReq(tag, 'GET', uri.path + (uri.query.isNotEmpty ? '?'+uri.query : ''));
+    final r = await http.get(uri, headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    if (r.statusCode == 404) return {'items': [], 'next_cursor': null};
+    throw Exception('mentorGetGenericHistory failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<bool> mentorEmailGenericReport(String templateId, String apprenticeId, {String? assessmentId, bool includePdf = true, bool includeHtml = false}) async {
+    const tag = 'API-mentorGenericEmail';
+    await _ensureFreshToken();
+    final path = '/templates/$templateId/$apprenticeId/email-report';
+    final payload = <String, dynamic>{
+      if (assessmentId != null) 'assessment_id': assessmentId,
+      'include_pdf': includePdf,
+      'include_html': includeHtml,
+    };
+    _logReq(tag, 'POST', path, payload);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    _logRes(tag, r);
+    if (r.statusCode == 200) return true;
+    if (r.statusCode == 429) throw Exception('RATE_LIMIT: ${r.body}');
+    if (r.statusCode == 404) throw Exception('Submission not found');
+    throw Exception('mentorEmailGenericReport failed (${r.statusCode}) ${r.body}');
   }
 
   /* ─────────────────────────────────────────────────────────────────── */
@@ -1616,18 +1810,64 @@ class ApiService {
     throw Exception('mentorGetApprenticeSpiritualGiftsHistory failed (${r.statusCode}) ${r.body}');
   }
 
+  Future<Map<String, dynamic>> getSpiritualGiftsHistory({String? cursor, int? limit}) async {
+    const tag = 'API-getSpiritualGiftsHistory';
+    await _ensureFreshToken();
+    final qp = <String,String>{};
+    if (cursor != null) qp['cursor'] = cursor;
+    if (limit != null) qp['limit'] = limit.toString();
+    const base = '/assessments/spiritual-gifts/history';
+    final uri = Uri.parse('$_base$base').replace(queryParameters: qp.isEmpty ? null : qp);
+    _logReq(tag, 'GET', uri.path + (uri.query.isNotEmpty ? '?'+uri.query : ''));
+    final r = await http.get(uri, headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    if (r.statusCode == 404) return {'items': [], 'next_cursor': null};
+    throw Exception('getSpiritualGiftsHistory failed (${r.statusCode}) ${r.body}');
+  }
+
   Future<bool> emailMySpiritualGiftsReport() async {
     const tag = 'API-emailMySpiritualGiftsReport';
     await _ensureFreshToken();
     const path = '/assessments/spiritual-gifts/email-report';
-    _logReq(tag, 'POST', path, {});
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    // Backend expects a JSON body: { to_email, optional assessment_id, include_pdf, include_html }
+  final email = FirebaseAuth.instance.currentUser?.email; // may be null; still attempt
+    final payload = {
+      'to_email': email ?? '',
+      'include_pdf': true,
+      'include_html': false,
+    };
+    _logReq(tag, 'POST', path, payload);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
     _logRes(tag, r);
     if (r.statusCode == 200) return true;
     if (r.statusCode == 429) {
       throw Exception('RATE_LIMIT: ${r.body}');
     }
     throw Exception('emailMySpiritualGiftsReport failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<bool> emailMySpiritualGiftsReportForSubmission(String submissionId) async {
+    const tag = 'API-emailMySpiritualGiftsReportForSubmission';
+    await _ensureFreshToken();
+    const path = '/assessments/spiritual-gifts/email-report';
+    final payload = {
+      'assessment_id': submissionId,
+  'to_email': FirebaseAuth.instance.currentUser?.email ?? '',
+      'include_pdf': true,
+      'include_html': false,
+    };
+    _logReq(tag, 'POST', path, payload);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    _logRes(tag, r);
+    if (r.statusCode == 200) return true;
+    if (r.statusCode == 404) {
+      throw Exception('Submission not found');
+    }
+    if (r.statusCode == 429) {
+      throw Exception('RATE_LIMIT: ${r.body}');
+    }
+    throw Exception('emailMySpiritualGiftsReportForSubmission failed (${r.statusCode}) ${r.body}');
   }
 
   Future<bool> mentorEmailSpiritualGiftsReport(String apprenticeId) async {

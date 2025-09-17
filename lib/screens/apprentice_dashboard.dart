@@ -1043,9 +1043,9 @@ class _SpiritualGiftsProgressCardState extends State<_SpiritualGiftsProgressCard
         ),
         const SizedBox(width: 12),
         ElevatedButton(
-          onPressed: widget.onStart,
+          onPressed: _handleStartNew,
           style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
-          child: const Text('Start', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+          child: const Text('Start Assessment', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
         )
       ],
     );
@@ -1072,17 +1072,93 @@ class _SpiritualGiftsProgressCardState extends State<_SpiritualGiftsProgressCard
             ElevatedButton(
               onPressed: widget.onView,
               style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12)),
-              child: const Text('View Report', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+              child: const Text('View Results', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
             ),
             const SizedBox(width: 12),
             OutlinedButton(
-              onPressed: widget.onStart,
+              onPressed: _handleStartNew,
               style: OutlinedButton.styleFrom(foregroundColor: Colors.amber, side: const BorderSide(color: Colors.amber), padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12)),
-              child: const Text('Retake', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
-            )
+              child: const Text('Start New Test', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+            ),
           ],
         )
       ],
+    );
+  }
+
+  Future<void> _handleStartNew() async {
+    final confirmed = await _showBeforeYouBeginDisclosure();
+    if (confirmed == true) {
+      widget.onStart();
+    }
+  }
+
+  Future<bool?> _showBeforeYouBeginDisclosure() {
+    return showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      isScrollControlled: true,
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.info_outline, color: Colors.amber),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Before You Begin',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      icon: const Icon(Icons.close, color: Colors.white70),
+                      tooltip: 'Close',
+                    )
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'This Spiritual Gifts Assessment helps you identify how God has uniquely equipped you to serve. There are 72 statements. Answer prayerfully and honestly based on your present experience, not what you wish were true. There are no “right” answers.',
+                  style: TextStyle(color: Colors.white.withOpacity(0.85), fontFamily: 'Poppins', fontSize: 13, height: 1.32),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Retaking: Starting a new test will create an additional entry in your history (your previous results are kept). Use a new attempt only if circumstances or self-awareness have meaningfully changed.',
+                  style: TextStyle(color: Colors.white.withOpacity(0.75), fontFamily: 'Poppins', fontSize: 12.5, height: 1.35),
+                ),
+                const SizedBox(height: 22),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        style: OutlinedButton.styleFrom(foregroundColor: Colors.amber, side: const BorderSide(color: Colors.amber)),
+                        child: const Text('Not Now', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black),
+                        child: const Text('Begin Assessment', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
