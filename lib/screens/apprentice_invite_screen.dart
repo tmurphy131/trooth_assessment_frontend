@@ -34,7 +34,10 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
         _apiService.bearerToken = token;
       }
       
-      await _loadPendingInvites();
+      await Future.wait([
+        _loadPendingInvites(),
+        _primeInactiveCount(),
+      ]);
     } catch (e) {
       setState(() {
         _error = 'Failed to initialize: $e';
@@ -63,6 +66,16 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
     }
   }
 
+  // Prime inactive apprentice count without showing dialog
+  Future<void> _primeInactiveCount() async {
+    try {
+      final list = await _apiService.listInactiveApprentices();
+      if (mounted) setState(() { _inactiveApprentices = list.cast<Map<String,dynamic>>(); });
+    } catch (_) {
+      // silent; badge just won't show
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -79,6 +92,37 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          IconButton(
+            onPressed: _showInactiveApprenticesDialog,
+            tooltip: 'View Inactive Apprentices',
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.archive, color: Colors.amber),
+                if (_inactiveApprentices.isNotEmpty) Positioned(
+                  right: -6,
+                  top: -6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.black, width: 1),
+                    ),
+                    child: Text(
+                      _inactiveApprentices.length > 99 ? '99+' : _inactiveApprentices.length.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           IconButton(
             onPressed: _showInviteDialog,
             icon: const Icon(Icons.add, color: Colors.amber),
@@ -541,5 +585,166 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
     } catch (e) {
       return dateString;
     }
+  }
+
+  // Inactive apprentices relocation (moved from mentor dashboard)
+  List<Map<String, dynamic>> _inactiveApprentices = [];
+  bool _loadingInactive = false;
+
+  Future<void> _loadInactiveApprentices() async {
+    try {
+      setState(() { _loadingInactive = true; });
+      final list = await _apiService.listInactiveApprentices();
+      setState(() {
+        _inactiveApprentices = list.cast<Map<String, dynamic>>();
+        _loadingInactive = false;
+      });
+    } catch (e) {
+      setState(() { _loadingInactive = false; });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load inactive: $e')));
+      }
+    }
+  }
+
+  void _showInactiveApprenticesDialog() async {
+    await _loadInactiveApprentices();
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: Colors.grey[900],
+            title: Row(
+              children: const [
+                Icon(Icons.archive, color: Colors.amber),
+                SizedBox(width: 8),
+                Text('Inactive Apprentices', style: TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+              ],
+            ),
+            content: SizedBox(
+              width: 500,
+              child: _loadingInactive
+                  ? const SizedBox(height:120, child: Center(child: CircularProgressIndicator(color: Colors.amber)))
+                  : _inactiveApprentices.isEmpty
+                      ? Text('No inactive apprentices', style: TextStyle(color: Colors.grey[400], fontFamily: 'Poppins'))
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: _inactiveApprentices.length,
+                          itemBuilder: (context, index) {
+                            final a = _inactiveApprentices[index];
+                            return ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.person_off, color: Colors.redAccent),
+                              title: Text(a['name'] ?? 'Unknown', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+                              subtitle: Text(a['email'] ?? '', style: TextStyle(color: Colors.grey[400], fontFamily: 'Poppins')),
+                              trailing: TextButton.icon(
+                                onPressed: () async {
+                                  Navigator.of(ctx).pop();
+                                  await _confirmReinstateApprentice(a);
+                                },
+                                icon: const Icon(Icons.replay, color: Colors.amber, size: 18),
+                                label: const Text('Reinstate', style: TextStyle(color: Colors.amber, fontFamily: 'Poppins')),
+                              ),
+                            );
+                          },
+                        ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Close', style: TextStyle(color: Colors.amber)),
+              ),
+            ],
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmReinstateApprentice(Map<String, dynamic> apprentice) async {
+    final apprenticeId = apprentice['id'];
+    if (apprenticeId == null) return;
+
+    final controller = TextEditingController();
+    bool submitting = false;
+    await showDialog(
+      context: context,
+      barrierDismissible: !submitting,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setLocalState) => AlertDialog(
+            backgroundColor: Colors.grey[900],
+            title: Row(
+              children: [
+                const Icon(Icons.replay, color: Colors.amber),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Reinstate ${apprentice['name'] ?? 'Apprentice'}', style: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold))),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Optional message to apprentice:', style: TextStyle(color: Colors.grey[300], fontFamily: 'Poppins', fontSize: 13)),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: controller,
+                  maxLines: 3,
+                  style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'),
+                  decoration: InputDecoration(
+                    hintText: 'Reason or welcome back note (optional)',
+                    hintStyle: TextStyle(color: Colors.grey[500]),
+                    filled: true,
+                    fillColor: Colors.grey[850],
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[700]!)),
+                    focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.amber)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Icon(Icons.email, color: Colors.amber, size: 16),
+                    const SizedBox(width: 6),
+                    Expanded(child: Text('An email will be sent informing them of reinstatement.', style: TextStyle(color: Colors.grey[400], fontSize: 12, fontFamily: 'Poppins')))
+                  ],
+                )
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: submitting ? null : () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                onPressed: submitting ? null : () async {
+                  setLocalState(() => submitting = true);
+                  try {
+                    await _apiService.reinstateApprenticeship(apprenticeId, reason: controller.text.trim().isEmpty ? null : controller.text.trim());
+                    if (!mounted) return; 
+                    setLocalState(() { submitting = false; });
+                    Navigator.of(ctx).pop();
+                    // Update lists
+                    setState(() { _inactiveApprentices.removeWhere((a) => a['id'] == apprenticeId); });
+                    await _loadInactiveApprentices();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Apprentice reinstated')));
+                    }
+                  } catch (e) {
+                    setLocalState(() => submitting = false);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+                  }
+                },
+                child: submitting
+                    ? const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white))
+                    : const Text('Reinstate'),
+              )
+            ],
+          ),
+        );
+      }
+    );
   }
 }

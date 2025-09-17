@@ -64,6 +64,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('[Login] build');
     return Scaffold(
       backgroundColor: Colors.black,
       body: Center(
@@ -74,6 +75,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                const _LoginDebugBadge(),
                 // Logo
                 Container(
                   padding: const EdgeInsets.all(16.0),
@@ -228,6 +230,38 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _LoginDebugBadge extends StatefulWidget {
+  const _LoginDebugBadge();
+  @override
+  State<_LoginDebugBadge> createState() => _LoginDebugBadgeState();
+}
+
+class _LoginDebugBadgeState extends State<_LoginDebugBadge> {
+  bool _frameLogged = false;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_frameLogged) {
+        _frameLogged = true;
+        debugPrint('[Login] first frame rendered');
+      }
+    });
+  }
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.topRight,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(color: Colors.blueGrey.shade800, borderRadius: BorderRadius.circular(6)),
+        child: const Text('LOGIN', style: TextStyle(color: Colors.white70, fontSize: 10, letterSpacing: 1.2)),
       ),
     );
   }

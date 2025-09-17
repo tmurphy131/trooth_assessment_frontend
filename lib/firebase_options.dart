@@ -60,22 +60,22 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyCzyzCLht3piyygJ0kDFYaj5PCvtF75AX4',
-    appId: '1:557349072084:ios:b6bbc9054f3b224bd79f41',
+    appId: '1:557349072084:ios:6932039489546a37d79f41',
     messagingSenderId: '557349072084',
     projectId: 'only-blv',
     storageBucket: 'only-blv.firebasestorage.app',
-    iosClientId: '557349072084-7o7b4svm919irfjcfg0clgvif8t94rab.apps.googleusercontent.com',
-    iosBundleId: 'com.example.flutterTroothAssessment',
+    iosClientId: '557349072084-f5e9d8dkkg9rp05oaqgra6878d8lthfg.apps.googleusercontent.com',
+    iosBundleId: 'com.trooth.flutterTroothAssessment',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyCzyzCLht3piyygJ0kDFYaj5PCvtF75AX4',
-    appId: '1:557349072084:ios:b6bbc9054f3b224bd79f41',
+    appId: '1:557349072084:ios:02f202472b80a03dd79f41',
     messagingSenderId: '557349072084',
     projectId: 'only-blv',
     storageBucket: 'only-blv.firebasestorage.app',
-    iosClientId: '557349072084-7o7b4svm919irfjcfg0clgvif8t94rab.apps.googleusercontent.com',
-    iosBundleId: 'com.example.flutterTroothAssessment',
+    iosClientId: '557349072084-5jb785134oo57s64q1fdtes1licqgrn0.apps.googleusercontent.com',
+    iosBundleId: 'com.example.troothAssessment',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
@@ -87,4 +87,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'only-blv.firebasestorage.app',
     measurementId: 'G-ZVPYY0B1QN',
   );
+
 }

@@ -7,9 +7,11 @@ import 'apprentice_invite_screen.dart';
 import 'assessment_results_screen.dart';
 import 'mentor_agreements_screen.dart';
 import 'mentor_notifications_screen.dart';
+import 'mentor_assessment_results_screen.dart';
 import 'dart:async';
 import 'mentor_profile_screen.dart';
 import 'mentor_resources_screen.dart';
+import 'mentor_spiritual_gifts_screen.dart';
 
 class MentorDashboardNew extends StatefulWidget {
   const MentorDashboardNew({super.key});
@@ -25,11 +27,11 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   
   // State management
   List<Map<String, dynamic>> _apprentices = [];
-  List<Map<String, dynamic>> _inactiveApprentices = [];
+  // Inactive apprentice data moved to ApprenticeInviteScreen
   Map<String, List<Map<String, dynamic>>> _completedAssessmentsByApprentice = {};
   bool _isLoadingApprentices = true;
   bool _isLoadingAssessments = true;
-  bool _loadingInactive = false;
+  // bool _loadingInactive = false; // Removed unused inactive apprentice state
   String? _error;
   int _activeNotificationCount = 0;
   Timer? _notifTimer;
@@ -107,15 +109,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
     }
   }
 
-  Future<void> _loadInactiveApprentices() async {
-    setState(() { _loadingInactive = true; });
-    try {
-      final list = await _apiService.listInactiveApprentices();
-      setState(() { _inactiveApprentices = list.cast<Map<String,dynamic>>(); });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load inactive: $e')));
-    } finally { setState(() { _loadingInactive = false; }); }
-  }
+  Future<void> _loadInactiveApprentices() async { /* no-op: feature relocated */ }
 
   Future<void> _loadCompletedAssessments() async {
     try {
@@ -142,136 +136,8 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   }
 
 
-  Future<void> _confirmReinstateApprentice(Map<String, dynamic> apprentice) async {
-    final controller = TextEditingController();
-    bool submitting = false;
-    final apprenticeId = apprentice['id'] as String;
-    final displayName = apprentice['name'] ?? 'this apprentice';
-    await showDialog(
-      context: context,
-      barrierDismissible: !submitting,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setState) => AlertDialog(
-            backgroundColor: Colors.grey[900],
-            title: const Text('Reinstate Apprenticeship', style: TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Are you sure you want to reinstate $displayName? They will immediately regain active status and receive an email notification.',
-                  style: TextStyle(color: Colors.grey[300], fontFamily: 'Poppins')),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: controller,
-                  maxLines: 3,
-                  style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'),
-                  decoration: const InputDecoration(
-                    labelText: 'Optional note to include in email',
-                    labelStyle: TextStyle(color: Colors.amber),
-                    enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.amber)),
-                    focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.amber, width: 2)),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(Icons.email, color: Colors.amber, size: 16),
-                    const SizedBox(width: 6),
-                    Expanded(child: Text('An email will be sent informing them of reinstatement.', style: TextStyle(color: Colors.grey[400], fontSize: 12, fontFamily: 'Poppins')))
-                  ],
-                )
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: submitting ? null : () => Navigator.of(ctx).pop(),
-                child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
-                onPressed: submitting ? null : () async {
-                  setState(() => submitting = true);
-                  try {
-                    await _apiService.reinstateApprenticeship(apprenticeId, reason: controller.text.trim().isEmpty ? null : controller.text.trim());
-                    if (!mounted) return; 
-                    setState(() { submitting = false; });
-                    Navigator.of(ctx).pop();
-                    // Update lists
-                    this.setState(() { _inactiveApprentices.removeWhere((a) => a['id'] == apprenticeId); });
-                    await _loadApprentices();
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Apprentice reinstated')));
-                    }
-                  } catch (e) {
-                    setState(() => submitting = false);
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
-                  }
-                },
-                child: submitting
-                    ? const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white))
-                    : const Text('Reinstate'),
-              )
-            ],
-          ),
-        );
-      }
-    );
-  }
+  // _confirmReinstateApprentice removed (handled in invite screen now)
 
-  void _showInactiveApprenticesDialog() async {
-    await _loadInactiveApprentices();
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: Colors.grey[900],
-          title: Row(
-            children: [
-              const Icon(Icons.archive, color: Colors.amber),
-              const SizedBox(width: 8),
-              const Text('Inactive Apprentices', style: TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
-            ],
-          ),
-          content: SizedBox(
-            width: 500,
-            child: _loadingInactive
-                ? const SizedBox(height:120, child: Center(child: CircularProgressIndicator(color: Colors.amber)))
-                : _inactiveApprentices.isEmpty
-                    ? Text('No inactive apprentices', style: TextStyle(color: Colors.grey[400], fontFamily: 'Poppins'))
-                    : ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: _inactiveApprentices.length,
-                        itemBuilder: (context, index) {
-                          final a = _inactiveApprentices[index];
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(Icons.person_off, color: Colors.redAccent),
-                            title: Text(a['name'] ?? 'Unknown', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
-                            subtitle: Text(a['email'] ?? '', style: TextStyle(color: Colors.grey[400], fontFamily: 'Poppins')),
-                            trailing: TextButton.icon(
-                              onPressed: () async {
-                                Navigator.of(ctx).pop();
-                                await _confirmReinstateApprentice(a);
-                              },
-                              icon: const Icon(Icons.replay, color: Colors.amber, size: 18),
-                              label: const Text('Reinstate', style: TextStyle(color: Colors.amber, fontFamily: 'Poppins')),
-                            ),
-                          );
-                        },
-                      ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Close', style: TextStyle(color: Colors.amber)),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -365,6 +231,15 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
               ),
               Row(
                 children: [
+                  IconButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const MentorSpiritualGiftsScreen()),
+                      );
+                    },
+                    icon: const Icon(Icons.auto_awesome, color: Colors.amber),
+                    tooltip: 'Spiritual Gifts',
+                  ),
                   // Resources button removed; Resources now accessible via main tab bar
                   IconButton(
                     onPressed: _navigateToInviteApprentices,
@@ -387,11 +262,6 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                     onPressed: _loadApprentices,
                     icon: const Icon(Icons.refresh, color: Colors.amber),
                     tooltip: 'Refresh',
-                  ),
-                  IconButton(
-                    onPressed: _showInactiveApprenticesDialog,
-                    icon: const Icon(Icons.archive, color: Colors.amber),
-                    tooltip: 'View Inactive Apprentices',
                   ),
                 ],
               ),
@@ -1125,7 +995,14 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   }
 
   Future<void> _showApprenticeAssessments(String apprenticeId) async {
-    _showComingSoon('Apprentice Assessments');
+    try {
+      final apprentice = _apprentices.firstWhere((a) => a['id'] == apprenticeId, orElse: () => {});
+      final name = (apprentice['name'] ?? apprentice['display_name'] ?? apprentice['email'] ?? 'Apprentice').toString();
+      if (!mounted) return;
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => MentorAssessmentResultsScreen(apprenticeId: apprenticeId, apprenticeName: name)));
+    } catch (e) {
+      _showMessage('Unable to open assessments: $e', isError: true);
+    }
   }
 
   Future<void> _showApprenticeDraft(String apprenticeId) async {
@@ -1308,41 +1185,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
     }
   }
 
-  void _showComingSoon(String feature) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text(
-          'Coming Soon!',
-          style: TextStyle(
-            color: Colors.amber,
-            fontFamily: 'Poppins',
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          '$feature functionality will be available soon. Stay tuned for updates!',
-          style: const TextStyle(
-            color: Colors.white,
-            fontFamily: 'Poppins',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'OK',
-              style: TextStyle(
-                color: Colors.amber,
-                fontFamily: 'Poppins',
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  
 
   void _navigateToInviteApprentices() {
     Navigator.push(

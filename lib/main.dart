@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -5,14 +7,64 @@ import 'firebase_options.dart';
 import 'package:uni_links/uni_links.dart';
 import 'screens/agreement_sign_public_screen.dart';
 import 'theme.dart';
-import 'screens/splash_screen.dart'; // <-- NEW
+import 'screens/splash_screen.dart'; // splash / auth bootstrap
 import 'services/api_service.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+void main() {
+  // Wrap everything so uncaught async errors surface in logs & UI.
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+
+    // Attach a global error handler for framework errors.
+    FlutterError.onError = (FlutterErrorDetails details) {
+      // Always log full details.
+      FlutterError.dumpErrorToConsole(details);
+    };
+
+    // Replace red screen (in release becomes a silent fail) with a visible banner style.
+    ErrorWidget.builder = (FlutterErrorDetails details) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.red.shade900,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.redAccent, width: 2),
+            ),
+            width: 320,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('App Error', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  Text(
+                    details.exceptionAsString(),
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    (details.stack ?? StackTrace.empty).toString().split('\n').take(8).join('\n'),
+                    style: TextStyle(color: Colors.grey.shade300, fontSize: 11, height: 1.2),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    };
+
+    final firebaseStopwatch = Stopwatch()..start();
+    debugPrint('🔄 Firebase.initializeApp starting...');
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    firebaseStopwatch.stop();
+    debugPrint('✅ Firebase.initializeApp completed in ${firebaseStopwatch.elapsedMilliseconds}ms');
 
   // Explicit sign-in only: listen for auth changes and update ApiService token.
   FirebaseAuth.instance.authStateChanges().listen((user) async {
@@ -64,7 +116,11 @@ void main() async {
     print('⚠️ URI stream error: $err');
   });
 
-  runApp(const MyApp());
+    runApp(const MyApp());
+  }, (error, stack) {
+    // Last‑resort zone error logging
+    debugPrint('💥 Uncaught zone error: $error\n$stack');
+  });
 }
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -82,6 +138,16 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Log first frame after build of root widget tree to detect if we ever paint.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint('🖼️ First Flutter frame rendered (postFrameCallback)');
+    });
+
+    // Diagnostic test screen toggle (set _forceTestScreenRuntime = true during a debugging session)
+    final bool forceTestScreen = _forceTestScreenRuntime; // not const to avoid dead code warning
+    if (forceTestScreen) {
+      return const MaterialApp(debugShowCheckedModeBanner: false, home: _RenderTestScreen());
+    }
     return MaterialApp(
       title: 'T[root]H Assessment',
       theme: buildAppTheme(),
@@ -104,3 +170,31 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+/// Simple diagnostic screen to validate rendering pipeline independent of app logic.
+class _RenderTestScreen extends StatelessWidget {
+  const _RenderTestScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle, size: 72, color: Colors.greenAccent),
+            const SizedBox(height: 24),
+            Text('Render Test OK', style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white)),
+            const SizedBox(height: 12),
+            Text('If you can see this, the painting pipeline works.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[300])),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Runtime adjustable debug flag (could be wired to a dev menu later)
+const bool _forceTestScreenRuntime = false;
