@@ -421,7 +421,72 @@ class ApiService {
   }
 
   /* ─────────────────────────────────────────────────────────────────── */
-  /*  🧑‍🏫  Mentor Profile                                               */
+  /*  �  Submissions (Mentor view)                                       */
+  /* ─────────────────────────────────────────────────────────────────── */
+
+  Future<Map<String, dynamic>> fetchSubmissionDetail({required String assessmentId}) async {
+    const tag = 'API-fetchSubmissionDetail';
+    await _ensureFreshToken();
+    final path = '/mentor/assessment/$assessmentId';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    if (r.statusCode == 403) throw Exception('Forbidden');
+    throw Exception('fetchSubmissionDetail failed (${r.statusCode})');
+  }
+
+  Future<Map<String, dynamic>> fetchMentorReportV2Json({required String assessmentId}) async {
+    // Backend returns HTML for preview route; we expose a JSON path via /assessments/{id} (scores+mentor_report_v2)
+    const tag = 'API-fetchMentorReportV2Json';
+    await _ensureFreshToken();
+    final path = '/mentor/assessment/$assessmentId';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) {
+      final data = jsonDecode(r.body) as Map<String, dynamic>;
+      return data;
+    }
+    throw Exception('fetchMentorReportV2Json failed (${r.statusCode})');
+  }
+
+  Future<String> fetchMentorReportV2Html({required String assessmentId}) async {
+    const tag = 'API-fetchMentorReportV2Html';
+    await _ensureFreshToken();
+    final path = '/assessments/$assessmentId/mentor-report-v2';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return r.body;
+    if (r.statusCode == 404) throw Exception('No report');
+    throw Exception('fetchMentorReportV2Html failed (${r.statusCode})');
+  }
+
+  Future<http.Response> downloadMentorReportPdf({required String assessmentId}) async {
+    const tag = 'API-downloadMentorReportPdf';
+    await _ensureFreshToken();
+    final path = '/assessments/$assessmentId/mentor-report-v2.pdf';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    return r;
+  }
+
+  Future<Map<String, dynamic>> emailMentorReportByAssessment({required String assessmentId, required String toEmail, bool includePdf = true}) async {
+    const tag = 'API-emailMentorReportByAssessment';
+    await _ensureFreshToken();
+    final path = '/assessments/$assessmentId/email-report';
+    final body = { 'to_email': toEmail, 'include_pdf': includePdf };
+    _logReq(tag, 'POST', path, body);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(body));
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('emailMentorReportByAssessment failed (${r.statusCode}) ${r.body}');
+  }
+
+  /* ─────────────────────────────────────────────────────────────────── */
+  /*  �🧑‍🏫  Mentor Profile                                               */
   /* ─────────────────────────────────────────────────────────────────── */
 
   Future<Map<String, dynamic>> getMyMentorProfile() async {
@@ -698,14 +763,19 @@ class ApiService {
     throw Exception('updateDraft failed (${r.statusCode})');
   }
 
-  Future<Map<String, dynamic>> submitDraft() async {
+  Future<Map<String, dynamic>> submitDraft({String? draftId, String? templateId}) async {
     const tag = 'API-submitDraft';
     await _ensureFreshToken();
-    _logReq(tag, 'POST', '/assessment-drafts/submit');
-    final r = await http.post(
-      Uri.parse('$_base/assessment-drafts/submit'),
-      headers: _headers(),
-    );
+    String path = '/assessment-drafts/submit';
+    final qp = <String, String>{};
+    if (draftId != null && draftId.isNotEmpty) qp['draft_id'] = draftId;
+    if (templateId != null && templateId.isNotEmpty) qp['template_id'] = templateId;
+    if (qp.isNotEmpty) {
+      final query = qp.entries.map((e) => '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}').join('&');
+      path = '$path?$query';
+    }
+    _logReq(tag, 'POST', path);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body);
     throw Exception('submitDraft failed (${r.statusCode})');
@@ -882,6 +952,63 @@ class ApiService {
       print('❌ $tag Network Error: $e');
       throw Exception('getAllTemplates network error: $e');
     }
+  }
+
+  /* ─────────────────────────────────────────────────────────────────── */
+  /*  📈  Progress (Featured + Reports)                                  */
+  /* ─────────────────────────────────────────────────────────────────── */
+
+  Future<Map<String, dynamic>> getProgressMasterLatest() async {
+    const tag = 'API-progressMasterLatest';
+    await _ensureFreshToken();
+    const path = '/progress/master/latest';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    if (r.statusCode == 404) return <String, dynamic>{}; // treat as empty state
+    throw Exception('progressMasterLatest failed (${r.statusCode})');
+  }
+
+  Future<Map<String, dynamic>> getProgressGiftsLatest() async {
+    const tag = 'API-progressGiftsLatest';
+    await _ensureFreshToken();
+    const path = '/progress/spiritual-gifts/latest';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    if (r.statusCode == 404) return <String, dynamic>{};
+    throw Exception('progressGiftsLatest failed (${r.statusCode})');
+  }
+
+  Future<Map<String, dynamic>> getProgressReports({int limit = 20, String? cursor}) async {
+    const tag = 'API-progressReports';
+    await _ensureFreshToken();
+    final qp = {
+      'limit': limit.toString(),
+      if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
+    };
+    final uri = Uri.parse('$_base/progress/reports').replace(queryParameters: qp);
+    _logReq(tag, 'GET', uri.toString());
+    final r = await http.get(uri, headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('progressReports failed (${r.statusCode})');
+  }
+
+  /// Get simplified report for apprentice's own assessment
+  Future<Map<String, dynamic>> getMySimplifiedReport(String assessmentId) async {
+    const tag = 'API-getMySimplifiedReport';
+    await _ensureFreshToken();
+    _logReq(tag, 'GET', '/progress/reports/$assessmentId/simplified');
+    final r = await http.get(
+      Uri.parse('$_base/progress/reports/$assessmentId/simplified'),
+      headers: _headers(),
+    );
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('getMySimplifiedReport failed (${r.statusCode})');
   }
 
   Future<Map<String, dynamic>> getTemplate(String templateId) async {

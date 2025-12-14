@@ -1,0 +1,40 @@
+{
+  "snapshot": {
+    "overall_mc_percent": 72,
+    "knowledge_band": "Growing",
+    "top_strengths": ["Prayer habits", "Scripture memory"],
+    "top_gaps": ["Assurance", "Trinity basics"],
+    "notes": "Solid foundation and teachable."
+  },
+  "biblical_knowledge": {
+    "total": 25,
+    "correct": 18,
+    "topic_breakdown": [
+      {"topic": "Gospel", "total": 6, "correct": 5, "note": "Understands justification"},
+      {"topic": "Trinity", "total": 5, "correct": 3},
+      {"topic": "Assurance", "total": 4, "correct": 2}
+    ]
+  },
+  "open_ended_insights": [
+    {"title": "Identity in Christ", "observation": "Speaks of grace over performance.", "evidence": "God delights in me because of Jesus.", "level": "growing", "next_step": "Meditate on Eph 1"},
+    {"title": "Community", "observation": "Values accountability.", "evidence": "My group asks me hard questions.", "level": "mature", "next_step": "Invite a peer to read together"}
+  ],
+  "conversation_starters": [
+    "Where do you run when you feel shame?",
+    "How would you explain the gospel to a friend?"
+  ],
+  "four_week_plan": {
+    "rhythm": [
+      "Daily prayer using ACTS",
+      "Read John 1-4 with notes"
+    ],
+    "checkpoints": [
+      "Recite Ephesians 2:8-9",
+      "Share testimony in group"
+    ]
+  },
+  "recommended_resources": [
+    {"title": "Knowing God", "type": "book", "why": "Deepen view of God"},
+    {"title": "What is the Gospel?", "type": "article", "why": "Clarify essentials"}
+  ]
+}

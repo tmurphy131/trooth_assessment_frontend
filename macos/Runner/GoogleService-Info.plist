@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>557349072084-5jb785134oo57s64q1fdtes1licqgrn0.apps.googleusercontent.com</string>
+	<string>557349072084-f5e9d8dkkg9rp05oaqgra6878d8lthfg.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.557349072084-5jb785134oo57s64q1fdtes1licqgrn0</string>
+	<string>com.googleusercontent.apps.557349072084-f5e9d8dkkg9rp05oaqgra6878d8lthfg</string>
 	<key>API_KEY</key>
 	<string>AIzaSyCzyzCLht3piyygJ0kDFYaj5PCvtF75AX4</string>
 	<key>GCM_SENDER_ID</key>
@@ -13,7 +13,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.troothAssessment</string>
+	<string>com.trooth.flutterTroothAssessment</string>
 	<key>PROJECT_ID</key>
 	<string>only-blv</string>
 	<key>STORAGE_BUCKET</key>
@@ -29,6 +29,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:557349072084:ios:02f202472b80a03dd79f41</string>
+	<string>1:557349072084:ios:6932039489546a37d79f41</string>
 </dict>
 </plist>

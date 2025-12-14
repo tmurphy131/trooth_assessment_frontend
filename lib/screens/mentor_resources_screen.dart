@@ -60,7 +60,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
     final titleCtrl = TextEditingController(text: existing?['title'] ?? '');
     final descCtrl = TextEditingController(text: existing?['description'] ?? '');
     final linkCtrl = TextEditingController(text: existing?['link_url'] ?? '');
-    String? apprenticeId = existing?['apprentice_id'] as String?;
+  String? apprenticeId = existing?['apprentice_id'] as String?;
     bool isShared = (existing?['is_shared'] ?? true) == true;
 
     await showDialog(
@@ -127,6 +127,10 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                         value: null,
                         child: Text('— None —', style: TextStyle(color: Colors.white, fontFamily: 'Poppins')),
                       ),
+                      const DropdownMenuItem<String>(
+                        value: '__ALL__',
+                        child: Text('All Apprentices', style: TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+                      ),
                       ..._apprentices.map((a) => DropdownMenuItem<String>(
                         value: a['id'] as String,
                         child: Text(a['name'] ?? a['email'] ?? 'Unnamed', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
@@ -171,7 +175,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                       );
                     } else {
                       await _api.createMentorResource(
-                        apprenticeId: apprenticeId ?? '',
+                        apprenticeId: (apprenticeId == null || (apprenticeId?.isEmpty ?? true)) ? null : apprenticeId,
                         title: title,
                         description: descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim(),
                         linkUrl: linkCtrl.text.trim().isEmpty ? null : linkCtrl.text.trim(),

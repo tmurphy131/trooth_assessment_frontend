@@ -1,0 +1,26 @@
+{
+  "assessment_id": "demo-assessment-1",
+  "submission_id": "demo-assessment-1",
+  "id": "demo-assessment-1",
+  "apprentice": {"id": "apprentice-123", "name": "Alex Apprentice"},
+  "submitted_at": "2025-09-20T12:00:00Z",
+  "questions": [
+    {
+      "id": "q1",
+      "type": "multiple_choice",
+      "text": "What saves us?",
+      "options": [
+        {"id": "o1", "text": "Grace through faith", "is_correct": true},
+        {"id": "o2", "text": "Good works", "is_correct": false}
+      ],
+      "chosen_option_id": "o1"
+    },
+    {
+      "id": "q2",
+      "type": "open",
+      "text": "Share your testimony.",
+      "apprentice_answer": "I grew up in church...",
+      "rubric": {"understanding": 4, "practice": 3, "gospel_centeredness": 4}
+    }
+  ]
+}

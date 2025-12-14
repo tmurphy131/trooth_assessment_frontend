@@ -1,0 +1,8 @@
+// Profile.xcconfig restored
+// Include CocoaPods configuration for Profile
+#include "Pods/Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"
+
+// Include Flutter generated values
+#include "Generated.xcconfig"
+
+// You can add custom profile overrides below this line
