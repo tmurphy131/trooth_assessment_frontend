@@ -1,27 +1,24 @@
 import UIKit
 import Flutter
 
-@UIApplicationMain
-class AppDelegate: FlutterAppDelegate {
-  var flutterEngine: FlutterEngine? = FlutterEngine(name: "primary")
-  var windowRef: UIWindow?
-
+@main
+@objc class AppDelegate: FlutterAppDelegate {
+  var flutterEngine: FlutterEngine?
   override func application(
     _ application: UIApplication,
-    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    // Start engine early
-    flutterEngine?.run()
-    guard let engine = flutterEngine else { return false }
+    // Initialize a Flutter engine and attach it to a visible window since we don't use a main storyboard.
+    let engine = FlutterEngine(name: "root_engine")
+    engine.run()
     GeneratedPluginRegistrant.register(with: engine)
+    self.flutterEngine = engine
 
-    // Manually create window since we removed any main storyboard
-    windowRef = UIWindow(frame: UIScreen.main.bounds)
-    let flutterVC = FlutterViewController(engine: engine, nibName: nil, bundle: nil)
-    windowRef?.rootViewController = flutterVC
-    windowRef?.makeKeyAndVisible()
+    let flutterViewController = FlutterViewController(engine: engine, nibName: nil, bundle: nil)
+    self.window = UIWindow(frame: UIScreen.main.bounds)
+    self.window?.rootViewController = flutterViewController
+    self.window?.makeKeyAndVisible()
 
-    // Allow FlutterAppDelegate to handle plugins (push, links, etc.)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }

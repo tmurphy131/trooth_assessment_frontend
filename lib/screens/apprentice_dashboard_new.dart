@@ -9,7 +9,7 @@ import 'apprentice_mentor_screen.dart';
 import 'spiritual_gifts_assessment_screen.dart';
 import 'spiritual_gifts_results_screen.dart';
 import 'spiritual_gifts_history_screen.dart';
-import 'apprentice_progress_screen.dart';
+import 'progress_screen.dart';
 
 class ApprenticeDashboardNew extends StatefulWidget {
   const ApprenticeDashboardNew({super.key});
@@ -117,6 +117,8 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
   final user = FirebaseAuth.instance.currentUser;
   final _apiService = ApiService();
   List<Map<String, dynamic>> _assessments = [];
+  // Cache of templateId -> template name for displaying draft titles
+  Map<String, String> _templateNameById = {};
   bool _isLoading = true;
   String? _error;
   String? _name; // backend 'name' field
@@ -182,7 +184,26 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
             final db = DateTime.tryParse(b['updated_at'] ?? b['created_at'] ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
           return db.compareTo(da); // newest first
         });
-      if (mounted) setState(() { _assessments = items; _isLoading = false; });
+      // Build a lookup of template IDs to names to render accurate draft titles
+      Map<String, String> names = {};
+      try {
+        final templates = await _apiService.getPublishedTemplates();
+        for (final t in templates) {
+          final id = (t['id'] ?? t['template_id'])?.toString();
+          if (id == null) continue;
+          final name = (t['name'] ?? t['display_name'] ?? t['title'] ?? '').toString();
+          if (name.trim().isNotEmpty) names[id] = name.trim();
+        }
+      } catch (_) {
+        // If template lookup fails, continue with empty map and fallbacks
+      }
+      if (mounted) {
+        setState(() {
+          _assessments = items;
+          _templateNameById = names;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       if (mounted) setState(() { _error = 'Failed to load assessments: $e'; _isLoading = false; });
     }
@@ -377,7 +398,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
                 subtitle: 'Track your growth',
                 color: Colors.blue,
                 onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ApprenticeProgressScreen()),
+                  MaterialPageRoute(builder: (_) => const ProgressScreen()),
                 ),
               ),
             ),
@@ -583,7 +604,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
   }
 
   Widget _buildAssessmentCard(Map<String, dynamic> assessment) {
-    final title = assessment['title'] ?? 'Spiritual Assessment';
+    final title = _resolveDraftTitle(assessment);
     final isSubmitted = assessment['is_submitted'] == true;
     final status = isSubmitted ? 'completed' : 'in_progress';
     final score = assessment['score'] ?? 0;
@@ -690,6 +711,28 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
         onTap: () => _navigateToAssessment(assessment),
       ),
     );
+  }
+
+  String _resolveDraftTitle(Map<String, dynamic> assessment) {
+    // Prefer explicit template name fields if available
+    final templateObj = assessment['template'];
+    final fromTemplateObj = (templateObj is Map) ? (templateObj['name'] ?? templateObj['display_name'])?.toString() : null;
+    if (fromTemplateObj != null && fromTemplateObj.trim().isNotEmpty) return fromTemplateObj.trim();
+
+    final templateName = (assessment['template_name'] ?? assessment['templateTitle'])?.toString();
+    if (templateName != null && templateName.trim().isNotEmpty) return templateName.trim();
+
+    // Try lookup from cached published templates
+    final templateId = assessment['template_id']?.toString();
+    final fromMap = templateId != null ? _templateNameById[templateId] : null;
+    if (fromMap != null && fromMap.trim().isNotEmpty) return fromMap.trim();
+
+    // Fall back to any provided title/name, then a generic label
+    final fallback = (assessment['title'] ?? assessment['name'])?.toString();
+    if (fallback != null && fallback.trim().isNotEmpty && fallback.trim().toLowerCase() != 'spiritual assessment') {
+      return fallback.trim();
+    }
+    return 'Assessment';
   }
 
   Color _getStatusColor(String status) {

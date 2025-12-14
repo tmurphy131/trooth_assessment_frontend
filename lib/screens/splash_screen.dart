@@ -19,10 +19,11 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   late final Future<Widget> _next;
   Widget? _resolved;
+  bool _navigated = false;
 
   Future<Widget> _determineNext() async {
     debugPrint('[Splash] Start resolving destination');
-    // Enforce a minimum 5 second splash regardless of auth/profile speed.
+    // Enforce a small minimum splash to show branding and avoid flashes.
     final gate = Future.delayed(const Duration(seconds: 5));
     const hardTimeout = Duration(seconds: 10); // absolute cap
 
@@ -63,12 +64,35 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     _next = _determineNext();
+    // Hard fallback: if for any reason resolution stalls, push login anyway.
+    Future.delayed(const Duration(seconds: 7), () {
+      if (!mounted) return;
+      if (_resolved == null) {
+        debugPrint('[Splash] Hard fallback fired; forcing SimpleLoginScreen');
+        setState(() {
+          _resolved = const SimpleLoginScreen();
+        });
+      }
+    });
     _next.then((w) {
       if (!mounted) return;
       debugPrint('[Splash] Future completed with ${w.runtimeType}; swapping child in-place');
-      setState(() {
-        _resolved = w;
-      });
+      _navigateTo(w);
+    });
+  }
+
+  void _navigateTo(Widget screen) {
+    if (_navigated || !mounted) {
+      setState(() { _resolved = screen; });
+      return;
+    }
+    _navigated = true;
+    // Use route replacement to ensure no splash overlay lingers.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => screen),
+      );
     });
   }
 

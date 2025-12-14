@@ -3,17 +3,25 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'firebase_options.dart';
 import 'package:uni_links/uni_links.dart';
 import 'screens/agreement_sign_public_screen.dart';
 import 'theme.dart';
-import 'screens/splash_screen.dart'; // splash / auth bootstrap
+// import 'screens/splash_screen.dart'; // legacy complex splash (kept for later)
+import 'screens/simple_login_screen.dart';
 import 'services/api_service.dart';
+import 'features/assessments/screens/mentor_submission_detail_screen.dart';
+import 'features/assessments/screens/mentor_report_v2_screen.dart';
+import 'features/assessments/data/assessments_repository.dart';
+import 'features/assessments/models/mentor_report_v2.dart';
 
 void main() {
   // Wrap everything so uncaught async errors surface in logs & UI.
   runZonedGuarded(() async {
-    WidgetsFlutterBinding.ensureInitialized();
+    final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+    // Keep the native splash visible until we explicitly remove it.
+    FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
     // Attach a global error handler for framework errors.
     FlutterError.onError = (FlutterErrorDetails details) {
@@ -66,6 +74,9 @@ void main() {
     firebaseStopwatch.stop();
     debugPrint('✅ Firebase.initializeApp completed in ${firebaseStopwatch.elapsedMilliseconds}ms');
 
+  // Hold the native splash for an additional 5 seconds per request.
+  await Future.delayed(const Duration(seconds: 5));
+
   // Explicit sign-in only: listen for auth changes and update ApiService token.
   FirebaseAuth.instance.authStateChanges().listen((user) async {
     if (user != null) {
@@ -116,6 +127,8 @@ void main() {
     print('⚠️ URI stream error: $err');
   });
 
+    // Remove native splash now that initialization and delay are done.
+    FlutterNativeSplash.remove();
     runApp(const MyApp());
   }, (error, stack) {
     // Last‑resort zone error logging
@@ -152,8 +165,8 @@ class MyApp extends StatelessWidget {
       title: 'T[root]H Assessment',
       theme: buildAppTheme(),
       debugShowCheckedModeBanner: false,
-      navigatorKey: navigatorKey,
-      home: const SplashScreen(), // <-- Use splash first
+  navigatorKey: navigatorKey,
+  home: const SimpleLoginScreen(), // Use only native launch screen, then show Login
       onGenerateRoute: (settings) {
         // Expected pattern: /agreements/sign/:tokenType/:token
         final uri = Uri.parse(settings.name ?? '');
@@ -165,10 +178,83 @@ class MyApp extends StatelessWidget {
             settings: settings,
           );
         }
+
+        // Mentor routes
+        // /mentor/submissions/:assessmentId
+        if (uri.pathSegments.length == 3 && uri.pathSegments[0] == 'mentor' && uri.pathSegments[1] == 'submissions') {
+          final assessmentId = uri.pathSegments[2];
+          return _guardedMentorRoute(settings, builder: (ctx, claims) {
+            final apprenticeName = settings.arguments is Map && (settings.arguments as Map)['apprenticeName'] is String
+                ? (settings.arguments as Map)['apprenticeName'] as String
+                : 'Apprentice';
+            final apprenticeId = settings.arguments is Map && (settings.arguments as Map)['apprenticeId'] is String
+                ? (settings.arguments as Map)['apprenticeId'] as String
+                : '';
+            return MentorSubmissionDetailScreen(
+              assessmentId: assessmentId,
+              apprenticeId: apprenticeId,
+              apprenticeName: apprenticeName,
+            );
+          });
+        }
+
+        // /mentor/submissions/:assessmentId/report
+        if (uri.pathSegments.length == 4 && uri.pathSegments[0] == 'mentor' && uri.pathSegments[1] == 'submissions' && uri.pathSegments[3] == 'report') {
+          final assessmentId = uri.pathSegments[2];
+          return _guardedMentorRoute(settings, builder: (ctx, claims) {
+            // We can fetch report here synchronously via repo mock or pass placeholder and let screen fetch.
+            // Keep it simple: instantiate repository and fetch in a FutureBuilder.
+            final repo = AssessmentsRepository(ApiService());
+            return FutureBuilder<MentorReportV2>(
+              future: repo.getMentorReportV2(assessmentId),
+              builder: (context, snap) {
+                if (!snap.hasData) {
+                  return const Scaffold(body: Center(child: CircularProgressIndicator()));
+                }
+                final apprenticeName = settings.arguments is Map && (settings.arguments as Map)['apprenticeName'] is String
+                    ? (settings.arguments as Map)['apprenticeName'] as String
+                    : 'Apprentice';
+                return MentorReportV2Screen(report: snap.data!, apprenticeName: apprenticeName);
+              },
+            );
+          });
+        }
         return null; // fall back to unknown
       },
     );
   }
+}
+
+Route<dynamic> _guardedMentorRoute(RouteSettings settings, {required Widget Function(BuildContext, Map<String, dynamic> claims) builder}) {
+  // Simple role guard using Firebase custom claims (mentor/admin). If claims missing, allow and rely on server 403.
+  // We still try to fetch claims for UX.
+  Future<Map<String, dynamic>> _claims() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return {};
+      final result = await user.getIdTokenResult(true);
+      return (result.claims ?? const {});
+    } catch (_) { return {}; }
+  }
+
+  return MaterialPageRoute(
+    settings: settings,
+    builder: (context) {
+      return FutureBuilder<Map<String, dynamic>>(
+        future: _claims(),
+        builder: (context, snap) {
+          final claims = snap.data ?? const {};
+          // Always render the route. Server-side auth (403) will control data access.
+          // This avoids blocking UI with an overlay and preserves back navigation.
+          if (snap.connectionState == ConnectionState.waiting) {
+            // Render target page quickly; let pages show spinners for their own data.
+            return builder(context, claims);
+          }
+          return builder(context, claims);
+        },
+      );
+    },
+  );
 }
 
 /// Simple diagnostic screen to validate rendering pipeline independent of app logic.

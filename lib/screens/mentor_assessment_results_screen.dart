@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:trooth_assessment/utils/assessments.dart';
+import 'package:trooth_assessment/screens/mentor_spiritual_gifts_screen.dart';
+import 'assessment_results_screen.dart';
 import '../services/api_service.dart';
-import 'assessment_history_screen.dart';
 
 class MentorAssessmentResultsScreen extends StatefulWidget {
   final String apprenticeId;
@@ -15,9 +17,7 @@ class _MentorAssessmentResultsScreenState extends State<MentorAssessmentResultsS
   final _api = ApiService();
   bool _loading = true;
   String? _error;
-
-  Map<String, dynamic>? _masterLatest;
-  List<Map<String, dynamic>> _genericSummaries = [];
+  List<Map<String, dynamic>> _assessments = const [];
 
   @override
   void initState() {
@@ -28,29 +28,13 @@ class _MentorAssessmentResultsScreenState extends State<MentorAssessmentResultsS
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final templates = await _api.getPublishedTemplates();
-      final masterFuture = _api.mentorGetMasterTroothLatest(widget.apprenticeId);
-      final genericTemplates = templates.where((t) => (t as Map)['is_master_assessment'] != true).cast<Map<String,dynamic>>().toList();
-      final genericLatestFutures = genericTemplates.map((t) => _api.mentorGetGenericLatest(t['id'] as String, widget.apprenticeId).then((m) => { 'template': t, 'latest': m })).toList();
-  final results = await Future.wait([masterFuture, ...genericLatestFutures]);
-  final master = results.first;
-      final genPairs = results.skip(1).cast<Map<String,dynamic>>().toList();
-
-      final summaries = <Map<String, dynamic>>[];
-      for (final item in genPairs) {
-        final t = item['template'] as Map<String, dynamic>;
-        final latest = (item['latest'] as Map<String, dynamic>);
-        if (latest.isEmpty) continue;
-        summaries.add({'template_id': t['id'], 'template_name': t['name'] ?? 'Assessment', 'latest': latest});
-      }
-
-      if (mounted) setState(() {
-        _masterLatest = master.isEmpty ? null : master;
-        _genericSummaries = summaries;
+      final list = await _api.getApprenticeSubmittedAssessments(widget.apprenticeId, limit: 100);
+      setState(() {
+        _assessments = list.cast<Map<String, dynamic>>();
         _loading = false;
       });
     } catch (e) {
-      if (mounted) setState(() { _error = 'Failed to load results: $e'; _loading = false; });
+      setState(() { _error = 'Failed to load assessments: $e'; _loading = false; });
     }
   }
 
@@ -60,86 +44,89 @@ class _MentorAssessmentResultsScreenState extends State<MentorAssessmentResultsS
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: Text('${widget.apprenticeName} · Results', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
-        leading: IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back, color: Colors.white)),
-        actions: [IconButton(icon: const Icon(Icons.refresh, color: Colors.amber), onPressed: _load)],
+        title: Text('${widget.apprenticeName} · Assessments', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            onPressed: _load,
+            icon: const Icon(Icons.refresh, color: Colors.amber),
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: Colors.amber))
           : _error != null
               ? Center(child: Text(_error!, style: const TextStyle(color: Colors.redAccent, fontFamily: 'Poppins')))
-              : _content(),
+              : _assessments.isEmpty
+                  ? ListView(children: const [SizedBox(height: 200), Center(child: Text('No submissions yet', style: TextStyle(color: Colors.white70, fontFamily: 'Poppins')))])
+                  : ListView.separated(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: _assessments.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, i) => _item(context, _assessments[i]),
+                    ),
     );
   }
 
-  Widget _content() {
-    final children = <Widget>[];
-    children.add(const Text('Master T[root]H', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Poppins')));
-    if (_masterLatest == null) {
-      children.add(Text('No Master submission yet.', style: TextStyle(color: Colors.grey[400], fontFamily: 'Poppins')));
-    } else {
-      children.add(_card(
-        title: 'Master T[root]H',
-        latest: _masterLatest!,
-        onHistory: () => _openHistoryMaster(),
-        onEmail: null, // mentor email for master not supported
-      ));
-    }
-
-    children.add(const SizedBox(height: 16));
-    children.add(const Text('Other Assessments', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Poppins')));
-    if (_genericSummaries.isEmpty) {
-      children.add(Text('No other submissions yet.', style: TextStyle(color: Colors.grey[400], fontFamily: 'Poppins')));
-    } else {
-      for (final s in _genericSummaries) {
-        children.add(_card(
-          title: s['template_name']?.toString() ?? 'Assessment',
-          latest: (s['latest'] as Map<String, dynamic>),
-          onHistory: () => _openHistoryGeneric(s['template_id'] as String, s['template_name']?.toString() ?? 'Assessment'),
-          onEmail: () async { await _api.mentorEmailGenericReport(s['template_id'] as String, widget.apprenticeId, assessmentId: (s['latest'] as Map)['id']?.toString()); _toast('Report emailed'); },
-        ));
-      }
-    }
-
-    return SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children));
-  }
-
-  Widget _card({required String title, required Map<String, dynamic> latest, required VoidCallback onHistory, required Future<void> Function()? onEmail}) {
-    final createdAt = latest['created_at']?.toString();
-    final scores = latest['scores'] as Map<String, dynamic>?;
-    final overall = scores?['overall'] ?? scores?['overall_score'] ?? scores?['overall_percent'];
+  Widget _item(BuildContext context, Map<String, dynamic> a) {
+    final id = (a['id'] ?? a['assessment_id']).toString();
+    final createdAt = a['created_at']?.toString();
+  final cat = (a['template_name'] ?? a['category'] ?? a['template_id'] ?? 'Assessment').toString();
+    final scores = (a['scores'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final overall = scores['overall_score'] ?? scores['overall'];
+    String subtitle = '';
+    if (overall != null) subtitle = 'Overall: $overall/10';
     return Card(
       color: Colors.grey[850],
-      margin: const EdgeInsets.only(top: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-              if (createdAt != null) Text(_safeDate(createdAt), style: TextStyle(color: Colors.grey[400], fontSize: 12, fontFamily: 'Poppins')),
-            ])),
-            Row(mainAxisSize: MainAxisSize.min, children: [
-              TextButton.icon(onPressed: onHistory, icon: const Icon(Icons.history, color: Colors.amber, size: 18), label: const Text('History', style: TextStyle(color: Colors.amber, fontFamily: 'Poppins'))),
-              if (onEmail != null) ...[
-                const SizedBox(width: 6),
-                TextButton.icon(onPressed: () async { await onEmail(); }, icon: const Icon(Icons.mail_outline, color: Colors.amber, size: 18), label: const Text('Email', style: TextStyle(color: Colors.amber, fontFamily: 'Poppins'))),
-              ],
-            ]),
-          ]),
-          if (overall != null) ...[const SizedBox(height: 8), Text('Overall: $overall', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'))],
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        leading: const CircleAvatar(backgroundColor: Color(0x33FFC107), child: Icon(Icons.analytics, color: Colors.amber)),
+        title: Text(cat, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+        subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (subtitle.isNotEmpty) Text(subtitle, style: const TextStyle(color: Colors.white70, fontFamily: 'Poppins')),
+          if (createdAt != null) Text(_formatDate(createdAt), style: const TextStyle(color: Colors.grey, fontSize: 12, fontFamily: 'Poppins')),
         ]),
+        trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+        onTap: () {
+          final assessment = a;
+          // Spiritual Gifts: go to gifts screen with apprentice preselected
+          if (isSpiritualGiftsAssessment(assessment)) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => MentorSpiritualGiftsScreen(
+                  initialApprenticeId: widget.apprenticeId,
+                  initialApprenticeName: widget.apprenticeName,
+                ),
+              ),
+            );
+            return;
+          }
+          // Otherwise go to the mentor submission detail route
+          Navigator.of(context).pushNamed(
+            '/mentor/submissions/$id',
+            arguments: {
+              'apprenticeName': widget.apprenticeName,
+              'apprenticeId': widget.apprenticeId,
+            },
+          );
+        },
       ),
     );
   }
 
-  void _openHistoryMaster() {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => AssessmentHistoryScreen(mode: HistoryMode.mentorMaster, apprenticeId: widget.apprenticeId, title: 'Master T[root]H History')));
+  String _formatDate(String iso) {
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      final y = dt.year;
+      final m = dt.month.toString().padLeft(2, '0');
+      final d = dt.day.toString().padLeft(2, '0');
+      final h12 = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+      final ap = dt.hour >= 12 ? 'PM' : 'AM';
+      final mm = dt.minute.toString().padLeft(2, '0');
+      return '$y-$m-$d · $h12:$mm $ap';
+    } catch (_) {
+      return iso;
+    }
   }
-  void _openHistoryGeneric(String templateId, String title) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => AssessmentHistoryScreen(mode: HistoryMode.mentorGeneric, templateId: templateId, apprenticeId: widget.apprenticeId, title: '$title History')));
-  }
-
-  String _safeDate(String iso) { try { final d = DateTime.parse(iso).toLocal(); return '${d.day}/${d.month}/${d.year}'; } catch (_) { return iso; } }
-  void _toast(String msg, {bool error = false}) { if (!mounted) return; ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: error ? Colors.red : Colors.green)); }
 }

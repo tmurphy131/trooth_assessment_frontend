@@ -11,7 +11,9 @@ import 'spiritual_gifts_full_report_screen.dart';
 
 /// Mentor view: pick an apprentice, view latest gifts result, navigate to history.
 class MentorSpiritualGiftsScreen extends StatefulWidget {
-  const MentorSpiritualGiftsScreen({super.key});
+  final String? initialApprenticeId;
+  final String? initialApprenticeName; // reserved for future UI polish
+  const MentorSpiritualGiftsScreen({super.key, this.initialApprenticeId, this.initialApprenticeName});
 
   @override
   State<MentorSpiritualGiftsScreen> createState() => _MentorSpiritualGiftsScreenState();
@@ -49,6 +51,15 @@ class _MentorSpiritualGiftsScreenState extends State<MentorSpiritualGiftsScreen>
   Future<void> _restoreLastSelection() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      // Prefer explicitly provided apprentice if valid
+      final provided = widget.initialApprenticeId;
+      if (provided != null && _apprentices.any((a) => a['id'].toString() == provided)) {
+        setState(() { _selectedApprenticeId = provided; });
+        await _saveLast(provided);
+        _loadLatest(provided);
+        return;
+      }
+      // Otherwise fall back to last selection from preferences
       final last = prefs.getString('last_apprentice_id');
       if (last != null && _apprentices.any((a) => a['id'].toString() == last)) {
         setState(() { _selectedApprenticeId = last; });

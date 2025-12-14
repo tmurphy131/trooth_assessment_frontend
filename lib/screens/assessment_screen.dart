@@ -813,12 +813,22 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
         }
       }
 
-      // Then submit the draft using the proper endpoint
-      final submission = await _apiService.submitDraft();
+      // Then submit the draft using the proper endpoint (target the right draft)
+      final submission = await _apiService.submitDraft(
+        draftId: _currentDraft?['id']?.toString(),
+        templateId: (widget.templateId ?? _currentDraft?['template_id']?.toString()),
+      );
 
-  // Show submitted snackbar and kick off status polling (stay on this screen)
-  if (!mounted) return;
-  _showSubmittedSnackAndPoll(submission);
+      // On success: notify and return to dashboard
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Assessment submitted successfully')),
+      );
+      // Pop back to dashboard after a brief delay; return true so callers can refresh
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
       
     } catch (e) {
       _showMessage('Failed to submit assessment: $e', isError: true);

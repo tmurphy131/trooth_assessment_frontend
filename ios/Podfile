@@ -1,5 +1,5 @@
-# Set a global platform to align all pods and silence deployment target warnings
-platform :ios, '13.0'
+# Define a global platform for the project
+platform :ios, '16.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -24,6 +24,21 @@ def flutter_root
 end
 
 require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+require 'xcodeproj'
+
+def read_runner_team_id
+  begin
+    project_path = File.expand_path('Runner.xcodeproj', __dir__)
+    project = Xcodeproj::Project.open(project_path)
+    runner = project.targets.find { |t| t.name == 'Runner' }
+    attrs = project.root_object.attributes['TargetAttributes']
+    team = attrs && runner ? attrs[runner.uuid] && attrs[runner.uuid]['DevelopmentTeam'] : nil
+    return team if team && team.strip.length > 0
+  rescue => e
+    Pod::UI.warn "[Podfile] Could not read Runner DevelopmentTeam: #{e}"
+  end
+  nil
+end
 
 flutter_ios_podfile_setup
 
@@ -37,10 +52,31 @@ target 'Runner' do
 end
 
 post_install do |installer|
+  team_id = read_runner_team_id
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+
+    # Ensure all pods use at least iOS 16.0 to match the app target and avoid warnings
     target.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+
+      # Allow code signing defaults for pods (avoid forcing NO which can break some builds)
+      # We still don't want pods to be signed as apps; leaving identity empty is fine.
+      config.build_settings['CODE_SIGNING_ALLOWED'] = 'YES'
+      config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
+      config.build_settings['CODE_SIGN_IDENTITY'] = ''
+
+      # For Firebase core modules, ensure they define a module for @import to work from plugins
+      firebase_module_targets = %w[
+        FirebaseAuth FirebaseCore FirebaseCoreExtension FirebaseCoreInternal FirebaseFirestore
+        FirebaseAppCheckInterop FirebaseAuthInterop RecaptchaInterop GoogleUtilities GTMSessionFetcher
+      ]
+      if firebase_module_targets.include?(target.name)
+        config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'
+        config.build_settings['DEFINES_MODULE'] = 'YES'
+        # Helps generate a module interface when needed
+        config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'YES'
+      end
     end
   end
 end

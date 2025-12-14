@@ -12,6 +12,7 @@ import 'dart:async';
 import 'mentor_profile_screen.dart';
 import 'mentor_resources_screen.dart';
 import 'mentor_spiritual_gifts_screen.dart';
+import '../utils/assessments.dart';
 
 class MentorDashboardNew extends StatefulWidget {
   const MentorDashboardNew({super.key});
@@ -31,6 +32,8 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   Map<String, List<Map<String, dynamic>>> _completedAssessmentsByApprentice = {};
   bool _isLoadingApprentices = true;
   bool _isLoadingAssessments = true;
+  // Filter: '_all' sentinel means show all apprentices
+  String _selectedApprenticeId = '_all';
   // bool _loadingInactive = false; // Removed unused inactive apprentice state
   String? _error;
   int _activeNotificationCount = 0;
@@ -51,9 +54,9 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
         final token = await user!.getIdToken();
         _apiService.bearerToken = token;
       }
-      
+      // First load apprentices, then load dependent data to avoid empty results on first paint
+      await _loadApprentices();
       await Future.wait([
-        _loadApprentices(),
         _loadCompletedAssessments(),
         _loadInactiveApprentices(),
         _refreshNotificationCount(),
@@ -118,7 +121,10 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
         _error = null;
       });
       Map<String, List<Map<String, dynamic>>> grouped = {};
-      for (final apprentice in _apprentices) {
+      final targets = _selectedApprenticeId == '_all'
+          ? _apprentices
+          : _apprentices.where((a) => a['id'] == _selectedApprenticeId);
+      for (final apprentice in targets) {
         final apprenticeId = apprentice['id'] as String;
         final assessments = await _apiService.getApprenticeSubmittedAssessments(apprenticeId, limit: 100);
         grouped[apprenticeId] = assessments.cast<Map<String, dynamic>>();
@@ -319,12 +325,18 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
     // Calculate average score
     double averageScore = 0.0;
     if (allAssessments.isNotEmpty) {
-      final scores = allAssessments
-          .where((assessment) => assessment['scores']?['overall_score'] != null)
-          .map((assessment) => (assessment['scores']['overall_score'] as num).toDouble())
-          .toList();
+      final scores = <double>[];
+      for (final a in allAssessments) {
+        final raw = (a as Map)['scores']?['overall_score'];
+        double v;
+        if (raw is num) v = raw.toDouble();
+        else if (raw is String) v = double.tryParse(raw) ?? 0.0;
+        else v = 0.0;
+        if (v.isFinite) scores.add(v);
+      }
       if (scores.isNotEmpty) {
-        averageScore = scores.reduce((a, b) => a + b) / scores.length;
+        final sum = scores.fold<double>(0.0, (p, c) => p + c);
+        averageScore = (sum / scores.length).clamp(0.0, 10.0);
       }
     }
 
@@ -352,7 +364,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
           child: _buildStatCard(
             icon: Icons.trending_up,
             title: 'Average Score',
-            value: '${averageScore.toStringAsFixed(1)}%',
+            value: '${(averageScore * 10).toStringAsFixed(1)}%',
             color: Colors.orange,
           ),
         ),
@@ -371,7 +383,8 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
       color: Colors.grey[900],
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        // Reduce horizontal padding by 1px on each side to gain ~2px inner width
+        padding: const EdgeInsets.fromLTRB(15, 16, 15, 16),
         child: Column(
           children: [
             Container(
@@ -519,9 +532,6 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
               case 'assessments':
                 await _showApprenticeAssessments(apprenticeId);
                 break;
-              case 'draft':
-                await _showApprenticeDraft(apprenticeId);
-                break;
               case 'meeting':
                 await _showMeetingInfo(apprenticeId, email, name);
                 break;
@@ -548,16 +558,6 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                   Icon(Icons.assignment, color: Colors.amber),
                   SizedBox(width: 8),
                   Text('View Assessments', style: TextStyle(color: Colors.white)),
-                ],
-              ),
-            ),
-            const PopupMenuItem(
-              value: 'draft',
-              child: Row(
-                children: [
-                  Icon(Icons.edit, color: Colors.amber),
-                  SizedBox(width: 8),
-                  Text('Current Draft', style: TextStyle(color: Colors.white)),
                 ],
               ),
             ),
@@ -739,25 +739,25 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Assessment Results',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Poppins',
-                ),
-              ),
-              IconButton(
-                onPressed: _loadCompletedAssessments,
-                icon: const Icon(Icons.refresh, color: Colors.amber),
-                tooltip: 'Refresh',
-              ),
-            ],
+          const Text(
+            'Assessment Results',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Poppins',
+            ),
           ),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(child: _buildApprenticeFilter()),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: _reloadAssessments,
+              icon: const Icon(Icons.refresh, color: Colors.amber),
+              tooltip: 'Refresh',
+            ),
+          ]),
           const SizedBox(height: 16),
           Expanded(
             child: _isLoadingAssessments
@@ -767,7 +767,10 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                 : _completedAssessmentsByApprentice.isEmpty
                     ? _buildEmptyAssessmentsState()
                     : ListView(
-                        children: _apprentices.map((apprentice) {
+                        children: (_selectedApprenticeId == '_all'
+                                ? _apprentices
+                                : _apprentices.where((a) => a['id'] == _selectedApprenticeId).toList())
+                            .map((apprentice) {
                           final apprenticeId = apprentice['id'] as String;
                           final assessments = _completedAssessmentsByApprentice[apprenticeId] ?? [];
                           if (assessments.isEmpty) return const SizedBox.shrink();
@@ -795,6 +798,46 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
         ],
       ),
     );
+  }
+
+  Widget _buildApprenticeFilter() {
+    final items = <DropdownMenuItem<String>>[
+      const DropdownMenuItem(
+        value: '_all',
+        child: Text('All Apprentices'),
+      ),
+      ..._apprentices.map((a) => DropdownMenuItem<String>(
+            value: a['id'] as String,
+            child: Text((a['name'] ?? a['email'] ?? 'Apprentice').toString()),
+          )),
+    ];
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey[850],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[700]!),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedApprenticeId,
+          items: items,
+          dropdownColor: Colors.grey[900],
+          style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'),
+          onChanged: (value) async {
+            if (value == null) return;
+            setState(() { _selectedApprenticeId = value; });
+            await _loadCompletedAssessments();
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _reloadAssessments() async {
+    // Ensure apprentices list is up-to-date first, then reload grouped submissions
+    await _loadApprentices();
+    await _loadCompletedAssessments();
   }
 
   Widget _buildEmptyAssessmentsState() {
@@ -842,9 +885,26 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
 
   Widget _buildCompletedAssessmentCard(Map<String, dynamic> assessment) {
     final scores = assessment['scores'] as Map<String, dynamic>? ?? {};
-    final overallScore = scores['overall_score'] ?? 0;
+    // Normalize overall score to a 0..10 double if possible
+    double overall10;
+    try {
+      final raw = scores['overall_score'];
+      if (raw is num) {
+        overall10 = raw.toDouble();
+      } else if (raw is String) {
+        overall10 = double.tryParse(raw) ?? 0.0;
+      } else {
+        overall10 = 0.0;
+      }
+    } catch (_) {
+      overall10 = 0.0;
+    }
+    if (!overall10.isFinite) overall10 = 0.0;
+    final overallPct = (overall10 * 10).clamp(0, 100).round();
     final createdAt = assessment['created_at'] as String?;
-    final apprenticeName = assessment['apprentice_name'] ?? 'Unknown Apprentice';
+    final apprenticeName = assessment['apprentice_name'] ?? assessment['apprentice']?['name'] ?? 'Unknown Apprentice';
+    final apprenticeId = assessment['apprentice_id'] ?? assessment['apprentice']?['id'] ?? '';
+    final assessmentId = assessment['id']?.toString() ?? assessment['assessment_id']?.toString() ?? '';
     
     return Card(
       elevation: 2,
@@ -856,12 +916,12 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: _getScoreColor(overallScore * 10).withOpacity(0.2), // Convert 1-10 to percentage
+            color: _getScoreColor(overallPct).withOpacity(0.2), // Percent 0..100
             borderRadius: BorderRadius.circular(24),
           ),
           child: Icon(
             Icons.analytics,
-            color: _getScoreColor(overallScore * 10),
+            color: _getScoreColor(overallPct),
           ),
         ),
         title: Text(
@@ -876,9 +936,9 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Overall Score: $overallScore/10',
+              'Overall Score: ${overall10.toStringAsFixed(1)}/10',
               style: TextStyle(
-                color: _getScoreColor(overallScore * 10),
+                color: _getScoreColor(overallPct),
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.w600,
               ),
@@ -908,7 +968,33 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
           color: Colors.grey[600],
           size: 16,
         ),
-        onTap: () => _showAssessmentResults(assessment),
+        onTap: () {
+          // If this submission is for Spiritual Gifts, route to the dedicated gifts screen
+          if (isSpiritualGiftsAssessment(assessment)) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => MentorSpiritualGiftsScreen(
+                  initialApprenticeId: apprenticeId?.toString().isEmpty == false ? apprenticeId.toString() : null,
+                  initialApprenticeName: apprenticeName?.toString(),
+                ),
+              ),
+            );
+            return;
+          }
+
+          // Navigate to mentor submission detail screen with real IDs
+          if (assessmentId.isNotEmpty) {
+            Navigator.of(context).pushNamed(
+              '/mentor/submissions/$assessmentId',
+              arguments: {
+                'apprenticeName': apprenticeName,
+                'apprenticeId': apprenticeId,
+              },
+            );
+          } else {
+            _showAssessmentResults(assessment); // fallback to legacy view
+          }
+        },
       ),
     );
   }

@@ -65,11 +65,18 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
   @override
   Widget build(BuildContext context) {
     debugPrint('[Login] build');
+    // Responsive tweaks: shrink spacing/logo on smaller screens
+    final size = MediaQuery.of(context).size;
+    final isSmall = size.height < 750;
+    final logoHeight = isSmall ? 200.0 : 300.0; // was 400 (too tall)
+    final sectionGap = isSmall ? 20.0 : 32.0;  // reduce gaps on small screens
+    final pagePadding = EdgeInsets.all(isSmall ? 16.0 : 24.0);
+    final titleFontSize = isSmall ? 28.0 : 32.0;
     return Scaffold(
       backgroundColor: Colors.black,
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: pagePadding,
           child: Form(
             key: _formKey,
             child: Column(
@@ -81,14 +88,14 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
                   padding: const EdgeInsets.all(16.0),
                   child: Image.asset(
                     'assets/logo.png',
-                    height: 400,
-                    width: 400,
+                    height: logoHeight,
+                    width: logoHeight,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
                       // Fallback if logo fails to load
                       return Container(
-                        height: 400,
-                        width: 400,
+                        height: logoHeight,
+                        width: logoHeight,
                         decoration: BoxDecoration(
                           border: Border.all(color: Colors.amber),
                           borderRadius: BorderRadius.circular(8),
@@ -98,7 +105,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
                             'T[root]H',
                             style: TextStyle(
                               color: Colors.amber,
-                              fontSize: 32,
+                              fontSize: 28,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -107,14 +114,14 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
                     },
                   ),
                 ),
-                const SizedBox(height: 32),
+                SizedBox(height: sectionGap),
 
                 // Title
-                const Text(
+                Text(
                   'Welcome Back',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 32,
+                    fontSize: titleFontSize,
                     fontWeight: FontWeight.bold,
                     fontFamily: 'Poppins',
                   ),
@@ -131,7 +138,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
                     fontFamily: 'Poppins',
                   ),
                 ),
-                const SizedBox(height: 32),
+                SizedBox(height: sectionGap),
 
                 // Extra fields for sign up
                 // (Sign up fields removed; dedicated signup screen now handles account creation.)

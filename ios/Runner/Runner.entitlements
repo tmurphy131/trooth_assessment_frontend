@@ -2,13 +2,15 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Add iCloud / push / keychain access groups here as needed -->
-	<key>aps-environment</key>
-	<string>development</string>
-	<!-- Associated domains for Universal Links / App Links -->
-	<key>com.apple.developer.associated-domains</key>
+	<!-- Keychain access groups: default to app's bundle identifier if unspecified by signing -->
+	<key>keychain-access-groups</key>
 	<array>
-		<string>applinks:links.onlyblv.com</string>
+		<string>$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	</array>
+	<!-- Associated domains for universal links (keep but empty if not configured) -->
+	<!-- <key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:example.com</string>
+	</array> -->
 </dict>
 </plist>
