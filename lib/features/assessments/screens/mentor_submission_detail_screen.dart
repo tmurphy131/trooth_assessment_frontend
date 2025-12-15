@@ -130,17 +130,49 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
 
   Future<void> _downloadPdf() async {
     try {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Downloading PDF...')));
+      
       final r = await ApiService().downloadMentorReportPdf(assessmentId: widget.assessmentId);
       if (r.statusCode == 200) {
-        final dir = await getTemporaryDirectory();
-        final file = File('${dir.path}/mentor_report_${widget.assessmentId}.pdf');
+        // Use application documents directory for better iOS compatibility
+        final dir = await getApplicationDocumentsDirectory();
+        final fileName = 'mentor_report_${widget.assessmentId.substring(0, 8)}.pdf';
+        final file = File('${dir.path}/$fileName');
         await file.writeAsBytes(r.bodyBytes);
-        await Share.shareXFiles([XFile(file.path)], text: 'Mentor Report for ${widget.apprenticeName}');
-        if (!mounted) return; ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PDF saved and share sheet opened.')));
+        
+        // Verify file was written
+        if (!await file.exists()) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to save PDF file')));
+          return;
+        }
+        
+        // Try to share the file
+        try {
+          final result = await Share.shareXFiles(
+            [XFile(file.path, mimeType: 'application/pdf')],
+            subject: 'Mentor Report for ${widget.apprenticeName}',
+          );
+          if (!mounted) return;
+          if (result.status == ShareResultStatus.success) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PDF shared successfully')));
+          } else if (result.status == ShareResultStatus.dismissed) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PDF saved to app documents')));
+          }
+        } catch (shareError) {
+          // If sharing fails, at least confirm the file was saved
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('PDF saved: ${file.path}')));
+        }
       } else {
-        if (!mounted) return; ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Download failed: ${r.statusCode}')));
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Download failed: ${r.statusCode} - ${r.body}')));
       }
-    } catch (e) { if (!mounted) return; ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Download error: $e'))); }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Download error: $e')));
+    }
   }
 
   void _openSimplifiedReport() {

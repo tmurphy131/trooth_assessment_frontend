@@ -168,6 +168,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                     if (isEdit) {
                       await _api.updateMentorResource(
                         resourceId: existing['id'],
+                        apprenticeId: (apprenticeId == null || (apprenticeId?.isEmpty ?? true)) ? null : apprenticeId,
                         title: title,
                         description: descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim(),
                         linkUrl: linkCtrl.text.trim().isEmpty ? null : linkCtrl.text.trim(),

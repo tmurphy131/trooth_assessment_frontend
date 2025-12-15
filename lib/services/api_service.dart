@@ -635,6 +635,7 @@ class ApiService {
   // Mentor: update a resource
   Future<Map<String, dynamic>> updateMentorResource({
     required String resourceId,
+    String? apprenticeId,
     String? title,
     String? description,
     String? linkUrl,
@@ -644,6 +645,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/mentor/resources/$resourceId';
     final payload = <String, dynamic>{
+      if (apprenticeId != null) 'apprentice_id': apprenticeId,
       if (title != null) 'title': title,
       if (description != null) 'description': description,
       if (linkUrl != null) 'link_url': linkUrl,
