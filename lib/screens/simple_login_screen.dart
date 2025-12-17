@@ -1,6 +1,13 @@
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:io' show Platform;
 
 import 'mentor_dashboard_new.dart';
 import 'apprentice_dashboard_new.dart';
@@ -55,6 +62,112 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.message ?? 'Login failed')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Navigate to appropriate dashboard based on user role
+  Future<void> _navigateBasedOnRole(User user) async {
+    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final data = doc.data();
+    final role = data?['role'] as String?;
+    
+    if (!mounted) return;
+    
+    if (role == 'mentor') {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const MentorDashboardNew()),
+      );
+    } else if (role == 'apprentice') {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const ApprenticeDashboardNew()),
+      );
+    } else {
+      // New user or legacy user missing profile; send to signup to complete
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const SignupScreen()),
+      );
+    }
+  }
+
+  /// Google Sign-In
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
+        // User cancelled the sign-in
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      if (!mounted) return;
+      
+      await _navigateBasedOnRole(userCredential.user!);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google sign-in failed: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Generate a random nonce for Apple Sign-In
+  String _generateNonce([int length = 32]) {
+    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+  }
+
+  /// SHA256 hash of the nonce
+  String _sha256ofString(String input) {
+    final bytes = utf8.encode(input);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
+  /// Apple Sign-In
+  Future<void> _signInWithApple() async {
+    setState(() => _isLoading = true);
+    try {
+      // Generate nonce for security
+      final rawNonce = _generateNonce();
+      final nonce = _sha256ofString(rawNonce);
+
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+
+      final oauthCredential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        rawNonce: rawNonce,
+      );
+
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(oauthCredential);
+      if (!mounted) return;
+      
+      await _navigateBasedOnRole(userCredential.user!);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Apple sign-in failed: ${e.toString()}')),
         );
       }
     } finally {
@@ -219,6 +332,92 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
+
+                // Divider with "or"
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: Colors.grey.shade600)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'or',
+                        style: TextStyle(
+                          color: Colors.grey.shade400,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: Colors.grey.shade600)),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Google Sign-In Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: OutlinedButton.icon(
+                    onPressed: _isLoading ? null : _signInWithGoogle,
+                    icon: Image.asset(
+                      'assets/google_logo.png',
+                      height: 24,
+                      width: 24,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.g_mobiledata,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    label: const Text(
+                      'Sign in with Google',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: BorderSide(color: Colors.grey.shade600),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Apple Sign-In Button (only show on iOS)
+                if (Platform.isIOS)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: OutlinedButton.icon(
+                      onPressed: _isLoading ? null : _signInWithApple,
+                      icon: const Icon(
+                        Icons.apple,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      label: const Text(
+                        'Sign in with Apple',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: BorderSide(color: Colors.grey.shade600),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                if (Platform.isIOS) const SizedBox(height: 24),
+                if (!Platform.isIOS) const SizedBox(height: 8),
 
                 // Toggle button
                 TextButton(
