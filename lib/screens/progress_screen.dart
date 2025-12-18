@@ -151,7 +151,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
         _toast('Tap "New Assessment" to begin.', error: false);
       },
     );
-    final badge = (_master!['overall_score_display'] ?? _master!['overall_score'] ?? 0).toString();
+    // Try multiple keys for the score: overall_score_display, overall_score, latest_score, score
+    final rawScore = _master!['overall_score_display'] ?? _master!['overall_score'] ?? _master!['latest_score'] ?? _master!['score'] ?? 0;
+    final badge = rawScore.toString();
     final top3 = (_master!['top3'] as List<dynamic>? ?? const []).cast<Map>();
     final chips = top3.map((m) => {'category': m['category']?.toString() ?? '', 'score': m['score']}).toList();
     final completedAt = _master!['completed_at']?.toString();
@@ -186,31 +188,31 @@ class _ProgressScreenState extends State<ProgressScreen> {
   Widget _featuredCard({required String title, String? badge, required List<Map<String, dynamic>> chips, String? subtitle}) {
     return Card(
       color: Colors.grey[900],
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 12),
+          Text(title, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 13)),
+          const SizedBox(height: 10),
           Row(children: [
             if (badge != null)
               Container(
-                width: 48, height: 48,
-                decoration: BoxDecoration(color: Colors.amber.withOpacity(0.2), borderRadius: BorderRadius.circular(24)),
+                width: 40, height: 40,
+                decoration: BoxDecoration(color: Colors.amber.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
                 alignment: Alignment.center,
-                child: Text(badge, style: const TextStyle(color: Colors.amber, fontSize: 18, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+                child: Text(badge, style: const TextStyle(color: Colors.amber, fontSize: 15, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
               ),
-            const SizedBox(width: 12),
+            if (badge != null) const SizedBox(width: 8),
             Expanded(
-              child: Wrap(spacing: 8, runSpacing: 8, children: [
+              child: Wrap(spacing: 4, runSpacing: 4, children: [
                 for (final c in chips)
                   _chip(text: c['category']?.toString() ?? '', value: c['score']?.toString()),
               ]),
             ),
           ]),
           if (subtitle != null) ...[
-            const SizedBox(height: 12),
-            Text(subtitle, style: TextStyle(color: Colors.grey[400], fontSize: 12, fontFamily: 'Poppins')),
+            const SizedBox(height: 8),
+            Text(subtitle, style: TextStyle(color: Colors.grey[400], fontSize: 11, fontFamily: 'Poppins')),
           ],
         ]),
       ),
@@ -339,15 +341,17 @@ class _ProgressScreenState extends State<ProgressScreen> {
   }
 
   Widget _chip({required String text, String? value}) {
-    final label = text.length > 14 ? '${text.substring(0, 14)}…' : text;
+    final label = text.length > 12 ? '${text.substring(0, 12)}…' : text;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: Colors.amber.withOpacity(0.15), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.amber.withOpacity(0.45))),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(color: Colors.amber.withOpacity(0.15), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.amber.withOpacity(0.45))),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Text(label, style: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
+        Flexible(
+          child: Text(label, style: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 11), overflow: TextOverflow.ellipsis),
+        ),
         if (value != null) ...[
-          const SizedBox(width: 6),
-          Text(value, style: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 12)),
+          const SizedBox(width: 4),
+          Text(value, style: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 11)),
         ]
       ]),
     );

@@ -10,6 +10,7 @@ import 'spiritual_gifts_assessment_screen.dart';
 import 'spiritual_gifts_results_screen.dart';
 import 'spiritual_gifts_history_screen.dart';
 import 'progress_screen.dart';
+import 'apprentice_resources_screen.dart';
 
 class ApprenticeDashboardNew extends StatefulWidget {
   const ApprenticeDashboardNew({super.key});
@@ -213,19 +214,30 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
   Widget build(BuildContext context) {
     return BaseDashboard(
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildWelcomeCard(),
-            const SizedBox(height: 24),
-            _buildQuickActions(),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 300,
+              child: _buildQuickActions(),
+            ),
+            const SizedBox(height: 20),
             Expanded(child: _buildRecentAssessments()),
           ],
         ),
       ),
       additionalActions: [
+        // Mentor & Agreements icon
+        IconButton(
+          icon: const Icon(Icons.people, color: Color(0xFFFFD700)),
+          tooltip: 'Mentor & Agreements',
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ApprenticeMentorScreen()),
+          ),
+        ),
         // Invitations icon with badge (badge hidden automatically when count == 0)
         Stack(
           alignment: Alignment.topRight,
@@ -269,49 +281,43 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
     return Card(
       elevation: 4,
       color: Colors.grey[900],
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              width: 60,
-              height: 60,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: Colors.amber.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(30),
+                borderRadius: BorderRadius.circular(22),
               ),
-              child: const Icon(Icons.person, color: Colors.amber, size: 30),
+              child: const Icon(Icons.person, color: Colors.amber, size: 22),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Welcome back,',
-                    style: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 14,
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
-                  Text(
-                    _deriveDisplayName(),
+                    'Welcome back, ${_deriveDisplayName()}',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 20,
+                      fontSize: 15,
                       fontWeight: FontWeight.bold,
                       fontFamily: 'Poppins',
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
                   Text(
                     '#getrooted',
                     style: TextStyle(
                       color: Colors.amber[300],
-                      fontSize: 12,
+                      fontSize: 11,
                       fontFamily: 'Poppins',
                     ),
                   ),
@@ -332,14 +338,15 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
           'Quick Actions',
           style: TextStyle(
             color: Colors.white,
-            fontSize: 18,
+            fontSize: 14,
             fontWeight: FontWeight.bold,
             fontFamily: 'Poppins',
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 6),
         // First row: New Assessment + Spiritual Gifts
-        Row(
+        Expanded(
+          child: Row(
           children: [
             Expanded(
               child: _buildActionCard(
@@ -387,34 +394,37 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        // Second row: View Progress + Mentor
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionCard(
-                icon: Icons.history,
-                title: 'View Progress',
-                subtitle: 'Track your growth',
-                color: Colors.blue,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ProgressScreen()),
+        ),
+        const SizedBox(height: 20),
+        // Second row: View Progress + Resources
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildActionCard(
+                  icon: Icons.history,
+                  title: 'View Progress',
+                  subtitle: 'Track your growth',
+                  color: Colors.blue,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ProgressScreen()),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildActionCard(
-                icon: Icons.people,
-                title: 'Mentor',
-                subtitle: 'Mentor & Agreements',
-                color: Colors.purple,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ApprenticeMentorScreen()),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildActionCard(
+                  icon: Icons.menu_book,
+                  title: 'Resources',
+                  subtitle: 'Guides & weekly tips',
+                  color: Colors.orange,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ApprenticeResourcesScreen()),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
@@ -430,29 +440,31 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
     return Card(
       elevation: 2,
       color: Colors.grey[850],
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 14.0),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(22),
                 ),
-                child: Icon(icon, color: color, size: 24),
+                child: Icon(icon, color: color, size: 22),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Text(
                 title,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: FontWeight.bold,
                   fontFamily: 'Poppins',
                 ),
@@ -463,10 +475,12 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
                 subtitle,
                 style: TextStyle(
                   color: Colors.grey[400],
-                  fontSize: 12,
+                  fontSize: 11,
                   fontFamily: 'Poppins',
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -476,6 +490,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
   }
 
   Widget _buildRecentAssessments() {
+    // Draft assessments section - fills remaining space
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -486,60 +501,49 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
               'Draft Assessments',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 18,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
-                fontFamily: 'Poppins',
+                  fontFamily: 'Poppins',
+                ),
               ),
-            ),
-            IconButton(
-              onPressed: _loadAssessments,
-              icon: const Icon(Icons.refresh, color: Colors.amber),
-              tooltip: 'Refresh',
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Expanded(
-          child: _isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(color: Colors.amber),
-                )
-              : _error != null
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            _error!,
-                            style: TextStyle(
-                              color: Colors.grey[400],
-                              fontFamily: 'Poppins',
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: _loadAssessments,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.amber,
-                              foregroundColor: Colors.black,
-                            ),
-                            child: const Text('Retry'),
-                          ),
-                        ],
-                      ),
-                    )
-                  : _assessments.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
-                          itemCount: _assessments.length,
-                          itemBuilder: (context, index) {
-                            return _buildAssessmentCard(_assessments[index]);
-                          },
+              SizedBox(
+                height: 28,
+                width: 28,
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  onPressed: _loadAssessments,
+                  icon: const Icon(Icons.refresh, color: Colors.amber, size: 18),
+                  tooltip: 'Refresh',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: Colors.amber, strokeWidth: 2),
+                  )
+                : _error != null
+                    ? Center(
+                        child: Text(
+                          _error!,
+                          style: TextStyle(color: Colors.grey[400], fontFamily: 'Poppins', fontSize: 12),
+                          textAlign: TextAlign.center,
                         ),
-        ),
-      ],
-    );
+                      )
+                    : _assessments.isEmpty
+                        ? _buildEmptyStateCompact()
+                        : ListView.builder(
+                            padding: EdgeInsets.zero,
+                            itemCount: _assessments.length,
+                            itemBuilder: (context, index) {
+                              return _buildAssessmentCardCompact(_assessments[index]);
+                            },
+                          ),
+          ),
+        ],
+      );
   }
 
   Widget _buildEmptyState() {
@@ -596,6 +600,96 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
                   ),
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyStateCompact() {
+    return Center(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.assignment_outlined, size: 24, color: Colors.grey[600]),
+          const SizedBox(width: 10),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'No drafts yet',
+                style: TextStyle(color: Colors.grey[400], fontSize: 13, fontFamily: 'Poppins', fontWeight: FontWeight.w500),
+              ),
+              GestureDetector(
+                onTap: _startNewAssessment,
+                child: Text(
+                  'Start a new assessment →',
+                  style: TextStyle(color: Colors.amber[300], fontSize: 11, fontFamily: 'Poppins'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAssessmentCardCompact(Map<String, dynamic> assessment) {
+    final title = _resolveDraftTitle(assessment);
+    final updatedAt = assessment['updated_at'] as String?;
+    final createdAt = assessment['created_at'] as String?;
+    String timeInfo = '';
+    try {
+      final ts = updatedAt ?? createdAt;
+      if (ts != null) {
+        timeInfo = _relativeTime(DateTime.parse(ts).toLocal());
+      }
+    } catch (_) {}
+
+    return Card(
+      elevation: 1,
+      color: Colors.grey[850],
+      margin: const EdgeInsets.only(bottom: 6),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: InkWell(
+        onTap: () => _navigateToAssessment(assessment),
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Icon(Icons.edit_note, color: Colors.amber, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'Poppins'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (timeInfo.isNotEmpty)
+                      Text(
+                        timeInfo,
+                        style: TextStyle(color: Colors.grey[500], fontSize: 10, fontFamily: 'Poppins'),
+                      ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Colors.grey, size: 18),
             ],
           ),
         ),

@@ -345,7 +345,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
         Expanded(
           child: _buildStatCard(
             icon: Icons.people,
-            title: 'Active Apprentices',
+            title: 'Active\nApprentices',
             value: totalApprentices.toString(),
             color: Colors.blue,
           ),
@@ -354,7 +354,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
         Expanded(
           child: _buildStatCard(
             icon: Icons.assignment_turned_in,
-            title: 'Completed Assessments',
+            title: 'Completed\nAssessments',
             value: totalCompletedAssessments.toString(),
             color: Colors.green,
           ),
@@ -363,7 +363,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
         Expanded(
           child: _buildStatCard(
             icon: Icons.trending_up,
-            title: 'Average Score',
+            title: 'Average\nScore',
             value: '${(averageScore * 10).toStringAsFixed(1)}%',
             color: Colors.orange,
           ),
@@ -411,10 +411,12 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
               title,
               style: TextStyle(
                 color: Colors.grey[400],
-                fontSize: 12,
+                fontSize: 10,
                 fontFamily: 'Poppins',
+                height: 1.2,
               ),
               textAlign: TextAlign.center,
+              maxLines: 2,
             ),
           ],
         ),
@@ -519,7 +521,10 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
           style: TextStyle(
             color: Colors.grey[400],
             fontFamily: 'Poppins',
+            fontSize: 12,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         trailing: PopupMenuButton<String>(
           icon: Icon(Icons.more_vert, color: Colors.grey[600]),
