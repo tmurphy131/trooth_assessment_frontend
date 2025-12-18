@@ -418,15 +418,24 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
                 const Icon(Icons.assignment, color: Colors.amber),
                 const SizedBox(width: 8),
                 const Text('Agreement Status', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _statusColor(status).withOpacity(.2),
-                    borderRadius: BorderRadius.circular(12),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _statusColor(status).withOpacity(.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _formatStatus(status),
+                        style: TextStyle(color: _statusColor(status), fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
-                  child: Text(status, style: TextStyle(color: _statusColor(status), fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-                )
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -581,8 +590,13 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
           backgroundColor: _statusColor(status).withOpacity(.2),
           child: Icon(Icons.description, color: _statusColor(status)),
         ),
-        title: Text(ag['apprentice_email'] ?? 'Unknown', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
-        subtitle: Text(status, style: TextStyle(color: _statusColor(status), fontFamily: 'Poppins')),
+        title: Text(
+          ag['apprentice_email'] ?? 'Unknown',
+          style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 14),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(_formatStatus(status), style: TextStyle(color: _statusColor(status), fontFamily: 'Poppins')),
         onTap: () async {
           // Fetch latest details & show
           try {
@@ -616,6 +630,17 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
       case 'fully_signed': return Colors.green;
       case 'revoked': return Colors.red;
       default: return Colors.grey;
+    }
+  }
+
+  String _formatStatus(String status) {
+    switch (status) {
+      case 'draft': return 'Draft';
+      case 'awaiting_apprentice': return 'Awaiting Apprentice';
+      case 'awaiting_parent': return 'Awaiting Parent';
+      case 'fully_signed': return 'Fully Signed';
+      case 'revoked': return 'Revoked';
+      default: return status;
     }
   }
 

@@ -1,6 +1,13 @@
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:io' show Platform;
 
 import 'mentor_dashboard_new.dart';
 import 'apprentice_dashboard_new.dart';
@@ -62,40 +69,146 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
     }
   }
 
+  /// Navigate to appropriate dashboard based on user role
+  Future<void> _navigateBasedOnRole(User user) async {
+    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final data = doc.data();
+    final role = data?['role'] as String?;
+    
+    if (!mounted) return;
+    
+    if (role == 'mentor') {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const MentorDashboardNew()),
+      );
+    } else if (role == 'apprentice') {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const ApprenticeDashboardNew()),
+      );
+    } else {
+      // New user or legacy user missing profile; send to signup to complete
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const SignupScreen()),
+      );
+    }
+  }
+
+  /// Google Sign-In
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
+        // User cancelled the sign-in
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      if (!mounted) return;
+      
+      await _navigateBasedOnRole(userCredential.user!);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google sign-in failed: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Generate a random nonce for Apple Sign-In
+  String _generateNonce([int length = 32]) {
+    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+  }
+
+  /// SHA256 hash of the nonce
+  String _sha256ofString(String input) {
+    final bytes = utf8.encode(input);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
+  /// Apple Sign-In
+  Future<void> _signInWithApple() async {
+    setState(() => _isLoading = true);
+    try {
+      // Generate nonce for security
+      final rawNonce = _generateNonce();
+      final nonce = _sha256ofString(rawNonce);
+
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+
+      final oauthCredential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        rawNonce: rawNonce,
+      );
+
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(oauthCredential);
+      if (!mounted) return;
+      
+      await _navigateBasedOnRole(userCredential.user!);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Apple sign-in failed: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     debugPrint('[Login] build');
     // Responsive tweaks: shrink spacing/logo on smaller screens
     final size = MediaQuery.of(context).size;
     final isSmall = size.height < 750;
-    final logoHeight = isSmall ? 200.0 : 300.0; // was 400 (too tall)
-    final sectionGap = isSmall ? 20.0 : 32.0;  // reduce gaps on small screens
-    final pagePadding = EdgeInsets.all(isSmall ? 16.0 : 24.0);
-    final titleFontSize = isSmall ? 28.0 : 32.0;
+    final isVerySmall = size.height < 680;
+    final logoWidth = size.width - 48; // Nearly full width
+    final sectionGap = isVerySmall ? 12.0 : (isSmall ? 16.0 : 24.0);
+    final pagePadding = EdgeInsets.symmetric(horizontal: isSmall ? 16.0 : 24.0, vertical: 8.0);
+    final titleFontSize = isSmall ? 24.0 : 28.0;
+    final buttonHeight = isSmall ? 48.0 : 52.0;
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Center(
-        child: SingleChildScrollView(
-          padding: pagePadding,
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const _LoginDebugBadge(),
-                // Logo
-                Container(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Image.asset(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: pagePadding,
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const _LoginDebugBadge(),
+                  // Logo - cropped version, nearly full width
+                  Image.asset(
                     'assets/logo.png',
-                    height: logoHeight,
-                    width: logoHeight,
+                    width: logoWidth,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
                       // Fallback if logo fails to load
                       return Container(
-                        height: logoHeight,
-                        width: logoHeight,
+                        width: logoWidth,
+                        height: 60,
                         decoration: BoxDecoration(
                           border: Border.all(color: Colors.amber),
                           borderRadius: BorderRadius.circular(8),
@@ -105,7 +218,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
                             'T[root]H',
                             style: TextStyle(
                               color: Colors.amber,
-                              fontSize: 28,
+                              fontSize: 32,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -113,112 +226,203 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
                       );
                     },
                   ),
-                ),
-                SizedBox(height: sectionGap),
+                  SizedBox(height: sectionGap),
 
-                // Title
-                Text(
-                  'Welcome Back',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: titleFontSize,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                
-                // Subtitle
-                Text(
-                  '#getrooted',
-                  style: TextStyle(
-                    color: Colors.amber.shade300,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w300,
-                    fontFamily: 'Poppins',
-                  ),
-                ),
-                SizedBox(height: sectionGap),
-
-                // Extra fields for sign up
-                // (Sign up fields removed; dedicated signup screen now handles account creation.)
-
-                // Email field
-                TextFormField(
-                  controller: _emailController,
-                  decoration: _fieldDecoration('Email'),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontFamily: 'Poppins',
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Password field
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: _fieldDecoration('Password'),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontFamily: 'Poppins',
-                  ),
-                  obscureText: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-
-                // Submit button
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _login,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      elevation: 2,
+                  // Title
+                  Text(
+                    'Welcome Back',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: titleFontSize,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Poppins',
                     ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.black,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Text(
-                            'Sign In',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Poppins',
-                            ),
-                          ),
                   ),
-                ),
-                const SizedBox(height: 24),
+                  const SizedBox(height: 4),
+                  
+                  // Subtitle
+                  Text(
+                    '#getrooted',
+                    style: TextStyle(
+                      color: Colors.amber.shade300,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w300,
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                  SizedBox(height: sectionGap),
+
+                  // Email field
+                  SizedBox(
+                    height: 52,
+                    child: TextFormField(
+                      controller: _emailController,
+                      decoration: _fieldDecoration('Email'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your email';
+                        }
+                        if (!value.contains('@')) {
+                          return 'Please enter a valid email';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Password field
+                  SizedBox(
+                    height: 52,
+                    child: TextFormField(
+                      controller: _passwordController,
+                      decoration: _fieldDecoration('Password'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
+                      ),
+                      obscureText: true,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your password';
+                        }
+                        if (value.length < 6) {
+                          return 'Password must be at least 6 characters';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  SizedBox(height: sectionGap),
+
+                  // Submit button
+                  SizedBox(
+                    width: double.infinity,
+                    height: buttonHeight,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _login,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        elevation: 2,
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.black,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              'Sign In',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Poppins',
+                              ),
+                            ),
+                    ),
+                  ),
+                  SizedBox(height: sectionGap),
+
+                  // Divider with "or"
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: Colors.grey.shade600)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          'or',
+                          style: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontFamily: 'Poppins',
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      Expanded(child: Divider(color: Colors.grey.shade600)),
+                    ],
+                  ),
+                  SizedBox(height: sectionGap),
+
+                  // Google Sign-In Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: buttonHeight,
+                    child: OutlinedButton.icon(
+                      onPressed: _isLoading ? null : _signInWithGoogle,
+                      icon: Image.asset(
+                        'assets/google_logo.png',
+                        height: 20,
+                        width: 20,
+                        errorBuilder: (context, error, stackTrace) => const Icon(
+                          Icons.g_mobiledata,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                      label: const Text(
+                        'Sign in with Google',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: BorderSide(color: Colors.grey.shade600),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Apple Sign-In Button (only show on iOS)
+                  if (Platform.isIOS)
+                    SizedBox(
+                      width: double.infinity,
+                      height: buttonHeight,
+                      child: OutlinedButton.icon(
+                        onPressed: _isLoading ? null : _signInWithApple,
+                        icon: const Icon(
+                          Icons.apple,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        label: const Text(
+                          'Sign in with Apple',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            fontFamily: 'Poppins',
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: BorderSide(color: Colors.grey.shade600),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                if (Platform.isIOS) const SizedBox(height: 16),
+                if (!Platform.isIOS) const SizedBox(height: 8),
 
                 // Toggle button
                 TextButton(
@@ -230,6 +434,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
                     style: TextStyle(
                       color: Colors.grey.shade400,
                       fontFamily: 'Poppins',
+                      fontSize: 13,
                     ),
                   ),
                 ),
@@ -237,6 +442,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

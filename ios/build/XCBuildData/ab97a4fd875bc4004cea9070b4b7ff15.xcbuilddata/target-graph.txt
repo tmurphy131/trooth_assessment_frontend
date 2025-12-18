@@ -1,2 +1,0 @@
-Target dependency graph (1 target)
-Target 'share_plus-share_plus_privacy' in project 'Pods' (no dependencies)

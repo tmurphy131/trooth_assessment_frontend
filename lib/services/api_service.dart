@@ -635,6 +635,7 @@ class ApiService {
   // Mentor: update a resource
   Future<Map<String, dynamic>> updateMentorResource({
     required String resourceId,
+    String? apprenticeId,
     String? title,
     String? description,
     String? linkUrl,
@@ -644,6 +645,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/mentor/resources/$resourceId';
     final payload = <String, dynamic>{
+      if (apprenticeId != null) 'apprentice_id': apprenticeId,
       if (title != null) 'title': title,
       if (description != null) 'description': description,
       if (linkUrl != null) 'link_url': linkUrl,
@@ -1997,12 +1999,26 @@ class ApiService {
     throw Exception('emailMySpiritualGiftsReportForSubmission failed (${r.statusCode}) ${r.body}');
   }
 
-  Future<bool> mentorEmailSpiritualGiftsReport(String apprenticeId) async {
+  Future<bool> mentorEmailSpiritualGiftsReport(String apprenticeId, {String? toEmail}) async {
     const tag = 'API-mentorEmailSpiritualGiftsReport';
     await _ensureFreshToken();
     final path = '/assessments/spiritual-gifts/$apprenticeId/email-report';
-    _logReq(tag, 'POST', path, {});
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    // Use provided email or current user's email from Firebase
+    final email = toEmail ?? FirebaseAuth.instance.currentUser?.email ?? '';
+    if (email.isEmpty) {
+      throw Exception('No email address available for sending report');
+    }
+    final body = {
+      'to_email': email,
+      'include_pdf': true,
+      'include_html': false,
+    };
+    _logReq(tag, 'POST', path, body);
+    final r = await http.post(
+      Uri.parse('$_base$path'),
+      headers: _headers(),
+      body: jsonEncode(body),
+    );
     _logRes(tag, r);
     if (r.statusCode == 200) return true;
     if (r.statusCode == 429) {
