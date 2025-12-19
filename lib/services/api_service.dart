@@ -2058,4 +2058,39 @@ class ApiService {
     if (r.statusCode == 404) return [];
     throw Exception('getSpiritualGiftsDefinitions failed (${r.statusCode}) ${r.body}');
   }
+
+  /* ─────────────────────────────────────────────────────────────────── */
+  /*                       ACCOUNT DELETION                              */
+  /* ─────────────────────────────────────────────────────────────────── */
+
+  /// Get a summary of what will be deleted when the account is closed.
+  /// Returns counts of all associated data so the user understands the impact.
+  Future<Map<String, dynamic>> getAccountDeletionSummary() async {
+    const tag = 'API-getAccountDeletionSummary';
+    await _ensureFreshToken();
+    const path = '/users/me/deletion-summary';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('getAccountDeletionSummary failed (${r.statusCode}) ${r.body}');
+  }
+
+  /// Permanently delete the current user's account and all associated data.
+  /// This is IRREVERSIBLE. Requires confirmationText to be exactly "DELETE".
+  Future<Map<String, dynamic>> closeAccount({required String confirmationText}) async {
+    const tag = 'API-closeAccount';
+    await _ensureFreshToken();
+    const path = '/users/me/close-account';
+    final body = {'confirmation_text': confirmationText};
+    _logReq(tag, 'DELETE', path, body);
+    final r = await http.delete(
+      Uri.parse('$_base$path'),
+      headers: _headers(),
+      body: jsonEncode(body),
+    );
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('closeAccount failed (${r.statusCode}) ${r.body}');
+  }
 }

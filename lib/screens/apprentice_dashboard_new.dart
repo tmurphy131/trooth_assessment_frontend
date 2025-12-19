@@ -11,6 +11,7 @@ import 'spiritual_gifts_results_screen.dart';
 import 'spiritual_gifts_history_screen.dart';
 import 'progress_screen.dart';
 import 'apprentice_resources_screen.dart';
+import 'apprentice_profile_screen.dart';
 
 class ApprenticeDashboardNew extends StatefulWidget {
   const ApprenticeDashboardNew({super.key});
@@ -230,6 +231,14 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
         ),
       ),
       additionalActions: [
+        // Profile icon
+        IconButton(
+          icon: const Icon(Icons.account_circle, color: Color(0xFFFFD700)),
+          tooltip: 'My Profile',
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ApprenticeProfileScreen()),
+          ),
+        ),
         // Mentor & Agreements icon
         IconButton(
           icon: const Icon(Icons.people, color: Color(0xFFFFD700)),
