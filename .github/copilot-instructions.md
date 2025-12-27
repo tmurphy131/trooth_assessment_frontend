@@ -1,4 +1,4 @@
-# T[root]H Assessment - AI Agent Instructions (Frontend)
+# T[root]H Discipleship - AI Agent Instructions (Frontend)
 
 ## Project Overview
 T[root]H is a spiritual mentorship platform with a **Flutter mobile frontend** (this repo) and a **FastAPI backend** (sibling repo: `trooth_assessment_backend`). The app enables mentor-apprentice relationships, AI-scored spiritual assessments, mentorship agreements, and progress tracking.

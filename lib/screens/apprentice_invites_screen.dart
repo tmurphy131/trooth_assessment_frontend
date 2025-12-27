@@ -268,7 +268,7 @@ class _ApprenticeInvitesScreenState extends State<ApprenticeInvitesScreen> {
             const SizedBox(height: 12),
             
             Text(
-              'You have been invited to begin a mentoring relationship through the T[root]H Assessment platform.',
+              'You have been invited to begin a mentoring relationship through the T[root]H Discipleship platform.',
               style: TextStyle(
                 color: Colors.grey[300],
                 fontSize: 14,

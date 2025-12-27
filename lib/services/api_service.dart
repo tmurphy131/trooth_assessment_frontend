@@ -1,6 +1,6 @@
 // lib/services/api_service.dart
 //
-// Centralised HTTP wrapper for the T[root]H Assessment backend.
+// Centralised HTTP wrapper for the T[root]H Discipleship backend.
 // • Singleton with shared Firebase-ID-token (bearerToken)
 // • dev.log() output around **every** HTTP transaction
 // ─────────────────────────────────────────────────────────────

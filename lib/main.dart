@@ -161,7 +161,7 @@ class MyApp extends StatelessWidget {
       return const MaterialApp(debugShowCheckedModeBanner: false, home: _RenderTestScreen());
     }
     return MaterialApp(
-      title: 'T[root]H Assessment',
+      title: 'T[root]H Discipleship',
       theme: buildAppTheme(),
       debugShowCheckedModeBanner: false,
   navigatorKey: navigatorKey,

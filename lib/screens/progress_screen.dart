@@ -143,7 +143,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
 
   Widget _masterCard() {
     if (_master == null) return _emptyCard(
-      title: 'Master T[root]H Assessment',
+      title: 'Master T[root]H Discipleship',
       cta: 'Take Assessment',
       onPressed: () {
         // Go back to dashboard so user can tap "New Assessment" chooser.
@@ -158,7 +158,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
     final chips = top3.map((m) => {'category': m['category']?.toString() ?? '', 'score': m['score']}).toList();
     final completedAt = _master!['completed_at']?.toString();
     return _featuredCard(
-      title: 'Master T[root]H Assessment',
+      title: 'Master T[root]H Discipleship',
       badge: badge,
       chips: chips,
       subtitle: completedAt != null ? _friendlyDate(completedAt) : null,
