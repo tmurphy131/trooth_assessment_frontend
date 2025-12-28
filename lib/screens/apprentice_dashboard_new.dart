@@ -647,6 +647,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
 
   Widget _buildAssessmentCardCompact(Map<String, dynamic> assessment) {
     final title = _resolveDraftTitle(assessment);
+    final assessmentId = assessment['id'] as String?;
     final updatedAt = assessment['updated_at'] as String?;
     final createdAt = assessment['created_at'] as String?;
     String timeInfo = '';
@@ -657,10 +658,10 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
       }
     } catch (_) {}
 
-    return Card(
+    final cardContent = Card(
       elevation: 1,
       color: Colors.grey[850],
-      margin: const EdgeInsets.only(bottom: 6),
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: InkWell(
         onTap: () => _navigateToAssessment(assessment),
@@ -704,6 +705,103 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
         ),
       ),
     );
+
+    // Wrap with Dismissible for swipe-to-delete
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Dismissible(
+          key: Key(assessmentId ?? title),
+          direction: DismissDirection.endToStart,
+          confirmDismiss: (direction) async {
+            return await _showDeleteConfirmationDialog(assessmentId, title);
+          },
+          background: Container(
+            decoration: BoxDecoration(
+              color: Colors.red[700],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 20),
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.close, color: Colors.white, size: 24),
+                SizedBox(height: 2),
+                Text(
+                  'Delete',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          child: cardContent,
+        ),
+      ),
+    );
+  }
+
+  Future<bool> _showDeleteConfirmationDialog(String? draftId, String title) async {
+    if (draftId == null) return false;
+    
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text(
+          'Delete Draft',
+          style: TextStyle(
+            color: Colors.red,
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to delete the draft "$title"? This action cannot be undone.',
+          style: const TextStyle(
+            color: Colors.white,
+            fontFamily: 'Poppins',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: Colors.grey,
+                fontFamily: 'Poppins',
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context, true);
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(
+                color: Colors.red,
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    
+    if (result == true) {
+      await _deleteDraft(draftId);
+      return true;
+    }
+    return false;
   }
 
   Widget _buildAssessmentCard(Map<String, dynamic> assessment) {
@@ -1257,20 +1355,30 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
   Future<void> _deleteDraft(String draftId) async {
     try {
       await _apiService.deleteDraft(draftId);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Draft deleted successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Assessment draft deleted',
+              style: TextStyle(fontFamily: 'Poppins'),
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
       _loadAssessments(); // Refresh the list
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to delete draft: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to delete draft: $e',
+              style: const TextStyle(fontFamily: 'Poppins'),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }
