@@ -66,6 +66,58 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
     }
   }
 
+  Widget _buildAvatarPreview() {
+    final url = _avatarCtrl.text.trim();
+    if (url.isEmpty) {
+      return CircleAvatar(
+        radius: 30,
+        backgroundColor: Colors.amber.withOpacity(.15),
+        child: const Icon(Icons.person, color: Colors.amber),
+      );
+    }
+    // Validate URL format
+    final isValidUrl = Uri.tryParse(url)?.hasAbsolutePath == true && 
+                       (url.startsWith('http://') || url.startsWith('https://'));
+    if (!isValidUrl) {
+      return CircleAvatar(
+        radius: 30,
+        backgroundColor: Colors.red.withOpacity(.15),
+        child: const Icon(Icons.error_outline, color: Colors.red),
+      );
+    }
+    return ClipOval(
+      child: SizedBox(
+        width: 60,
+        height: 60,
+        child: Image.network(
+          url,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              color: Colors.amber.withOpacity(.15),
+              child: const Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(color: Colors.amber, strokeWidth: 2),
+                ),
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              color: Colors.red.withOpacity(.15),
+              child: const Center(
+                child: Icon(Icons.broken_image, color: Colors.red),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _nameCtrl.dispose();
@@ -102,12 +154,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                   children: [
                     Row(
                       children: [
-                        CircleAvatar(
-                          radius: 30,
-                          backgroundColor: Colors.amber.withOpacity(.15),
-                          backgroundImage: _avatarCtrl.text.trim().isNotEmpty ? NetworkImage(_avatarCtrl.text.trim()) : null,
-                          child: _avatarCtrl.text.trim().isEmpty ? const Icon(Icons.person, color: Colors.amber) : null,
-                        ),
+                        _buildAvatarPreview(),
                         const SizedBox(width: 12),
                         Expanded(
                           child: TextField(
@@ -116,9 +163,12 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                             decoration: const InputDecoration(
                               labelText: 'Avatar URL',
                               labelStyle: TextStyle(color: Colors.amber),
+                              hintText: 'https://example.com/photo.jpg',
+                              hintStyle: TextStyle(color: Colors.grey),
                               enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.amber)),
                               focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.amber, width: 2)),
                             ),
+                            onChanged: (_) => setState(() {}), // Refresh avatar preview
                           ),
                         )
                       ],

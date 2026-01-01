@@ -13,6 +13,7 @@ import 'mentor_profile_screen.dart';
 import 'mentor_resources_screen.dart';
 import 'mentor_spiritual_gifts_screen.dart';
 import '../utils/assessments.dart';
+import '../mixins/mentor_dashboard_tutorial.dart';
 
 class MentorDashboardNew extends StatefulWidget {
   const MentorDashboardNew({super.key});
@@ -21,7 +22,7 @@ class MentorDashboardNew extends StatefulWidget {
   State<MentorDashboardNew> createState() => _MentorDashboardNewState();
 }
 
-class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProviderStateMixin {
+class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProviderStateMixin, MentorDashboardTutorial {
   late TabController _tabController;
   final user = FirebaseAuth.instance.currentUser;
   final _apiService = ApiService();
@@ -44,6 +45,8 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
     super.initState();
   _tabController = TabController(length: 5, vsync: this); // Removed History tab; Resources now a tab
     _initializeAndLoadData();
+    // Initialize tutorial after data loads
+    initMentorTutorial();
   }
 
 
@@ -151,6 +154,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
       logoHeight: 64,
       additionalActions: [
         IconButton(
+          key: profileButtonKey,
           icon: const Icon(Icons.account_circle, color: Color(0xFFFFD700)),
           tooltip: 'My Profile',
           onPressed: () {
@@ -170,11 +174,12 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
           fontWeight: FontWeight.bold,
         ),
         tabs: [
-          const Tab(icon: Icon(Icons.people), text: 'Apprentices'),
-          const Tab(icon: Icon(Icons.assignment), text: 'Assessments'),
-          const Tab(icon: Icon(Icons.description), text: 'Agreements'),
-          const Tab(icon: Icon(Icons.link), text: 'Resources'),
+          Tab(key: apprenticesTabKey, icon: const Icon(Icons.people), text: 'Apprentices'),
+          Tab(key: assessmentsTabKey, icon: const Icon(Icons.assignment), text: 'Assessments'),
+          Tab(key: agreementsTabKey, icon: const Icon(Icons.description), text: 'Agreements'),
+          Tab(key: resourcesTabKey, icon: const Icon(Icons.link), text: 'Resources'),
           Tab(
+            key: alertsTabKey,
             icon: Stack(
               clipBehavior: Clip.none,
               children: [
@@ -248,6 +253,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                   ),
                   // Resources button removed; Resources now accessible via main tab bar
                   IconButton(
+                    key: inviteButtonKey,
                     onPressed: _navigateToInviteApprentices,
                     icon: const Icon(Icons.person_add_alt_1, color: Colors.amber),
                     tooltip: 'Invite Apprentice',
@@ -341,6 +347,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
     }
 
     return Row(
+      key: statsRowKey,
       children: [
         Expanded(
           child: _buildStatCard(
