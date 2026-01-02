@@ -917,6 +917,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
     final apprenticeName = assessment['apprentice_name'] ?? assessment['apprentice']?['name'] ?? 'Unknown Apprentice';
     final apprenticeId = assessment['apprentice_id'] ?? assessment['apprentice']?['id'] ?? '';
     final assessmentId = assessment['id']?.toString() ?? assessment['assessment_id']?.toString() ?? '';
+    final templateName = assessment['template_name'] ?? assessment['template']?['name'] ?? assessment['category'] ?? 'Assessment';
     
     return Card(
       elevation: 2,
@@ -937,7 +938,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
           ),
         ),
         title: Text(
-          apprenticeName,
+          templateName.toString(),
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -947,6 +948,14 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              apprenticeName.toString(),
+              style: TextStyle(
+                color: Colors.grey[400],
+                fontFamily: 'Poppins',
+                fontSize: 13,
+              ),
+            ),
             Text(
               'Overall Score: ${overall10.toStringAsFixed(1)}/10',
               style: TextStyle(

@@ -1885,6 +1885,22 @@ class ApiService {
     throw Exception('getSpiritualGiftsLatest failed (${r.statusCode}) ${r.body}');
   }
 
+  /// Fetch a specific spiritual gifts assessment by ID.
+  Future<Map<String, dynamic>> getSpiritualGiftsById(String assessmentId) async {
+    const tag = 'API-getSpiritualGiftsById';
+    await _ensureFreshToken();
+    final path = '/assessments/spiritual-gifts/by-id/$assessmentId';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) {
+      final data = jsonDecode(r.body) as Map<String, dynamic>;
+      return _normalizeSpiritualGiftsResult(data);
+    }
+    if (r.statusCode == 404) return {};
+    throw Exception('getSpiritualGiftsById failed (${r.statusCode}) ${r.body}');
+  }
+
   Future<Map<String, dynamic>> mentorGetApprenticeSpiritualGiftsLatest(String apprenticeId) async {
     const tag = 'API-mentorGetApprenticeSpiritualGiftsLatest';
     await _ensureFreshToken();

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../models/spiritual_gifts_models.dart';
 import 'assessment_history_screen.dart';
 import 'spiritual_gifts_assessment_screen.dart';
 import 'spiritual_gifts_history_screen.dart';
+import 'spiritual_gifts_full_report_screen.dart';
 import 'apprentice_report_screen.dart';
 
 class ProgressScreen extends StatefulWidget {
@@ -295,14 +297,19 @@ class _ProgressScreenState extends State<ProgressScreen> {
           onTap: () {
             // Navigate to report view for this specific assessment
             if (assessmentId != null && assessmentId.isNotEmpty) {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ApprenticeReportScreen(
-                    assessmentId: assessmentId,
-                    title: title,
+              // Spiritual Gifts assessments go to the dedicated spiritual gifts report screen
+              if (type == 'spiritual_gifts') {
+                _openSpiritualGiftsReport(assessmentId);
+              } else {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ApprenticeReportScreen(
+                      assessmentId: assessmentId,
+                      title: title,
+                    ),
                   ),
-                ),
-              );
+                );
+              }
             } else {
               _toast('Report not available for this assessment');
             }
@@ -310,6 +317,44 @@ class _ProgressScreenState extends State<ProgressScreen> {
         ),
       ),
     );
+  }
+
+  /// Fetch and display a specific spiritual gifts assessment
+  Future<void> _openSpiritualGiftsReport(String assessmentId) async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: Colors.amber)),
+    );
+    
+    try {
+      final json = await _api.getSpiritualGiftsById(assessmentId);
+      if (!mounted) return;
+      Navigator.of(context).pop(); // close loading dialog
+      
+      if (json.isEmpty) {
+        _toast('Spiritual gifts report not found', error: true);
+        return;
+      }
+      
+      final result = SpiritualGiftsResult.fromJson(json);
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => SpiritualGiftsFullReportScreen(
+            result: result,
+            readOnly: false,
+            allowEmail: true,
+            allowDefinitions: true,
+            showActionsSection: true,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // close loading dialog
+      _toast('Failed to load spiritual gifts report: $e', error: true);
+    }
   }
 
   Future<bool> _confirmDelete(String title) async {
