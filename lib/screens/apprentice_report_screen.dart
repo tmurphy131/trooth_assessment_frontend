@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../models/mentor_note.dart';
+import '../theme.dart';
 
 /// Screen for apprentices to view their own assessment report.
 /// Uses simplified report data structure similar to mentor report.
@@ -22,6 +24,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
   bool _loading = true;
   String? _error;
   Map<String, dynamic>? _report;
+  List<MentorNote> _sharedNotes = [];
 
   @override
   void initState() {
@@ -33,9 +36,17 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final report = await _api.getMySimplifiedReport(widget.assessmentId);
+      // Also load shared notes from mentor
+      List<MentorNote> notes = [];
+      try {
+        notes = await _api.getSharedNotesForAssessment(widget.assessmentId);
+      } catch (_) {
+        // Shared notes are optional, don't fail if not available
+      }
       if (mounted) {
         setState(() {
           _report = report;
+          _sharedNotes = notes;
           _loading = false;
         });
       }
@@ -142,6 +153,12 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
           // Insights
           if (insights.isNotEmpty) ...[
             _buildInsightsSection(insights),
+            const SizedBox(height: 16),
+          ],
+          
+          // Mentor's Shared Notes
+          if (_sharedNotes.isNotEmpty) ...[
+            _buildMentorNotesSection(),
             const SizedBox(height: 16),
           ],
           
@@ -573,6 +590,74 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildMentorNotesSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.note_alt_outlined, color: troothGold, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Notes from Your Mentor',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: troothGold,
+                fontFamily: 'Poppins',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ..._sharedNotes.map((note) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[900],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: troothGold.withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  note.content,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    height: 1.5,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _formatNoteDate(note.displayTimestamp),
+                  style: TextStyle(
+                    color: Colors.grey[500],
+                    fontSize: 12,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        )),
+      ],
+    );
+  }
+
+  String _formatNoteDate(DateTime timestamp) {
+    final d = timestamp.toLocal();
+    final hour = d.hour;
+    final minute = d.minute.toString().padLeft(2, '0');
+    final period = hour >= 12 ? 'PM' : 'AM';
+    final hour12 = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+    return '${d.month}/${d.day}/${d.year} at $hour12:$minute $period';
   }
 
   Widget _buildCompletedAtSection(String iso) {

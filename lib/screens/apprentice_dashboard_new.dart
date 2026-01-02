@@ -172,7 +172,11 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
 
   String _deriveDisplayName() {
     final n = _name?.trim();
-    if (n != null && n.isNotEmpty) return n;
+    if (n != null && n.isNotEmpty) {
+      // Return only the first name
+      final firstName = n.split(' ').first;
+      return firstName;
+    }
     final email = user?.email;
     if (email != null && email.contains('@')) return email.split('@')[0];
     return 'Apprentice';

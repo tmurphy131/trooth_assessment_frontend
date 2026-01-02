@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 // T[root]H App Theme Colors
 final Color kPrimaryGold = const Color(0xFFD4AF37);
+final Color troothGold = kPrimaryGold; // Alias for convenience
 final Color kCharcoal = const Color(0xFF2C2C2C);
 final Color kSurface = const Color(0xFFF5F5F5);
 final Color kText = const Color(0xFF1A1A1A);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/api_service.dart';
 import 'simple_login_screen.dart';
+import 'support_screen.dart';
 
 class MentorProfileScreen extends StatefulWidget {
   const MentorProfileScreen({super.key});
@@ -246,6 +247,11 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                     const SizedBox(height: 40),
                     const Divider(color: Colors.grey),
                     const SizedBox(height: 16),
+                    
+                    // Support Section
+                    _buildSupportCard(),
+                    const SizedBox(height: 24),
+                    
                     // Danger Zone - Close Account
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -473,5 +479,53 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
         ),
       );
     }
+  }
+
+  Widget _buildSupportCard() {
+    return InkWell(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const SupportScreen()),
+      ),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[850],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.amber.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.amber.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.support_agent, color: Colors.amber, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Need Help?',
+                    style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Contact support',
+                    style: TextStyle(color: Colors.grey[400], fontFamily: 'Poppins', fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: Colors.grey[600]),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -19,8 +19,10 @@ class _SignupScreenState extends State<SignupScreen> {
   final _lastController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   String? _role; // mentor | apprentice
   bool _showPassword = false;
+  bool _showConfirmPassword = false;
   bool _isLoading = false;
   String? _error;
   bool _acceptedPrivacy = false;
@@ -32,6 +34,7 @@ class _SignupScreenState extends State<SignupScreen> {
     _lastController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -160,6 +163,22 @@ class _SignupScreenState extends State<SignupScreen> {
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Password required';
                     if (v.length < 6) return 'Minimum 6 characters';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  decoration: _dec('Confirm Password').copyWith(
+                        suffixIcon: IconButton(
+                          icon: Icon(_showConfirmPassword ? Icons.visibility_off : Icons.visibility),
+                          onPressed: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
+                        ),
+                      ),
+                  obscureText: !_showConfirmPassword,
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Please confirm your password';
+                    if (v != _passwordController.text) return 'Passwords do not match';
                     return null;
                   },
                 ),

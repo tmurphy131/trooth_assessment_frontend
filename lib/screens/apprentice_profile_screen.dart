@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/api_service.dart';
 import 'simple_login_screen.dart';
+import 'support_screen.dart';
 
 class ApprenticeProfileScreen extends StatefulWidget {
   const ApprenticeProfileScreen({super.key});
@@ -94,6 +95,18 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
                     const SizedBox(height: 40),
                     const Divider(color: Colors.grey),
                     const SizedBox(height: 16),
+                    
+                    // Support Section
+                    _buildActionCard(
+                      icon: Icons.support_agent,
+                      label: 'Need Help?',
+                      subtitle: 'Contact support',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const SupportScreen()),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    
                     // Danger Zone - Close Account
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -157,21 +170,71 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
         children: [
           Icon(icon, color: Colors.amber, size: 24),
           const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(color: Colors.grey, fontFamily: 'Poppins', fontSize: 12),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontSize: 16),
-              ),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(color: Colors.grey, fontFamily: 'Poppins', fontSize: 12),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontSize: 16),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
+              ],
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildActionCard({required IconData icon, required String label, required String subtitle, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[850],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.amber.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.amber.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: Colors.amber, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(color: Colors.grey[400], fontFamily: 'Poppins', fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: Colors.grey[600]),
+          ],
+        ),
       ),
     );
   }

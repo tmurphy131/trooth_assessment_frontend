@@ -4,6 +4,10 @@ import 'package:share_plus/share_plus.dart';
 import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../services/api_service.dart';
+import '../../../models/mentor_note.dart';
+import '../../../widgets/mentor_note_card.dart';
+import '../../../widgets/add_edit_note_dialog.dart';
+import '../../../theme.dart';
 import '../data/assessments_repository.dart';
 import '../models/submission_models.dart';
 import '../models/mentor_report_v2.dart';
@@ -31,14 +35,142 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
   late final TabController _tab;
   bool _loading = true;
   String? _mentorEmail;
+  
+  // Mentor notes state
+  List<MentorNote> _notes = [];
+  bool _notesLoading = false;
 
   @override
   void initState() {
     super.initState();
     _repo = AssessmentsRepository(ApiService());
-    _tab = TabController(length: 2, vsync: this);
+    _tab = TabController(length: 3, vsync: this);
+    _tab.addListener(() {
+      // Trigger rebuild to show/hide FAB based on current tab
+      if (mounted) setState(() {});
+    });
     _load();
     _loadMentorEmail();
+    _loadNotes();
+  }
+
+  Future<void> _loadNotes() async {
+    setState(() => _notesLoading = true);
+    try {
+      final notes = await ApiService().getMentorNotesForAssessment(widget.assessmentId);
+      if (!mounted) return;
+      setState(() {
+        _notes = notes;
+        _notesLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _notesLoading = false);
+    }
+  }
+
+  Future<void> _addNote() async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => const AddEditNoteDialog(),
+    );
+
+    if (result != null && mounted) {
+      setState(() => _notesLoading = true);
+      try {
+        await ApiService().createMentorNote(
+          assessmentId: widget.assessmentId,
+          content: result['content'] as String,
+          isPrivate: result['is_private'] as bool,
+        );
+        await _loadNotes();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Note added'), backgroundColor: Colors.green),
+          );
+        }
+      } catch (e) {
+        setState(() => _notesLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to add note: $e'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _editNote(MentorNote note) async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => AddEditNoteDialog(
+        initialNoteText: note.content,
+        initialShared: note.isShared,
+        isEditing: true,
+      ),
+    );
+
+    if (result != null && mounted) {
+      setState(() => _notesLoading = true);
+      try {
+        await ApiService().updateMentorNote(
+          noteId: note.id,
+          content: result['content'] as String,
+          isPrivate: result['is_private'] as bool,
+        );
+        await _loadNotes();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Note updated'), backgroundColor: Colors.green),
+          );
+        }
+      } catch (e) {
+        setState(() => _notesLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to update note: $e'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _deleteNote(MentorNote note) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Note'),
+        content: const Text('Are you sure you want to delete this note?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      setState(() => _notesLoading = true);
+      try {
+        await ApiService().deleteMentorNote(note.id);
+        await _loadNotes();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Note deleted'), backgroundColor: Colors.orange),
+          );
+        }
+      } catch (e) {
+        setState(() => _notesLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete note: $e'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
   }
 
   Future<void> _loadMentorEmail() async {
@@ -89,8 +221,38 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
             onPressed: _openSimplifiedReport,
           ),
         ],
-        bottom: TabBar(controller: _tab, tabs: const [Tab(text: 'Answers'), Tab(text: 'Report')]),
+        bottom: TabBar(controller: _tab, tabs: [
+          const Tab(text: 'Answers'),
+          const Tab(text: 'Report'),
+          Tab(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Notes'),
+                if (_notes.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: troothGold,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${_notes.length}',
+                      style: const TextStyle(fontSize: 11, color: Colors.black, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ]),
       ),
+      floatingActionButton: _tab.index == 2 ? FloatingActionButton(
+        onPressed: _addNote,
+        backgroundColor: troothGold,
+        child: const Icon(Icons.add, color: Colors.black),
+      ) : null,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -98,6 +260,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
               : TabBarView(controller: _tab, children: [
                   _answersTab(),
                   _reportTab(),
+                  _notesTab(),
                 ]),
       bottomNavigationBar: _footerActions(context),
     );
@@ -306,6 +469,47 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
           const SizedBox(height: 6),
           ...r.recommendedResources.map((res) => Text('• ${res.title} — ${res.why} (${res.type})')),
         ],
+      ),
+    );
+  }
+
+  Widget _notesTab() {
+    if (_notesLoading) {
+      return Center(child: CircularProgressIndicator(color: troothGold));
+    }
+
+    if (_notes.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.note_add_outlined, color: Colors.grey[600], size: 64),
+            const SizedBox(height: 16),
+            Text('No notes yet', style: TextStyle(color: Colors.grey[500], fontSize: 18)),
+            const SizedBox(height: 8),
+            Text('Tap the + button to add your first note', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadNotes,
+      color: troothGold,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _notes.length,
+        itemBuilder: (context, index) {
+          final note = _notes[index];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: MentorNoteCard(
+              note: note,
+              onEdit: () => _editNote(note),
+              onDelete: () => _deleteNote(note),
+            ),
+          );
+        },
       ),
     );
   }
