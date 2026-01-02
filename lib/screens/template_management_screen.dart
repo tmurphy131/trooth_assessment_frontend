@@ -1207,8 +1207,16 @@ class _QuestionCreationDialogState extends State<_QuestionCreationDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isPhone = screenWidth < 600;
+    
     return AlertDialog(
       backgroundColor: Colors.grey[900],
+      contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isPhone ? 16 : 40,
+        vertical: 24,
+      ),
       title: const Text(
         'Add Question',
         style: TextStyle(
@@ -1218,11 +1226,11 @@ class _QuestionCreationDialogState extends State<_QuestionCreationDialog> {
         ),
       ),
       content: SizedBox(
-        width: MediaQuery.of(context).size.width * 0.6,
-        height: MediaQuery.of(context).size.height * 0.6,
+        width: isPhone ? screenWidth - 64 : 450,
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: _questionController,
@@ -1252,13 +1260,22 @@ class _QuestionCreationDialogState extends State<_QuestionCreationDialog> {
                     ),
                   ),
                   const Spacer(),
-                  TextButton.icon(
+                  TextButton(
                     onPressed: _showCreateCategoryDialog,
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.amber,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text('New Category'),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add, size: 14),
+                        SizedBox(width: 2),
+                        Text('New', style: TextStyle(fontSize: 12)),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -1306,16 +1323,23 @@ class _QuestionCreationDialogState extends State<_QuestionCreationDialog> {
                 ),
               ),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: RadioListTile<String>(
+              // Radio buttons in a more compact layout
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey[700]!),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    RadioListTile<String>(
                       title: const Text(
                         'Open Ended',
-                        style: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
+                        style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontSize: 14),
                       ),
                       value: 'open_ended',
                       groupValue: _questionType,
+                      dense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                       onChanged: (value) {
                         setState(() {
                           _questionType = value!;
@@ -1326,15 +1350,16 @@ class _QuestionCreationDialogState extends State<_QuestionCreationDialog> {
                       },
                       activeColor: Colors.amber,
                     ),
-                  ),
-                  Expanded(
-                    child: RadioListTile<String>(
+                    Divider(height: 1, color: Colors.grey[700]),
+                    RadioListTile<String>(
                       title: const Text(
                         'Multiple Choice',
-                        style: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
+                        style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontSize: 14),
                       ),
                       value: 'multiple_choice',
                       groupValue: _questionType,
+                      dense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                       onChanged: (value) {
                         setState(() {
                           _questionType = value!;
@@ -1348,12 +1373,13 @@ class _QuestionCreationDialogState extends State<_QuestionCreationDialog> {
                       },
                       activeColor: Colors.amber,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               if (_questionType == 'multiple_choice') ...[
                 const SizedBox(height: 16),
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       'Answer Options',
@@ -1363,8 +1389,7 @@ class _QuestionCreationDialogState extends State<_QuestionCreationDialog> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const Spacer(),
-                    ElevatedButton.icon(
+                    TextButton.icon(
                       onPressed: () {
                         setState(() {
                           _options.add({
@@ -1374,12 +1399,13 @@ class _QuestionCreationDialogState extends State<_QuestionCreationDialog> {
                           });
                         });
                       },
-                      style: ElevatedButton.styleFrom(
+                      style: TextButton.styleFrom(
                         backgroundColor: Colors.green[700],
                         foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
                       icon: const Icon(Icons.add, size: 16),
-                      label: const Text('Add Option'),
+                      label: const Text('Add', style: TextStyle(fontSize: 13)),
                     ),
                   ],
                 ),
