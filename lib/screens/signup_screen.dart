@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
 import 'mentor_dashboard_new.dart';
 import 'apprentice_dashboard_new.dart';
@@ -18,10 +19,14 @@ class _SignupScreenState extends State<SignupScreen> {
   final _lastController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   String? _role; // mentor | apprentice
   bool _showPassword = false;
+  bool _showConfirmPassword = false;
   bool _isLoading = false;
   String? _error;
+  bool _acceptedPrivacy = false;
+  bool _acceptedTerms = false;
 
   @override
   void dispose() {
@@ -29,6 +34,7 @@ class _SignupScreenState extends State<SignupScreen> {
     _lastController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -36,6 +42,12 @@ class _SignupScreenState extends State<SignupScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_role == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a role')));
+      return;
+    }
+    if (!_acceptedPrivacy || !_acceptedTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please accept the Privacy Policy and Terms of Service')),
+      );
       return;
     }
     setState(() => _isLoading = true);
@@ -154,6 +166,22 @@ class _SignupScreenState extends State<SignupScreen> {
                     return null;
                   },
                 ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  decoration: _dec('Confirm Password').copyWith(
+                        suffixIcon: IconButton(
+                          icon: Icon(_showConfirmPassword ? Icons.visibility_off : Icons.visibility),
+                          onPressed: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
+                        ),
+                      ),
+                  obscureText: !_showConfirmPassword,
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Please confirm your password';
+                    if (v != _passwordController.text) return 'Passwords do not match';
+                    return null;
+                  },
+                ),
                 const SizedBox(height: 24),
                 const Text('Role', style: TextStyle(fontWeight: FontWeight.w600)),
                 RadioListTile<String>(
@@ -172,6 +200,56 @@ class _SignupScreenState extends State<SignupScreen> {
                   const Padding(
                     padding: EdgeInsets.only(left: 12, bottom: 8),
                     child: Text('Please select a role', style: TextStyle(color: Colors.redAccent, fontSize: 12)),
+                  ),
+                const SizedBox(height: 16),
+                // Privacy Policy consent
+                CheckboxListTile(
+                  value: _acceptedPrivacy,
+                  onChanged: (v) => setState(() => _acceptedPrivacy = v ?? false),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  title: Wrap(
+                    children: [
+                      const Text('I have read and agree to the '),
+                      GestureDetector(
+                        onTap: () => launchUrl(
+                          Uri.parse('https://onlyblv.com/privacy.html'),
+                          mode: LaunchMode.externalApplication,
+                        ),
+                        child: const Text(
+                          'Privacy Policy',
+                          style: TextStyle(color: Colors.amber, decoration: TextDecoration.underline),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Terms of Service consent
+                CheckboxListTile(
+                  value: _acceptedTerms,
+                  onChanged: (v) => setState(() => _acceptedTerms = v ?? false),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  title: Wrap(
+                    children: [
+                      const Text('I have read and agree to the '),
+                      GestureDetector(
+                        onTap: () => launchUrl(
+                          Uri.parse('https://onlyblv.com/terms.html'),
+                          mode: LaunchMode.externalApplication,
+                        ),
+                        child: const Text(
+                          'Terms of Service',
+                          style: TextStyle(color: Colors.amber, decoration: TextDecoration.underline),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (!_acceptedPrivacy || !_acceptedTerms)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 12, bottom: 8),
+                    child: Text('You must accept both to continue', style: TextStyle(color: Colors.redAccent, fontSize: 12)),
                   ),
                 const SizedBox(height: 8),
                 SizedBox(

@@ -1,6 +1,6 @@
 // lib/services/api_service.dart
 //
-// Centralised HTTP wrapper for the T[root]H Assessment backend.
+// Centralised HTTP wrapper for the T[root]H Discipleship backend.
 // • Singleton with shared Firebase-ID-token (bearerToken)
 // • dev.log() output around **every** HTTP transaction
 // ─────────────────────────────────────────────────────────────
@@ -9,12 +9,13 @@ import 'dart:convert';
 import 'dart:developer' as dev;                  //  ← logging
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
+import '../models/mentor_note.dart';
 
 /// Default dev URL
 /// • Android emulator → 10.0.2.2
 /// • iOS sim / Flutter Web → use host machine IP for Docker
 /// • Host machine → localhost or 127.0.0.1
-const String _devBaseUrl = 'https://trooth-assessment-dev.onlyblv.com';
+const String _devBaseUrl = 'https://trooth-discipleship-api.onlyblv.com';
 
 class ApiService {
   /* ── Singleton ────────────────────────────────────────────────────── */
@@ -1013,6 +1014,20 @@ class ApiService {
     throw Exception('getMySimplifiedReport failed (${r.statusCode})');
   }
 
+  /// Delete an assessment report (apprentice only)
+  Future<void> deleteAssessmentReport(String assessmentId) async {
+    const tag = 'API-deleteAssessmentReport';
+    await _ensureFreshToken();
+    _logReq(tag, 'DELETE', '/progress/reports/$assessmentId');
+    final r = await http.delete(
+      Uri.parse('$_base/progress/reports/$assessmentId'),
+      headers: _headers(),
+    );
+    _logRes(tag, r);
+    if (r.statusCode == 204 || r.statusCode == 200) return;
+    throw Exception('deleteAssessmentReport failed (${r.statusCode})');
+  }
+
   Future<Map<String, dynamic>> getTemplate(String templateId) async {
     const tag = 'API-getTemplate';
   await _ensureFreshToken();
@@ -1870,6 +1885,22 @@ class ApiService {
     throw Exception('getSpiritualGiftsLatest failed (${r.statusCode}) ${r.body}');
   }
 
+  /// Fetch a specific spiritual gifts assessment by ID.
+  Future<Map<String, dynamic>> getSpiritualGiftsById(String assessmentId) async {
+    const tag = 'API-getSpiritualGiftsById';
+    await _ensureFreshToken();
+    final path = '/assessments/spiritual-gifts/by-id/$assessmentId';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) {
+      final data = jsonDecode(r.body) as Map<String, dynamic>;
+      return _normalizeSpiritualGiftsResult(data);
+    }
+    if (r.statusCode == 404) return {};
+    throw Exception('getSpiritualGiftsById failed (${r.statusCode}) ${r.body}');
+  }
+
   Future<Map<String, dynamic>> mentorGetApprenticeSpiritualGiftsLatest(String apprenticeId) async {
     const tag = 'API-mentorGetApprenticeSpiritualGiftsLatest';
     await _ensureFreshToken();
@@ -2057,5 +2088,201 @@ class ApiService {
     }
     if (r.statusCode == 404) return [];
     throw Exception('getSpiritualGiftsDefinitions failed (${r.statusCode}) ${r.body}');
+  }
+
+  /* ─────────────────────────────────────────────────────────────────── */
+  /*                       ACCOUNT DELETION                              */
+  /* ─────────────────────────────────────────────────────────────────── */
+
+  /// Get a summary of what will be deleted when the account is closed.
+  /// Returns counts of all associated data so the user understands the impact.
+  Future<Map<String, dynamic>> getAccountDeletionSummary() async {
+    const tag = 'API-getAccountDeletionSummary';
+    await _ensureFreshToken();
+    const path = '/users/me/deletion-summary';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('getAccountDeletionSummary failed (${r.statusCode}) ${r.body}');
+  }
+
+  /// Permanently delete the current user's account and all associated data.
+  /// This is IRREVERSIBLE. Requires confirmationText to be exactly "DELETE".
+  Future<Map<String, dynamic>> closeAccount({required String confirmationText}) async {
+    const tag = 'API-closeAccount';
+    await _ensureFreshToken();
+    const path = '/users/me/close-account';
+    final body = {'confirmation_text': confirmationText};
+    _logReq(tag, 'DELETE', path, body);
+    final r = await http.delete(
+      Uri.parse('$_base$path'),
+      headers: _headers(),
+      body: jsonEncode(body),
+    );
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('closeAccount failed (${r.statusCode}) ${r.body}');
+  }
+
+  /* ─────────────────────────────────────────────────────────────────── */
+  /*                       MENTOR NOTES                                  */
+  /* ─────────────────────────────────────────────────────────────────── */
+
+  /// Create a new mentor note on an assessment.
+  /// [assessmentId] - The assessment this note is for.
+  /// [content] - The note text (required).
+  /// [followUpPlan] - Optional follow-up plan text.
+  /// [isPrivate] - If true (default), only the mentor can see. If false, shared with apprentice.
+  Future<Map<String, dynamic>> createMentorNote({
+    required String assessmentId,
+    required String content,
+    String? followUpPlan,
+    bool isPrivate = true,
+  }) async {
+    const tag = 'API-createMentorNote';
+    await _ensureFreshToken();
+    const path = '/mentor-notes/';
+    final body = {
+      'assessment_id': assessmentId,
+      'content': content,
+      if (followUpPlan != null) 'follow_up_plan': followUpPlan,
+      'is_private': isPrivate,
+    };
+    _logReq(tag, 'POST', path, body);
+    final r = await http.post(
+      Uri.parse('$_base$path'),
+      headers: _headers(),
+      body: jsonEncode(body),
+    );
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('createMentorNote failed (${r.statusCode}) ${r.body}');
+  }
+
+  /// Get all mentor notes for a specific assessment (mentor view).
+  /// Returns all notes including private ones since this is for the mentor.
+  Future<List<MentorNote>> getMentorNotesForAssessment(String assessmentId) async {
+    const tag = 'API-getMentorNotesForAssessment';
+    await _ensureFreshToken();
+    final path = '/mentor-notes/assessment/$assessmentId';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) {
+      final decoded = jsonDecode(r.body);
+      if (decoded is List) {
+        return decoded.map((e) => MentorNote.fromJson(e as Map<String, dynamic>)).toList();
+      }
+      return [];
+    }
+    if (r.statusCode == 404) return [];
+    throw Exception('getMentorNotesForAssessment failed (${r.statusCode}) ${r.body}');
+  }
+
+  /// Update an existing mentor note.
+  /// Only the fields provided will be updated.
+  Future<Map<String, dynamic>> updateMentorNote({
+    required String noteId,
+    String? content,
+    String? followUpPlan,
+    bool? isPrivate,
+  }) async {
+    const tag = 'API-updateMentorNote';
+    await _ensureFreshToken();
+    final path = '/mentor-notes/$noteId';
+    final body = <String, dynamic>{};
+    if (content != null) body['content'] = content;
+    if (followUpPlan != null) body['follow_up_plan'] = followUpPlan;
+    if (isPrivate != null) body['is_private'] = isPrivate;
+    _logReq(tag, 'PATCH', path, body);
+    final r = await http.patch(
+      Uri.parse('$_base$path'),
+      headers: _headers(),
+      body: jsonEncode(body),
+    );
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('updateMentorNote failed (${r.statusCode}) ${r.body}');
+  }
+
+  /// Delete a mentor note.
+  /// Only the mentor who created the note can delete it.
+  Future<void> deleteMentorNote(String noteId) async {
+    const tag = 'API-deleteMentorNote';
+    await _ensureFreshToken();
+    final path = '/mentor-notes/$noteId';
+    _logReq(tag, 'DELETE', path);
+    final r = await http.delete(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 204 || r.statusCode == 200) return;
+    throw Exception('deleteMentorNote failed (${r.statusCode}) ${r.body}');
+  }
+
+  /// Get shared notes for an assessment (apprentice view).
+  /// Only returns notes where is_private=false.
+  Future<List<MentorNote>> getSharedNotesForAssessment(String assessmentId) async {
+    const tag = 'API-getSharedNotesForAssessment';
+    await _ensureFreshToken();
+    final path = '/mentor-notes/shared/assessment/$assessmentId';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) {
+      final decoded = jsonDecode(r.body);
+      if (decoded is List) {
+        return decoded.map((e) => MentorNote.fromJson(e as Map<String, dynamic>)).toList();
+      }
+      return [];
+    }
+    if (r.statusCode == 404) return [];
+    throw Exception('getSharedNotesForAssessment failed (${r.statusCode}) ${r.body}');
+  }
+
+  /* ─────────────────────────────────────────────────────────────────── */
+  /*  📧  Support                                                        */
+  /* ─────────────────────────────────────────────────────────────────── */
+
+  /// Submit a support request. Works for both authenticated and unauthenticated users.
+  /// If authenticated, user_id will be included automatically by the backend.
+  Future<Map<String, dynamic>> submitSupportRequest({
+    required String name,
+    required String email,
+    required String topic,
+    required String message,
+    String? deviceInfo,
+  }) async {
+    const tag = 'API-submitSupportRequest';
+    
+    // Try to get token if available, but don't require it
+    try {
+      await _ensureFreshToken();
+    } catch (_) {
+      // Support works without auth
+    }
+    
+    final path = '/support/submit';
+    final body = {
+      'name': name,
+      'email': email,
+      'topic': topic,
+      'message': message,
+      'source': 'app',
+      if (deviceInfo != null) 'device_info': deviceInfo,
+    };
+    _logReq(tag, 'POST', path, body);
+    final r = await http.post(
+      Uri.parse('$_base$path'),
+      headers: _headers(),
+      body: jsonEncode(body),
+    );
+    _logRes(tag, r);
+    if (r.statusCode == 200) {
+      return jsonDecode(r.body) as Map<String, dynamic>;
+    }
+    if (r.statusCode == 429) {
+      throw Exception('Too many requests. Please try again later.');
+    }
+    throw Exception('submitSupportRequest failed (${r.statusCode}) ${r.body}');
   }
 }

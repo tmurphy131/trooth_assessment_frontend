@@ -5,7 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'firebase_options.dart';
-import 'package:uni_links/uni_links.dart';
+import 'package:app_links/app_links.dart';
 import 'screens/agreement_sign_public_screen.dart';
 import 'theme.dart';
 // import 'screens/splash_screen.dart'; // legacy complex splash (kept for later)
@@ -98,7 +98,7 @@ void main() {
 
   // Point the frontend to the deployed backend for development/testing.
   // Update this URL if you deploy to a different host.
-  ApiService().baseUrlOverride = 'https://trooth-assessment-dev.onlyblv.com';
+  ApiService().baseUrlOverride = 'https://trooth-discipleship-api.onlyblv.com';
 
   // Quick connectivity check at startup — logs the backend response.
   try {
@@ -108,9 +108,10 @@ void main() {
     print('⚠️ Backend ping failed: $e');
   }
 
-  // Handle initial link (cold start)
+  // Handle initial link (cold start) and stream (app_links)
+  final appLinks = AppLinks();
   try {
-    final initialUri = await getInitialUri();
+    final initialUri = await appLinks.getInitialLink();
     if (initialUri != null) {
       _handleIncomingUri(initialUri);
     }
@@ -119,10 +120,8 @@ void main() {
   }
 
   // Listen to incoming links (warm / background)
-  uriLinkStream.listen((uri) {
-    if (uri != null) {
-      _handleIncomingUri(uri);
-    }
+  appLinks.uriLinkStream.listen((uri) {
+    _handleIncomingUri(uri);
   }, onError: (err) {
     print('⚠️ URI stream error: $err');
   });
@@ -162,7 +161,7 @@ class MyApp extends StatelessWidget {
       return const MaterialApp(debugShowCheckedModeBanner: false, home: _RenderTestScreen());
     }
     return MaterialApp(
-      title: 'T[root]H Assessment',
+      title: 'T[root]H Discipleship',
       theme: buildAppTheme(),
       debugShowCheckedModeBanner: false,
   navigatorKey: navigatorKey,

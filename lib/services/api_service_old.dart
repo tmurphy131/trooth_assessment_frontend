@@ -1,6 +1,6 @@
 // lib/services/api_service.dart
 //
-// Centralised HTTP wrapper for the T[root]H Assessment API.
+// Centralised HTTP wrapper for the T[root]H Discipleship API.
 // ─────────────────────────────────────────────────────────
 
 import 'dart:convert';

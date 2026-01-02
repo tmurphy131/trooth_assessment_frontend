@@ -1,4 +1,4 @@
-# T[root]H Assessment - AI Agent Instructions (Frontend)
+# T[root]H Discipleship - AI Agent Instructions (Frontend)
 
 ## Project Overview
 T[root]H is a spiritual mentorship platform with a **Flutter mobile frontend** (this repo) and a **FastAPI backend** (sibling repo: `trooth_assessment_backend`). The app enables mentor-apprentice relationships, AI-scored spiritual assessments, mentorship agreements, and progress tracking.
@@ -16,7 +16,7 @@ T[root]H is a spiritual mentorship platform with a **Flutter mobile frontend** (
 ### API Communication Pattern
 - **Singleton service**: `lib/services/api_service.dart` (2000+ lines)
 - All HTTP calls funnel through `ApiService()` with automatic token refresh
-- Backend base URL: `https://trooth-assessment-dev.onlyblv.com` (dev environment)
+- Backend base URL: `https://trooth-discipleship-api.onlyblv.com` (dev environment)
 - Token management: Call `await _maybeRefreshToken()` before API calls; token expires hourly
 - Every request logs via `dev.log()` for debugging network issues
 
@@ -172,7 +172,7 @@ Config: `firebase.json` points to `build/web`
 2. Verify Firebase token: `print(await FirebaseAuth.instance.currentUser?.getIdToken())`
 3. Check backend logs: `docker logs <container>` or Cloud Run logs
 4. Use `dev.log()` in `ApiService` - all requests/responses logged
-5. Test with curl: `curl -H "Authorization: Bearer $TOKEN" https://trooth-assessment-dev.onlyblv.com/health`
+5. Test with curl: `curl -H "Authorization: Bearer $TOKEN" https://trooth-discipleship-api.onlyblv.com/health`
 
 ## Security Considerations
 - **Never log Firebase tokens** in production (masked in `ApiService._headers()`)

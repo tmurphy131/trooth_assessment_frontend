@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../models/spiritual_gifts_models.dart';
 import 'assessment_history_screen.dart';
 import 'spiritual_gifts_assessment_screen.dart';
 import 'spiritual_gifts_history_screen.dart';
+import 'spiritual_gifts_full_report_screen.dart';
 import 'apprentice_report_screen.dart';
 
 class ProgressScreen extends StatefulWidget {
@@ -143,7 +145,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
 
   Widget _masterCard() {
     if (_master == null) return _emptyCard(
-      title: 'Master T[root]H Assessment',
+      title: 'Master T[root]H Discipleship',
       cta: 'Take Assessment',
       onPressed: () {
         // Go back to dashboard so user can tap "New Assessment" chooser.
@@ -158,7 +160,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
     final chips = top3.map((m) => {'category': m['category']?.toString() ?? '', 'score': m['score']}).toList();
     final completedAt = _master!['completed_at']?.toString();
     return _featuredCard(
-      title: 'Master T[root]H Assessment',
+      title: 'Master T[root]H Discipleship',
       badge: badge,
       chips: chips,
       subtitle: completedAt != null ? _friendlyDate(completedAt) : null,
@@ -244,42 +246,154 @@ class _ProgressScreenState extends State<ProgressScreen> {
     final templateId = r['template_id']?.toString();
     final assessmentId = r['id']?.toString();
     final summary = (r['summary'] as Map?)?.map((k, v) => MapEntry(k.toString(), v));
-    return Card(
-      color: Colors.grey[850],
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: Icon(_iconFor(type), color: Colors.amber),
-        title: Text(title, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    
+    return Dismissible(
+      key: Key(assessmentId ?? UniqueKey().toString()),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: Colors.red[700],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            if (ts != null) Text(_friendlyDate(ts), style: TextStyle(color: Colors.grey[400], fontSize: 12, fontFamily: 'Poppins')),
-            const SizedBox(height: 4),
-            if (summary != null) _summaryText(type, summary),
+            Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
+            SizedBox(width: 8),
+            Icon(Icons.delete, color: Colors.white),
           ],
         ),
-        trailing: IconButton(
-          icon: const Icon(Icons.history, color: Colors.grey, size: 20),
-          tooltip: 'View History',
-          onPressed: () => _openHistory(type, templateId, title),
+      ),
+      confirmDismiss: (direction) async {
+        return await _confirmDelete(title);
+      },
+      onDismissed: (direction) {
+        if (assessmentId != null) {
+          _deleteReport(assessmentId, title);
+        }
+      },
+      child: Card(
+        color: Colors.grey[850],
+        margin: const EdgeInsets.only(bottom: 8),
+        child: ListTile(
+          leading: Icon(_iconFor(type), color: Colors.amber),
+          title: Text(title, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (ts != null) Text(_friendlyDate(ts), style: TextStyle(color: Colors.grey[400], fontSize: 12, fontFamily: 'Poppins')),
+              const SizedBox(height: 4),
+              if (summary != null) _summaryText(type, summary),
+            ],
+          ),
+          trailing: IconButton(
+            icon: const Icon(Icons.history, color: Colors.grey, size: 20),
+            tooltip: 'View History',
+            onPressed: () => _openHistory(type, templateId, title),
+          ),
+          onTap: () {
+            // Navigate to report view for this specific assessment
+            if (assessmentId != null && assessmentId.isNotEmpty) {
+              // Spiritual Gifts assessments go to the dedicated spiritual gifts report screen
+              if (type == 'spiritual_gifts') {
+                _openSpiritualGiftsReport(assessmentId);
+              } else {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ApprenticeReportScreen(
+                      assessmentId: assessmentId,
+                      title: title,
+                    ),
+                  ),
+                );
+              }
+            } else {
+              _toast('Report not available for this assessment');
+            }
+          },
         ),
-        onTap: () {
-          // Navigate to report view for this specific assessment
-          if (assessmentId != null && assessmentId.isNotEmpty) {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => ApprenticeReportScreen(
-                  assessmentId: assessmentId,
-                  title: title,
-                ),
-              ),
-            );
-          } else {
-            _toast('Report not available for this assessment');
-          }
-        },
       ),
     );
+  }
+
+  /// Fetch and display a specific spiritual gifts assessment
+  Future<void> _openSpiritualGiftsReport(String assessmentId) async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: Colors.amber)),
+    );
+    
+    try {
+      final json = await _api.getSpiritualGiftsById(assessmentId);
+      if (!mounted) return;
+      Navigator.of(context).pop(); // close loading dialog
+      
+      if (json.isEmpty) {
+        _toast('Spiritual gifts report not found', error: true);
+        return;
+      }
+      
+      final result = SpiritualGiftsResult.fromJson(json);
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => SpiritualGiftsFullReportScreen(
+            result: result,
+            readOnly: false,
+            allowEmail: true,
+            allowDefinitions: true,
+            showActionsSection: true,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // close loading dialog
+      _toast('Failed to load spiritual gifts report: $e', error: true);
+    }
+  }
+
+  Future<bool> _confirmDelete(String title) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Delete Assessment?', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+        content: Text(
+          'Are you sure you want to delete "$title"?\n\nThis action cannot be undone.',
+          style: const TextStyle(color: Colors.white70, fontFamily: 'Poppins'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+
+  Future<void> _deleteReport(String assessmentId, String title) async {
+    try {
+      await _api.deleteAssessmentReport(assessmentId);
+      setState(() {
+        _reports.removeWhere((r) => r['id'] == assessmentId);
+      });
+      _toast('Deleted "$title"', error: false);
+    } catch (e) {
+      _toast('Failed to delete: $e', error: true);
+      // Reload to restore the list
+      _load();
+    }
   }
 
   void _openHistory(String type, String? templateId, String title) {

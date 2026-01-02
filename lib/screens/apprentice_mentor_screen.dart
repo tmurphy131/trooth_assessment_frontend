@@ -283,6 +283,49 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
     );
   }
 
+  Widget _buildMentorAvatar(String? url, double size) {
+    if (url == null || url.isEmpty) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: Colors.amber.withOpacity(.15),
+          borderRadius: BorderRadius.circular(size / 2),
+        ),
+        child: Icon(Icons.person, color: Colors.amber, size: size * 0.5),
+      );
+    }
+    return ClipOval(
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: Image.network(
+          url,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              color: Colors.amber.withOpacity(.15),
+              child: Center(
+                child: SizedBox(
+                  width: size * 0.4,
+                  height: size * 0.4,
+                  child: const CircularProgressIndicator(color: Colors.amber, strokeWidth: 2),
+                ),
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              color: Colors.amber.withOpacity(.15),
+              child: Icon(Icons.person, color: Colors.amber, size: size * 0.5),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _buildMentorOverviewCard() {
     final name = _mentorProfile?['name'] ?? _primaryAgreement?['mentor_name'] ?? 'Mentor';
     final emailRaw = _mentorProfile?['email'] ?? _primaryAgreement?['mentor_email'] ?? '';
@@ -322,15 +365,7 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 56, height: 56,
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(.15),
-                    borderRadius: BorderRadius.circular(28),
-                    image: avatarUrl != null ? DecorationImage(image: NetworkImage(avatarUrl), fit: BoxFit.cover) : null,
-                  ),
-                  child: avatarUrl == null ? const Icon(Icons.person, color: Colors.amber, size: 30) : null,
-                ),
+                _buildMentorAvatar(avatarUrl, 56),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -391,7 +426,7 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
                             if ((p['avatar_url'] ?? '').toString().isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(bottom: 12.0),
-                                child: CircleAvatar(radius: 28, backgroundImage: NetworkImage(p['avatar_url'])),
+                                child: _buildMentorAvatar(p['avatar_url']?.toString(), 56),
                               ),
                             Text('Name: ${p['name'] ?? 'N/A'}', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
                             Text('Email: ${p['email'] ?? 'N/A'}', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),

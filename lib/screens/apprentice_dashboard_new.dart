@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/base_dashboard.dart';
 import '../services/api_service.dart';
+import '../mixins/apprentice_dashboard_tutorial.dart';
 import 'assessment_screen.dart';
 import 'apprentice_invites_screen.dart';
 // Use the unified mentor & agreements screen (overview merged in)
@@ -11,6 +12,7 @@ import 'spiritual_gifts_results_screen.dart';
 import 'spiritual_gifts_history_screen.dart';
 import 'progress_screen.dart';
 import 'apprentice_resources_screen.dart';
+import 'apprentice_profile_screen.dart';
 
 class ApprenticeDashboardNew extends StatefulWidget {
   const ApprenticeDashboardNew({super.key});
@@ -114,7 +116,7 @@ class _SpiritualGiftsQuickActionsSheet extends StatelessWidget {
     );
   }
 }
-class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
+class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with ApprenticeDashboardTutorial {
   final user = FirebaseAuth.instance.currentUser;
   final _apiService = ApiService();
   List<Map<String, dynamic>> _assessments = [];
@@ -124,11 +126,16 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
   String? _error;
   String? _name; // backend 'name' field
   int _inviteCount = 0;
+  int _pendingAgreementCount = 0;
+
+  /// Total badge count = invites + pending agreements
+  int get _totalNotificationCount => _inviteCount + _pendingAgreementCount;
 
   @override
   void initState() {
     super.initState();
     _initializeAndLoadData();
+    initApprenticeTutorial();
   }
 
   Future<void> _initializeAndLoadData() async {
@@ -136,6 +143,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
       _loadUserProfile(),
       _loadAssessments(),
       _loadInviteCount(),
+      _loadPendingAgreementCount(),
     ]);
   }
 
@@ -150,9 +158,25 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
     }
   }
 
+  Future<void> _loadPendingAgreementCount() async {
+    try {
+      final agreements = await _apiService.listMyAgreements();
+      final pendingCount = agreements
+          .where((a) => a['status'] == 'awaiting_apprentice')
+          .length;
+      if (mounted) setState(() { _pendingAgreementCount = pendingCount; });
+    } catch (e) {
+      debugPrint('Failed to load pending agreements: $e');
+    }
+  }
+
   String _deriveDisplayName() {
     final n = _name?.trim();
-    if (n != null && n.isNotEmpty) return n;
+    if (n != null && n.isNotEmpty) {
+      // Return only the first name
+      final firstName = n.split(' ').first;
+      return firstName;
+    }
     final email = user?.email;
     if (email != null && email.contains('@')) return email.split('@')[0];
     return 'Apprentice';
@@ -230,8 +254,18 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
         ),
       ),
       additionalActions: [
+        // Profile icon
+        IconButton(
+          key: profileButtonKey,
+          icon: const Icon(Icons.account_circle, color: Color(0xFFFFD700)),
+          tooltip: 'My Profile',
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ApprenticeProfileScreen()),
+          ),
+        ),
         // Mentor & Agreements icon
         IconButton(
+          key: mentorButtonKey,
           icon: const Icon(Icons.people, color: Color(0xFFFFD700)),
           tooltip: 'Mentor & Agreements',
           onPressed: () => Navigator.of(context).push(
@@ -240,6 +274,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
         ),
         // Invitations icon with badge (badge hidden automatically when count == 0)
         Stack(
+          key: invitationsButtonKey,
           alignment: Alignment.topRight,
           children: [
             IconButton(
@@ -247,10 +282,14 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
               tooltip: 'Invitations',
               onPressed: () async {
                 _viewInvitations();
-                await _loadInviteCount();
+                // Refresh both counts after returning from invitations screen
+                await Future.wait([
+                  _loadInviteCount(),
+                  _loadPendingAgreementCount(),
+                ]);
               },
             ),
-            if (_inviteCount > 0)
+            if (_totalNotificationCount > 0)
               Positioned(
                 right: 6,
                 top: 6,
@@ -261,7 +300,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    _inviteCount.toString(),
+                    _totalNotificationCount.toString(),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 10,
@@ -279,6 +318,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
 
   Widget _buildWelcomeCard() {
     return Card(
+      key: welcomeCardKey,
       elevation: 4,
       color: Colors.grey[900],
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -350,6 +390,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
           children: [
             Expanded(
               child: _buildActionCard(
+                cardKey: newAssessmentCardKey,
                 icon: Icons.quiz,
                 title: 'New Assessment',
                 subtitle: 'Start a spiritual assessment',
@@ -364,6 +405,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
                 builder: (context, snap) {
                   final hasResult = snap.hasData && (snap.data?.isNotEmpty ?? false);
                   return _buildActionCard(
+                    cardKey: spiritualGiftsCardKey,
                     icon: Icons.auto_awesome,
                     title: 'Spiritual Gifts',
                     subtitle: hasResult ? 'View or retake assessment' : 'Discover your gifts',
@@ -402,6 +444,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
             children: [
               Expanded(
                 child: _buildActionCard(
+                  cardKey: progressCardKey,
                   icon: Icons.history,
                   title: 'View Progress',
                   subtitle: 'Track your growth',
@@ -414,6 +457,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
               const SizedBox(width: 10),
               Expanded(
                 child: _buildActionCard(
+                  cardKey: resourcesCardKey,
                   icon: Icons.menu_book,
                   title: 'Resources',
                   subtitle: 'Guides & weekly tips',
@@ -436,8 +480,10 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
     required String subtitle,
     required Color color,
     required VoidCallback onTap,
+    Key? cardKey,
   }) {
     return Card(
+      key: cardKey,
       elevation: 2,
       color: Colors.grey[850],
       margin: EdgeInsets.zero,
@@ -492,6 +538,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
   Widget _buildRecentAssessments() {
     // Draft assessments section - fills remaining space
     return Column(
+      key: recentAssessmentsKey,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -638,6 +685,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
 
   Widget _buildAssessmentCardCompact(Map<String, dynamic> assessment) {
     final title = _resolveDraftTitle(assessment);
+    final assessmentId = assessment['id'] as String?;
     final updatedAt = assessment['updated_at'] as String?;
     final createdAt = assessment['created_at'] as String?;
     String timeInfo = '';
@@ -648,10 +696,10 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
       }
     } catch (_) {}
 
-    return Card(
+    final cardContent = Card(
       elevation: 1,
       color: Colors.grey[850],
-      margin: const EdgeInsets.only(bottom: 6),
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: InkWell(
         onTap: () => _navigateToAssessment(assessment),
@@ -695,6 +743,103 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
         ),
       ),
     );
+
+    // Wrap with Dismissible for swipe-to-delete
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Dismissible(
+          key: Key(assessmentId ?? title),
+          direction: DismissDirection.endToStart,
+          confirmDismiss: (direction) async {
+            return await _showDeleteConfirmationDialog(assessmentId, title);
+          },
+          background: Container(
+            decoration: BoxDecoration(
+              color: Colors.red[700],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 20),
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.close, color: Colors.white, size: 24),
+                SizedBox(height: 2),
+                Text(
+                  'Delete',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          child: cardContent,
+        ),
+      ),
+    );
+  }
+
+  Future<bool> _showDeleteConfirmationDialog(String? draftId, String title) async {
+    if (draftId == null) return false;
+    
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text(
+          'Delete Draft',
+          style: TextStyle(
+            color: Colors.red,
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to delete the draft "$title"? This action cannot be undone.',
+          style: const TextStyle(
+            color: Colors.white,
+            fontFamily: 'Poppins',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: Colors.grey,
+                fontFamily: 'Poppins',
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context, true);
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(
+                color: Colors.red,
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    
+    if (result == true) {
+      await _deleteDraft(draftId);
+      return true;
+    }
+    return false;
   }
 
   Widget _buildAssessmentCard(Map<String, dynamic> assessment) {
@@ -1248,20 +1393,30 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> {
   Future<void> _deleteDraft(String draftId) async {
     try {
       await _apiService.deleteDraft(draftId);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Draft deleted successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Assessment draft deleted',
+              style: TextStyle(fontFamily: 'Poppins'),
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
       _loadAssessments(); // Refresh the list
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to delete draft: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to delete draft: $e',
+              style: const TextStyle(fontFamily: 'Poppins'),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }
