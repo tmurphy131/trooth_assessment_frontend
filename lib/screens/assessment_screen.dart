@@ -390,6 +390,60 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
     final questionType = question['question_type'] as String? ?? 'open_ended';
     final options = question['options'] as List<dynamic>? ?? [];
     
+    // Use different layout for open-ended vs multiple choice
+    if (questionType == 'open_ended' || options.isEmpty) {
+      // Open-ended: Use scrollable layout so keyboard doesn't hide text field
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Category badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.amber.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                category,
+                style: const TextStyle(
+                  color: Colors.amber,
+                  fontSize: 12,
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Question text
+            Text(
+              questionText,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Poppins',
+                height: 1.4,
+              ),
+            ),
+            
+            const SizedBox(height: 32),
+            
+            // Open-ended text input
+            _buildOpenEndedInput(questionId),
+            
+            // Extra padding at bottom for keyboard
+            const SizedBox(height: 120),
+          ],
+        ),
+      );
+    }
+    
+    // Multiple choice: Use fixed layout with expanded list
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: Column(
@@ -429,21 +483,13 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
           
           const SizedBox(height: 32),
           
-          // Answer input based on question type
+          // Multiple choice options
           Expanded(
-            child: _buildAnswerInput(questionId, questionType, options),
+            child: _buildMultipleChoiceInput(questionId, options),
           ),
         ],
       ),
     );
-  }
-
-  Widget _buildAnswerInput(String questionId, String questionType, List<dynamic> options) {
-    if (questionType == 'multiple_choice' && options.isNotEmpty) {
-      return _buildMultipleChoiceInput(questionId, options);
-    } else {
-      return _buildOpenEndedInput(questionId);
-    }
   }
 
   Widget _buildMultipleChoiceInput(String questionId, List<dynamic> options) {
@@ -487,6 +533,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
 
   Widget _buildOpenEndedInput(String questionId) {
     return Container(
+      constraints: const BoxConstraints(minHeight: 200),
       decoration: BoxDecoration(
         color: Colors.grey[900],
         borderRadius: BorderRadius.circular(12),
@@ -494,7 +541,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
       ),
       child: TextField(
         maxLines: null,
-        expands: true,
+        minLines: 6,
         textDirection: TextDirection.ltr, // Explicitly set LTR direction
         style: const TextStyle(
           color: Colors.white,

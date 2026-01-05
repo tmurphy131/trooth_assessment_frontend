@@ -10,6 +10,7 @@ import 'screens/agreement_sign_public_screen.dart';
 import 'theme.dart';
 // import 'screens/splash_screen.dart'; // legacy complex splash (kept for later)
 import 'screens/simple_login_screen.dart';
+import 'screens/auth_gate.dart';
 import 'services/api_service.dart';
 import 'features/assessments/screens/mentor_submission_detail_screen.dart';
 import 'features/assessments/screens/mentor_report_v2_screen.dart';
@@ -73,9 +74,6 @@ void main() {
     );
     firebaseStopwatch.stop();
     debugPrint('✅ Firebase.initializeApp completed in ${firebaseStopwatch.elapsedMilliseconds}ms');
-
-  // Hold the native splash for an additional 5 seconds per request.
-  await Future.delayed(const Duration(seconds: 5));
 
   // Explicit sign-in only: listen for auth changes and update ApiService token.
   FirebaseAuth.instance.authStateChanges().listen((user) async {
@@ -165,7 +163,7 @@ class MyApp extends StatelessWidget {
       theme: buildAppTheme(),
       debugShowCheckedModeBanner: false,
   navigatorKey: navigatorKey,
-  home: const SimpleLoginScreen(), // Use only native launch screen, then show Login
+  home: const AuthGate(), // Check auth state and route to appropriate screen
       onGenerateRoute: (settings) {
         // Expected pattern: /agreements/sign/:tokenType/:token
         final uri = Uri.parse(settings.name ?? '');
