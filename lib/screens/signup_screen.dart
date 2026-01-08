@@ -112,42 +112,48 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.shortestSide >= 600;
+    final maxFormWidth = isTablet ? 400.0 : double.infinity;
+    
     return Scaffold(
       appBar: AppBar(title: const Text('Sign Up')),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text('Create Account', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                const Text('Enter your details to get started.'),
-                const SizedBox(height: 24),
-                TextFormField(
-                  controller: _firstController,
-                  decoration: _dec('First Name'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'First name required' : null,
-                  textCapitalization: TextCapitalization.words,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _lastController,
-                  decoration: _dec('Last Name'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Last name required' : null,
-                  textCapitalization: TextCapitalization.words,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _emailController,
-                  decoration: _dec('Email'),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Email required';
-                    if (!v.contains('@')) return 'Invalid email';
-                    return null;
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxFormWidth),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text('Create Account', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  const Text('Enter your details to get started.'),
+                  const SizedBox(height: 24),
+                  TextFormField(
+                    controller: _firstController,
+                    decoration: _dec('First Name'),
+                    validator: (v) => (v == null || v.trim().isEmpty) ? 'First name required' : null,
+                    textCapitalization: TextCapitalization.words,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _lastController,
+                    decoration: _dec('Last Name'),
+                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Last name required' : null,
+                    textCapitalization: TextCapitalization.words,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _emailController,
+                    decoration: _dec('Email'),
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Email required';
+                      if (!v.contains('@')) return 'Invalid email';
+                      return null;
                   },
                 ),
                 const SizedBox(height: 16),
@@ -274,6 +280,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   Text(_error!, style: const TextStyle(color: Colors.red)),
                 ],
               ],
+              ),
             ),
           ),
         ),

@@ -1,12 +1,8 @@
-import 'dart:convert';
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
-import 'package:crypto/crypto.dart';
 import 'dart:io' show Platform;
 
 import 'mentor_dashboard_new.dart';
@@ -199,39 +195,20 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
     }
   }
 
-  /// Generate a random nonce for Apple Sign-In
-  String _generateNonce([int length = 32]) {
-    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
-    final random = Random.secure();
-    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
-  }
-
-  /// SHA256 hash of the nonce
-  String _sha256ofString(String input) {
-    final bytes = utf8.encode(input);
-    final digest = sha256.convert(bytes);
-    return digest.toString();
-  }
-
   /// Apple Sign-In
   Future<void> _signInWithApple() async {
     setState(() => _isLoading = true);
     try {
-      // Generate nonce for security
-      final rawNonce = _generateNonce();
-      final nonce = _sha256ofString(rawNonce);
-
       final appleCredential = await SignInWithApple.getAppleIDCredential(
         scopes: [
           AppleIDAuthorizationScopes.email,
           AppleIDAuthorizationScopes.fullName,
         ],
-        nonce: nonce,
       );
 
       final oauthCredential = OAuthProvider('apple.com').credential(
         idToken: appleCredential.identityToken,
-        rawNonce: rawNonce,
+        accessToken: appleCredential.authorizationCode,
       );
 
       final userCredential = await FirebaseAuth.instance.signInWithCredential(oauthCredential);
@@ -256,7 +233,9 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
     final size = MediaQuery.of(context).size;
     final isSmall = size.height < 750;
     final isVerySmall = size.height < 680;
-    final logoWidth = size.width - 48; // Nearly full width
+    final isTablet = size.shortestSide >= 600;
+    final maxFormWidth = isTablet ? 400.0 : double.infinity;
+    final logoWidth = isTablet ? 350.0 : size.width - 48; // Constrain logo on tablet
     final sectionGap = isVerySmall ? 12.0 : (isSmall ? 16.0 : 24.0);
     final pagePadding = EdgeInsets.symmetric(horizontal: isSmall ? 16.0 : 24.0, vertical: 8.0);
     final titleFontSize = isSmall ? 24.0 : 28.0;
@@ -267,87 +246,89 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
         child: Center(
           child: SingleChildScrollView(
             padding: pagePadding,
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const _LoginDebugBadge(),
-                  // Logo - cropped version, nearly full width
-                  Image.asset(
-                    'assets/logo.png',
-                    width: logoWidth,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      // Fallback if logo fails to load
-                      return Container(
-                        width: logoWidth,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.amber),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'T[root]H',
-                            style: TextStyle(
-                              color: Colors.amber,
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxFormWidth),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const _LoginDebugBadge(),
+                    // Logo - cropped version, nearly full width
+                    Image.asset(
+                      'assets/logo.png',
+                      width: logoWidth,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        // Fallback if logo fails to load
+                        return Container(
+                          width: logoWidth,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.amber),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Center(
+                            child: Text(
+                              'T[root]H',
+                              style: TextStyle(
+                                color: Colors.amber,
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                  SizedBox(height: sectionGap),
-
-                  // Title
-                  Text(
-                    'Welcome Back',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: titleFontSize,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  
-                  // Subtitle
-                  Text(
-                    '#getrooted',
-                    style: TextStyle(
-                      color: Colors.amber.shade300,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w300,
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
-                  SizedBox(height: sectionGap),
-
-                  // Email field
-                  SizedBox(
-                    height: 52,
-                    child: TextFormField(
-                      controller: _emailController,
-                      decoration: _fieldDecoration('Email'),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontFamily: 'Poppins',
-                        fontSize: 14,
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        if (!value.contains('@')) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
+                        );
                       },
                     ),
+                    SizedBox(height: sectionGap),
+
+                    // Title
+                    Text(
+                      'Welcome Back',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: titleFontSize,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    
+                    // Subtitle
+                    Text(
+                      '#getrooted',
+                      style: TextStyle(
+                        color: Colors.amber.shade300,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w300,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                    SizedBox(height: sectionGap),
+
+                    // Email field
+                    SizedBox(
+                      height: 52,
+                      child: TextFormField(
+                        controller: _emailController,
+                        decoration: _fieldDecoration('Email'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontFamily: 'Poppins',
+                          fontSize: 14,
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your email';
+                          }
+                          if (!value.contains('@')) {
+                            return 'Please enter a valid email';
+                          }
+                          return null;
+                        },
+                      ),
                   ),
                   const SizedBox(height: 12),
 
@@ -537,7 +518,8 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
             ),
           ),
         ),
-      ),
+          ),
+        ),
       ),
     );
   }
