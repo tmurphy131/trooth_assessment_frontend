@@ -4,6 +4,7 @@ import '../widgets/base_dashboard.dart';
 import '../services/api_service.dart';
 import '../mixins/apprentice_dashboard_tutorial.dart';
 import 'assessment_screen.dart';
+import 'assessment_preview_screen.dart';
 import 'apprentice_invites_screen.dart';
 // Use the unified mentor & agreements screen (overview merged in)
 import 'apprentice_mentor_screen.dart';
@@ -1010,25 +1011,25 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
         return;
       }
       
-      String? selectedTemplateId;
+      Map<String, dynamic>? selectedTemplate;
       
       // If only one template, use it directly
       if (templates.length == 1) {
-        selectedTemplateId = templates.first['id'] as String;
+        selectedTemplate = templates.first as Map<String, dynamic>;
       } else {
         // Show selection dialog for multiple templates
-        selectedTemplateId = await _showAssessmentSelectionDialog(templates);
+        selectedTemplate = await _showAssessmentSelectionDialog(templates);
       }
       
-      if (selectedTemplateId == null) {
+      if (selectedTemplate == null) {
         return; // User cancelled selection
       }
       
-      // Navigate to assessment screen
+      // Navigate to preview screen instead of directly to assessment
       final result = await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => AssessmentScreen(templateId: selectedTemplateId),
+          builder: (context) => AssessmentPreviewScreen(template: selectedTemplate!),
         ),
       );
       
@@ -1043,8 +1044,8 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
     }
   }
   
-  Future<String?> _showAssessmentSelectionDialog(List<dynamic> templates) async {
-    return showDialog<String>(
+  Future<Map<String, dynamic>?> _showAssessmentSelectionDialog(List<dynamic> templates) async {
+    return showDialog<Map<String, dynamic>>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
@@ -1063,7 +1064,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
               shrinkWrap: true,
               itemCount: templates.length,
               itemBuilder: (context, index) {
-                final template = templates[index];
+                final template = templates[index] as Map<String, dynamic>;
                 final isMaster = template['is_master_assessment'] == true;
                 
                 return Card(
@@ -1113,7 +1114,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
                         )
                       : null,
                     onTap: () {
-                      Navigator.of(context).pop(template['id'] as String);
+                      Navigator.of(context).pop(template);
                     },
                   ),
                 );

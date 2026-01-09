@@ -542,7 +542,8 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
       child: TextField(
         maxLines: null,
         minLines: 6,
-        textDirection: TextDirection.ltr, // Explicitly set LTR direction
+        textDirection: TextDirection.ltr,
+        textCapitalization: TextCapitalization.sentences, // Auto-capitalize after periods
         style: const TextStyle(
           color: Colors.white,
           fontSize: 16,
@@ -684,6 +685,8 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
 
   void _previousQuestion() {
     if (_currentQuestionIndex > 0) {
+      // Dismiss keyboard when navigating
+      FocusScope.of(context).unfocus();
       _pageController.previousPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -693,6 +696,8 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
 
   void _nextQuestion() {
     if (_currentQuestionIndex < _questions.length - 1) {
+      // Dismiss keyboard when navigating
+      FocusScope.of(context).unfocus();
       // Persist draft silently on navigation to Next
       _persistDraftSilently();
       _pageController.nextPage(
