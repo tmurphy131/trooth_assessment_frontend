@@ -27,6 +27,24 @@ class _SignupScreenState extends State<SignupScreen> {
   String? _error;
   bool _acceptedPrivacy = false;
   bool _acceptedTerms = false;
+  bool _isOAuthUser = false; // Track if user came from OAuth
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fill email if user is already authenticated (OAuth flow)
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null && currentUser.email != null) {
+      _emailController.text = currentUser.email!;
+      _isOAuthUser = true;
+      // Pre-fill name from OAuth provider if available
+      if (currentUser.displayName != null) {
+        final parts = currentUser.displayName!.split(' ');
+        if (parts.isNotEmpty) _firstController.text = parts.first;
+        if (parts.length > 1) _lastController.text = parts.sublist(1).join(' ');
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -52,22 +70,34 @@ class _SignupScreenState extends State<SignupScreen> {
     }
     setState(() => _isLoading = true);
     try {
-      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
+      // Check if user is already authenticated (from OAuth flow)
+      User? currentUser = FirebaseAuth.instance.currentUser;
+      UserCredential? cred;
+      
+      if (currentUser == null) {
+        // Regular email/password signup
+        cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+        currentUser = cred.user!;
+      } else {
+        // OAuth user completing profile - no need to create auth account
+        debugPrint('Using existing OAuth user: ${currentUser.uid}');
+      }
+      
       final first = _firstController.text.trim();
       final last = _lastController.text.trim();
       final fullName = [first, last].where((e) => e.isNotEmpty).join(' ');
-      if (fullName.isNotEmpty) {
-        await cred.user!.updateDisplayName(fullName);
+      if (fullName.isNotEmpty && currentUser != null) {
+        await currentUser.updateDisplayName(fullName);
       }
 
       // Backend user creation (ignore conflict duplicates gracefully)
       try {
         await ApiService().createUser(
-          uid: cred.user!.uid,
-            email: _emailController.text.trim(),
+          uid: currentUser!.uid,
+          email: _emailController.text.trim(),
           role: _role!,
           displayName: fullName.isNotEmpty ? fullName : null,
         );
@@ -78,7 +108,7 @@ class _SignupScreenState extends State<SignupScreen> {
         }
       }
 
-      await FirebaseFirestore.instance.collection('users').doc(cred.user!.uid).set({
+      await FirebaseFirestore.instance.collection('users').doc(currentUser!.uid).set({
         'name': fullName,
         'first_name': first,
         'last_name': last,
@@ -130,7 +160,34 @@ class _SignupScreenState extends State<SignupScreen> {
                 children: [
                   const Text('Create Account', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  const Text('Enter your details to get started.'),
+                  Text(
+                    _isOAuthUser 
+                      ? 'Complete your profile to get started.' 
+                      : 'Enter your details to get started.',
+                  ),
+                  if (_isOAuthUser) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade900.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue.shade700),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.blue.shade300, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'You\'ve signed in with Google/Apple. Just complete your profile below.',
+                              style: TextStyle(color: Colors.blue.shade200, fontSize: 13),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   TextFormField(
                     controller: _firstController,
@@ -150,44 +207,48 @@ class _SignupScreenState extends State<SignupScreen> {
                     controller: _emailController,
                     decoration: _dec('Email'),
                     keyboardType: TextInputType.emailAddress,
+                    enabled: !_isOAuthUser, // Disable if OAuth user
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'Email required';
                       if (!v.contains('@')) return 'Invalid email';
                       return null;
                   },
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: _dec('Password').copyWith(
-                        suffixIcon: IconButton(
-                          icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility),
-                          onPressed: () => setState(() => _showPassword = !_showPassword),
+                // Only show password fields for email/password signup
+                if (!_isOAuthUser) ...[
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _passwordController,
+                    decoration: _dec('Password').copyWith(
+                          suffixIcon: IconButton(
+                            icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility),
+                            onPressed: () => setState(() => _showPassword = !_showPassword),
+                          ),
                         ),
-                      ),
-                  obscureText: !_showPassword,
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Password required';
-                    if (v.length < 6) return 'Minimum 6 characters';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _confirmPasswordController,
-                  decoration: _dec('Confirm Password').copyWith(
-                        suffixIcon: IconButton(
-                          icon: Icon(_showConfirmPassword ? Icons.visibility_off : Icons.visibility),
-                          onPressed: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
+                    obscureText: !_showPassword,
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Password required';
+                      if (v.length < 6) return 'Minimum 6 characters';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _confirmPasswordController,
+                    decoration: _dec('Confirm Password').copyWith(
+                          suffixIcon: IconButton(
+                            icon: Icon(_showConfirmPassword ? Icons.visibility_off : Icons.visibility),
+                            onPressed: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
+                          ),
                         ),
-                      ),
-                  obscureText: !_showConfirmPassword,
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Please confirm your password';
-                    if (v != _passwordController.text) return 'Passwords do not match';
-                    return null;
-                  },
-                ),
+                    obscureText: !_showConfirmPassword,
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Please confirm your password';
+                      if (v != _passwordController.text) return 'Passwords do not match';
+                      return null;
+                    },
+                  ),
+                ],
                 const SizedBox(height: 24),
                 const Text('Role', style: TextStyle(fontWeight: FontWeight.w600)),
                 RadioListTile<String>(

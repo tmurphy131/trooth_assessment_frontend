@@ -66,7 +66,17 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
   }
 
   /// Navigate to appropriate dashboard based on user role
-  Future<void> _navigateBasedOnRole(User user) async {
+  Future<void> _navigateBasedOnRole(User user, {bool isNewUser = false}) async {
+    // If this is a brand new OAuth user, go straight to signup
+    // (Firebase Auth account exists but Firestore profile doesn't)
+    if (isNewUser) {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const SignupScreen()),
+      );
+      return;
+    }
+    
     final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
     final data = doc.data();
     final role = data?['role'] as String?;
@@ -82,7 +92,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
         MaterialPageRoute(builder: (_) => const ApprenticeDashboardNew()),
       );
     } else {
-      // New user or legacy user missing profile; send to signup to complete
+      // Existing user missing profile; send to signup to complete
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const SignupScreen()),
       );
@@ -183,7 +193,9 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
       final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
       if (!mounted) return;
       
-      await _navigateBasedOnRole(userCredential.user!);
+      // Check if this is a brand new user (OAuth creates Firebase Auth account automatically)
+      final isNewUser = userCredential.additionalUserInfo?.isNewUser ?? false;
+      await _navigateBasedOnRole(userCredential.user!, isNewUser: isNewUser);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -214,7 +226,9 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
       final userCredential = await FirebaseAuth.instance.signInWithCredential(oauthCredential);
       if (!mounted) return;
       
-      await _navigateBasedOnRole(userCredential.user!);
+      // Check if this is a brand new user (OAuth creates Firebase Auth account automatically)
+      final isNewUser = userCredential.additionalUserInfo?.isNewUser ?? false;
+      await _navigateBasedOnRole(userCredential.user!, isNewUser: isNewUser);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
