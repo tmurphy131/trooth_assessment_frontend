@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
 import 'mentor_dashboard_new.dart';
 import 'apprentice_dashboard_new.dart';
@@ -24,11 +25,20 @@ class RoleSelectionScreen extends StatefulWidget {
 class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
   String? _selectedRole;
   bool _isLoading = false;
+  bool _acceptedPrivacy = false;
+  bool _acceptedTerms = false;
 
   Future<void> _completeSetup() async {
     if (_selectedRole == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a role')),
+      );
+      return;
+    }
+    
+    if (!_acceptedPrivacy || !_acceptedTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please accept the Privacy Policy and Terms of Service')),
       );
       return;
     }
@@ -156,6 +166,93 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                     icon: Icons.person,
                   ),
                   const SizedBox(height: 32),
+                  
+                  // Privacy Policy consent
+                  CheckboxListTile(
+                    value: _acceptedPrivacy,
+                    onChanged: (v) => setState(() => _acceptedPrivacy = v ?? false),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                    activeColor: const Color(0xFFD4AF37),
+                    title: Wrap(
+                      children: [
+                        Text(
+                          'I have read and agree to the ',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 14,
+                            color: Colors.grey[300],
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => launchUrl(
+                            Uri.parse('https://onlyblv.com/privacy.html'),
+                            mode: LaunchMode.externalApplication,
+                          ),
+                          child: const Text(
+                            'Privacy Policy',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 14,
+                              color: Color(0xFFD4AF37),
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Terms of Service consent
+                  CheckboxListTile(
+                    value: _acceptedTerms,
+                    onChanged: (v) => setState(() => _acceptedTerms = v ?? false),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                    activeColor: const Color(0xFFD4AF37),
+                    title: Wrap(
+                      children: [
+                        Text(
+                          'I have read and agree to the ',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 14,
+                            color: Colors.grey[300],
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => launchUrl(
+                            Uri.parse('https://onlyblv.com/terms.html'),
+                            mode: LaunchMode.externalApplication,
+                          ),
+                          child: const Text(
+                            'Terms of Service',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 14,
+                              color: Color(0xFFD4AF37),
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  if (!_acceptedPrivacy || !_acceptedTerms)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 12, bottom: 8),
+                      child: Text(
+                        'You must accept both to continue',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          color: Colors.red[400],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  
+                  const SizedBox(height: 24),
                   
                   // Continue button
                   ElevatedButton(
