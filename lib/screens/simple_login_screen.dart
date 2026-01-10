@@ -8,6 +8,7 @@ import 'dart:io' show Platform;
 import 'mentor_dashboard_new.dart';
 import 'apprentice_dashboard_new.dart';
 import 'signup_screen.dart';
+import 'role_selection_screen.dart';
 
 class SimpleLoginScreen extends StatefulWidget {
   const SimpleLoginScreen({super.key});
@@ -66,13 +67,22 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
   }
 
   /// Navigate to appropriate dashboard based on user role
-  Future<void> _navigateBasedOnRole(User user, {bool isNewUser = false}) async {
-    // If this is a brand new OAuth user, go straight to signup
+  Future<void> _navigateBasedOnRole(User user, {bool isNewUser = false, String? displayName, String? email}) async {
+    // If this is a brand new OAuth user, extract their info and go to role selection
     // (Firebase Auth account exists but Firestore profile doesn't)
     if (isNewUser) {
+      // Extract display name and email from OAuth provider
+      final name = displayName ?? user.displayName ?? '';
+      final userEmail = email ?? user.email ?? '';
+      
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const SignupScreen()),
+        MaterialPageRoute(
+          builder: (_) => RoleSelectionScreen(
+            displayName: name,
+            email: userEmail,
+          ),
+        ),
       );
       return;
     }
@@ -195,7 +205,19 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
       
       // Check if this is a brand new user (OAuth creates Firebase Auth account automatically)
       final isNewUser = userCredential.additionalUserInfo?.isNewUser ?? false;
-      await _navigateBasedOnRole(userCredential.user!, isNewUser: isNewUser);
+      
+      // Extract user info from Google
+      final displayName = userCredential.user?.displayName ?? 
+                         googleUser.displayName ?? 
+                         '${googleUser.email.split('@').first}';
+      final email = userCredential.user?.email ?? googleUser.email;
+      
+      await _navigateBasedOnRole(
+        userCredential.user!, 
+        isNewUser: isNewUser,
+        displayName: displayName,
+        email: email,
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -228,7 +250,40 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
       
       // Check if this is a brand new user (OAuth creates Firebase Auth account automatically)
       final isNewUser = userCredential.additionalUserInfo?.isNewUser ?? false;
-      await _navigateBasedOnRole(userCredential.user!, isNewUser: isNewUser);
+      
+      // Extract user info from Apple
+      // Apple only provides name on FIRST sign-in, so we need to capture it here
+      String displayName = userCredential.user?.displayName ?? '';
+      if (displayName.isEmpty && appleCredential.givenName != null) {
+        // Build name from Apple's givenName and familyName
+        final parts = <String>[];
+        if (appleCredential.givenName?.isNotEmpty == true) {
+          parts.add(appleCredential.givenName!);
+        }
+        if (appleCredential.familyName?.isNotEmpty == true) {
+          parts.add(appleCredential.familyName!);
+        }
+        displayName = parts.join(' ');
+        
+        // Update Firebase user's display name if we got it from Apple
+        if (displayName.isNotEmpty) {
+          await userCredential.user?.updateDisplayName(displayName);
+        }
+      }
+      
+      // Use fallback if still no name
+      if (displayName.isEmpty) {
+        displayName = userCredential.user?.email?.split('@').first ?? 'User';
+      }
+      
+      final email = userCredential.user?.email ?? appleCredential.email ?? '';
+      
+      await _navigateBasedOnRole(
+        userCredential.user!,
+        isNewUser: isNewUser,
+        displayName: displayName,
+        email: email,
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
