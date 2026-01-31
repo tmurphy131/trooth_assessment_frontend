@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 import 'simple_login_screen.dart';
 import 'mentor_dashboard_new.dart';
@@ -37,6 +38,7 @@ class _AuthGateState extends State<AuthGate> {
       if (user == null) {
         // No user logged in → show login screen
         debugPrint('🔐 AuthGate: No user found, showing login');
+        FlutterNativeSplash.remove();
         if (mounted) {
           setState(() {
             _destination = const SimpleLoginScreen();
@@ -74,11 +76,13 @@ class _AuthGateState extends State<AuthGate> {
       if (!mounted) return;
       
       if (role == 'mentor') {
+        FlutterNativeSplash.remove();
         setState(() {
           _destination = const MentorDashboardNew();
           _isLoading = false;
         });
       } else if (role == 'apprentice') {
+        FlutterNativeSplash.remove();
         setState(() {
           _destination = const ApprenticeDashboardNew();
           _isLoading = false;
@@ -86,6 +90,7 @@ class _AuthGateState extends State<AuthGate> {
       } else {
         // Legacy user or missing profile → send to signup to complete
         debugPrint('🔐 AuthGate: No role found, redirecting to signup');
+        FlutterNativeSplash.remove();
         setState(() {
           _destination = const SignupScreen();
           _isLoading = false;
@@ -94,6 +99,7 @@ class _AuthGateState extends State<AuthGate> {
     } catch (e) {
       debugPrint('❌ AuthGate: Error checking auth state: $e');
       // On error, fall back to login screen
+      FlutterNativeSplash.remove();
       if (mounted) {
         setState(() {
           _destination = const SimpleLoginScreen();

@@ -34,13 +34,26 @@ WeeklyTip getCurrentWeekTip() {
   );
 }
 
-/// Get tip by week number
+/// Get tip by week number (only returns if week is current or past)
 WeeklyTip? getTipByWeek(int weekNumber) {
+  final currentWeek = getCurrentWeekNumber();
+  if (weekNumber > currentWeek) return null; // Don't allow future tips
   try {
     return weeklyTips.firstWhere((tip) => tip.weekNumber == weekNumber);
   } catch (e) {
     return null;
   }
+}
+
+/// Get all available tips (week 1 through current week)
+List<WeeklyTip> getAvailableTips() {
+  final currentWeek = getCurrentWeekNumber();
+  return weeklyTips.where((tip) => tip.weekNumber <= currentWeek).toList();
+}
+
+/// Check if a week's tip is available (current or past)
+bool isTipAvailable(int weekNumber) {
+  return weekNumber >= 1 && weekNumber <= getCurrentWeekNumber();
 }
 
 /// All 52 weekly tips

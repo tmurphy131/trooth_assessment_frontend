@@ -196,9 +196,10 @@ class ApprenticeWeeklyTipDetailScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                  if (tip.weekNumber > 1 && tip.weekNumber < 52)
+                  // Only show Next button if next week's tip is available (not in future)
+                  if (tip.weekNumber > 1 && isApprenticeTipAvailable(tip.weekNumber + 1))
                     const SizedBox(width: 12),
-                  if (tip.weekNumber < 52)
+                  if (isApprenticeTipAvailable(tip.weekNumber + 1))
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () {
