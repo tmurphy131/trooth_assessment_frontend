@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../screens/simple_login_screen.dart';
+import '../services/push_notification_service.dart';
 
 void logoutAndRedirect(BuildContext context) async {
   final confirm = await showDialog<bool>(
@@ -22,6 +23,13 @@ void logoutAndRedirect(BuildContext context) async {
   );
 
   if (confirm != true) return;
+
+  // Unregister device from push notifications before signing out
+  try {
+    await PushNotificationService().onLogout();
+  } catch (e) {
+    debugPrint('⚠️ Failed to unregister push notifications: $e');
+  }
 
   await FirebaseAuth.instance.signOut();
 

@@ -72,7 +72,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
   Future<void> _addNote() async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (context) => const AddEditNoteDialog(),
+      builder: (context) => AddEditNoteDialog(),
     );
 
     if (result != null && mounted) {

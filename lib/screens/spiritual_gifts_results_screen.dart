@@ -196,7 +196,7 @@ class _SpiritualGiftsResultsScreenState extends State<SpiritualGiftsResultsScree
       backgroundColor: Colors.grey[900],
       color: Colors.amber,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(UISpace.s16, UISpace.s16, UISpace.s16, UISpace.s40),
+        padding: EdgeInsets.fromLTRB(UISpace.s16, UISpace.s16, UISpace.s16, UISpace.s40),
         children: [
           SpiritualGiftsReportView(
             result: _result!,
@@ -379,7 +379,7 @@ class _LoadingSkeleton extends StatelessWidget {
     final baseColor = Colors.grey[800]!;
     final highlight = Colors.grey[700]!;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(UISpace.s16, UISpace.s16, UISpace.s16, UISpace.s40),
+      padding: EdgeInsets.fromLTRB(UISpace.s16, UISpace.s16, UISpace.s16, UISpace.s40),
       children: [
         _sectionHeaderSkeleton(baseColor, highlight, width: 140),
         const SizedBox(height: 16),

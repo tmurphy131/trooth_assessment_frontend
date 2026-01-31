@@ -34,13 +34,26 @@ ApprenticeWeeklyTip getApprenticeCurrentWeekTip() {
   );
 }
 
-/// Get tip by week number
+/// Get tip by week number (only returns if week is current or past)
 ApprenticeWeeklyTip? getApprenticeTipByWeek(int weekNumber) {
+  final currentWeek = getApprenticeCurrentWeekNumber();
+  if (weekNumber > currentWeek) return null; // Don't allow future tips
   try {
     return apprenticeWeeklyTips.firstWhere((tip) => tip.weekNumber == weekNumber);
   } catch (e) {
     return null;
   }
+}
+
+/// Get all available tips (week 1 through current week)
+List<ApprenticeWeeklyTip> getApprenticeAvailableTips() {
+  final currentWeek = getApprenticeCurrentWeekNumber();
+  return apprenticeWeeklyTips.where((tip) => tip.weekNumber <= currentWeek).toList();
+}
+
+/// Check if a week's tip is available (current or past)
+bool isApprenticeTipAvailable(int weekNumber) {
+  return weekNumber >= 1 && weekNumber <= getApprenticeCurrentWeekNumber();
 }
 
 /// All 52 weekly tips for apprentices

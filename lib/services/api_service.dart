@@ -15,7 +15,7 @@ import '../models/mentor_note.dart';
 /// • Android emulator → 10.0.2.2
 /// • iOS sim / Flutter Web → use host machine IP for Docker
 /// • Host machine → localhost or 127.0.0.1
-const String _devBaseUrl = 'https://trooth-discipleship-api.onlyblv.com';
+const String _devBaseUrl = 'https://trooth-discipleship-api.onlyblv.com/';
 
 class ApiService {
   /* ── Singleton ────────────────────────────────────────────────────── */
@@ -2240,7 +2240,79 @@ class ApiService {
   }
 
   /* ─────────────────────────────────────────────────────────────────── */
-  /*  📧  Support                                                        */
+  /*  �  Push Notifications                                             */
+  /* ─────────────────────────────────────────────────────────────────── */
+
+  /// Register a device for push notifications.
+  /// [fcmToken] is the Firebase Cloud Messaging token.
+  /// [platform] is 'ios', 'android', or 'web'.
+  Future<Map<String, dynamic>> registerDevice({
+    required String fcmToken,
+    required String platform,
+    String? deviceModel,
+  }) async {
+    const tag = 'API-registerDevice';
+    await _ensureFreshToken();
+    final path = '/push-notifications/register-device';
+    final body = {
+      'fcm_token': fcmToken,
+      'platform': platform,
+      if (deviceModel != null) 'device_model': deviceModel,
+    };
+    _logReq(tag, 'POST', path, {'platform': platform}); // Don't log full token
+    final r = await http.post(
+      Uri.parse('$_base$path'),
+      headers: _headers(),
+      body: jsonEncode(body),
+    );
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('registerDevice failed (${r.statusCode}) ${r.body}');
+  }
+
+  /// Unregister a device from push notifications.
+  /// Call this when the user logs out.
+  Future<void> unregisterDevice({required String fcmToken}) async {
+    const tag = 'API-unregisterDevice';
+    await _ensureFreshToken();
+    final path = '/push-notifications/unregister-device';
+    final body = {'fcm_token': fcmToken};
+    _logReq(tag, 'POST', path);
+    final r = await http.post(
+      Uri.parse('$_base$path'),
+      headers: _headers(),
+      body: jsonEncode(body),
+    );
+    _logRes(tag, r);
+    if (r.statusCode == 200 || r.statusCode == 204) return;
+    // Don't throw on 404 - token might already be unregistered
+    if (r.statusCode == 404) {
+      dev.log('$tag: Token not found (already unregistered)');
+      return;
+    }
+    throw Exception('unregisterDevice failed (${r.statusCode}) ${r.body}');
+  }
+
+  /// Get list of registered devices for the current user.
+  Future<List<Map<String, dynamic>>> getMyDevices() async {
+    const tag = 'API-getMyDevices';
+    await _ensureFreshToken();
+    final path = '/push-notifications/my-devices';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) {
+      final decoded = jsonDecode(r.body);
+      if (decoded is List) {
+        return decoded.cast<Map<String, dynamic>>();
+      }
+      return [];
+    }
+    throw Exception('getMyDevices failed (${r.statusCode}) ${r.body}');
+  }
+
+  /* ─────────────────────────────────────────────────────────────────── */
+  /*  �📧  Support                                                        */
   /* ─────────────────────────────────────────────────────────────────── */
 
   /// Submit a support request. Works for both authenticated and unauthenticated users.

@@ -12,6 +12,7 @@ import 'theme.dart';
 import 'screens/simple_login_screen.dart';
 import 'screens/auth_gate.dart';
 import 'services/api_service.dart';
+import 'services/push_notification_service.dart';
 import 'features/assessments/screens/mentor_submission_detail_screen.dart';
 import 'features/assessments/screens/mentor_report_v2_screen.dart';
 import 'features/assessments/data/assessments_repository.dart';
@@ -84,6 +85,19 @@ void main() {
         if (token != null) {
           ApiService().bearerToken = token;
           print('🔐 User signed in');
+          
+          // Initialize push notifications after successful sign-in
+          // Small delay to ensure auth token is fully set up
+          Future.delayed(const Duration(milliseconds: 500), () async {
+            try {
+              final pushService = PushNotificationService();
+              // Set up notification tap handler
+              pushService.onNotificationTap = _handleNotificationTap;
+              await pushService.initialize();
+            } catch (e) {
+              print('⚠️ Push notification init failed: $e');
+            }
+          });
         }
       } catch (e) {
         print('⚠️ Failed to fetch ID token after sign-in: $e');
@@ -96,7 +110,7 @@ void main() {
 
   // Point the frontend to the deployed backend for development/testing.
   // Update this URL if you deploy to a different host.
-  ApiService().baseUrlOverride = 'https://trooth-discipleship-api.onlyblv.com';
+  ApiService().baseUrlOverride = 'https://trooth-discipleship-api.onlyblv.com/';
 
   // Quick connectivity check at startup — logs the backend response.
   try {
@@ -124,8 +138,7 @@ void main() {
     print('⚠️ URI stream error: $err');
   });
 
-    // Remove native splash now that initialization and delay are done.
-    FlutterNativeSplash.remove();
+    // Note: Native splash is removed in AuthGate after auth state is resolved
     runApp(const MyApp());
   }, (error, stack) {
     // Last‑resort zone error logging
@@ -140,6 +153,53 @@ void _handleIncomingUri(Uri link) {
     final tokenType = link.pathSegments[2];
     final token = link.pathSegments[3];
     navigatorKey.currentState?.pushNamed('/agreements/sign/$tokenType/$token');
+  }
+}
+
+/// Handle notification tap - navigate to appropriate screen based on notification data
+void _handleNotificationTap(Map<String, dynamic> data) {
+  debugPrint('🔔 Handling notification tap: $data');
+  
+  final type = data['type'] as String?;
+  
+  switch (type) {
+    case 'assessment_submitted':
+      // Navigate to assessment detail
+      final assessmentId = data['assessment_id'] as String?;
+      if (assessmentId != null) {
+        navigatorKey.currentState?.pushNamed(
+          '/mentor/submissions/$assessmentId',
+          arguments: {
+            'apprenticeName': data['apprentice_name'] ?? 'Apprentice',
+            'apprenticeId': data['apprentice_id'] ?? '',
+          },
+        );
+      }
+      break;
+      
+    case 'weekly_tip':
+      // Weekly tips are informational - just show the notification
+      // No navigation needed, user stays on current screen
+      debugPrint('🔔 Weekly tip notification - no navigation');
+      break;
+      
+    case 'invitation_received':
+      // Navigate to invitations screen
+      // TODO: Add invitations route when screen exists
+      debugPrint('🔔 Invitation received - navigation TBD');
+      break;
+      
+    case 'agreement_signed':
+      // Navigate to agreements screen
+      final agreementId = data['agreement_id'] as String?;
+      if (agreementId != null) {
+        // TODO: Add agreement detail route
+        debugPrint('🔔 Agreement signed - navigation TBD');
+      }
+      break;
+      
+    default:
+      debugPrint('🔔 Unknown notification type: $type');
   }
 }
 
@@ -158,12 +218,17 @@ class MyApp extends StatelessWidget {
     if (forceTestScreen) {
       return const MaterialApp(debugShowCheckedModeBanner: false, home: _RenderTestScreen());
     }
-    return MaterialApp(
-      title: 'T[root]H Discipleship',
-      theme: buildAppTheme(),
-      debugShowCheckedModeBanner: false,
-  navigatorKey: navigatorKey,
-  home: const AuthGate(), // Check auth state and route to appropriate screen
+    return GestureDetector(
+      // Dismiss keyboard when tapping outside of text fields
+      onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
+      child: MaterialApp(
+        title: 'T[root]H Discipleship',
+        theme: buildAppTheme(),
+        debugShowCheckedModeBanner: false,
+        navigatorKey: navigatorKey,
+        home: const AuthGate(), // Check auth state and route to appropriate screen
       onGenerateRoute: (settings) {
         // Expected pattern: /agreements/sign/:tokenType/:token
         final uri = Uri.parse(settings.name ?? '');
@@ -218,6 +283,7 @@ class MyApp extends StatelessWidget {
         }
         return null; // fall back to unknown
       },
+      ),
     );
   }
 }

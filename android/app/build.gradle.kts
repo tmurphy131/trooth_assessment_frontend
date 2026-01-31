@@ -19,10 +19,12 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.trooth.flutterTroothAssessment"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36  // Highest required by plugins (backwards compatible)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        // Enable core library desugaring for flutter_local_notifications
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -36,10 +38,12 @@ android {
         applicationId = "com.trooth.flutterTroothAssessment"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 24  // Android 7.0 - supports ~98% of devices
+        targetSdk = 35  // Android 15 - required by Google Play as of Aug 2025
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Required for flutter_local_notifications
+        multiDexEnabled = true
     }
 
     signingConfigs {
@@ -73,4 +77,9 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Core library desugaring for Java 8+ APIs on older Android versions
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
