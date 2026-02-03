@@ -11,11 +11,19 @@ import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/mentor_note.dart';
 
+/// Exception thrown when a premium-only feature is accessed without subscription
+class PremiumRequiredException implements Exception {
+  final String message;
+  PremiumRequiredException(this.message);
+  @override
+  String toString() => message;
+}
+
 /// Default dev URL
 /// • Android emulator → 10.0.2.2
 /// • iOS sim / Flutter Web → use host machine IP for Docker
 /// • Host machine → localhost or 127.0.0.1
-const String _devBaseUrl = 'https://trooth-discipleship-api.onlyblv.com/';
+const String _devBaseUrl = 'https://trooth-discipleship-api-dev.onlyblv.com/';
 
 class ApiService {
   /* ── Singleton ────────────────────────────────────────────────────── */
@@ -472,6 +480,76 @@ class ApiService {
     final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     return r;
+  }
+
+  /// Download apprentice's own report as PDF
+  Future<http.Response> downloadMyReportPdf({required String assessmentId}) async {
+    const tag = 'API-downloadMyReportPdf';
+    await _ensureFreshToken();
+    // Use same endpoint - backend will check authorization
+    final path = '/assessments/$assessmentId/mentor-report-v2.pdf';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    return r;
+  }
+
+  /// Fetch enhanced full report (premium-only feature) - FOR MENTORS
+  /// Returns 403 if user is not premium tier
+  /// Returns full AI-enhanced report with deeper insights, resource recommendations, etc.
+  Future<Map<String, dynamic>> fetchFullReport({required String draftId}) async {
+    const tag = 'API-fetchFullReport';
+    await _ensureFreshToken();
+    final path = '/mentor/submitted-drafts/$draftId/full-report';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) {
+      return jsonDecode(r.body) as Map<String, dynamic>;
+    }
+    if (r.statusCode == 403) {
+      throw PremiumRequiredException('Premium subscription required for full reports');
+    }
+    throw Exception('fetchFullReport failed (${r.statusCode})');
+  }
+
+  /// Fetch full report for apprentice's own assessment (premium-only)
+  /// The [assessmentId] can be either an Assessment.id (from progress/reports)
+  /// or an AssessmentDraft.id - the backend handles both.
+  /// Returns 403 if apprentice is not premium tier
+  /// Returns 404 if assessment not found or not owned by apprentice
+  Future<Map<String, dynamic>> fetchMyFullReport({required String assessmentId}) async {
+    const tag = 'API-fetchMyFullReport';
+    await _ensureFreshToken();
+    final path = '/apprentice/my-assessments/$assessmentId/full-report';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) {
+      return jsonDecode(r.body) as Map<String, dynamic>;
+    }
+    if (r.statusCode == 403) {
+      throw PremiumRequiredException('Premium subscription required for full reports');
+    }
+    if (r.statusCode == 404) {
+      throw Exception('Assessment not found');
+    }
+    throw Exception('fetchMyFullReport failed (${r.statusCode})');
+  }
+
+  /// Check if the current user has premium subscription
+  /// Parses subscription_tier from /users/me endpoint
+  Future<bool> isPremiumUser() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return false;
+      final profile = await getUserProfile(user.uid);
+      final tier = profile['subscription_tier'] as String? ?? 'free';
+      return tier == 'premium';
+    } catch (e) {
+      dev.log('Error checking premium status: $e');
+      return false;
+    }
   }
 
   Future<Map<String, dynamic>> emailMentorReportByAssessment({required String assessmentId, required String toEmail, bool includePdf = true}) async {
