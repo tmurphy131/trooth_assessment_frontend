@@ -154,6 +154,7 @@ class BiblicalKnowledge {
   final List<String> studyTargets;
   final num? percent;
   final List<String>? weakTopics;
+  final String? studyRecommendation;
 
   BiblicalKnowledge({
     this.summary, 
@@ -161,6 +162,7 @@ class BiblicalKnowledge {
     required this.studyTargets,
     this.percent,
     this.weakTopics,
+    this.studyRecommendation,
   });
 
   factory BiblicalKnowledge.fromJson(Map<String, dynamic> json) {
@@ -174,10 +176,11 @@ class BiblicalKnowledge {
       weakTopics: json['weak_topics'] != null 
           ? (json['weak_topics'] as List<dynamic>).map((e) => e.toString()).toList(growable: false)
           : null,
+      studyRecommendation: json['study_recommendation'] as String?,
     );
   }
   
-  /// Parse v2.1 format which has percent and weak_topics only
+  /// Parse v2.1 format which has percent, weak_topics, and study_recommendation
   factory BiblicalKnowledge.fromV21Json(Map<String, dynamic> json) {
     return BiblicalKnowledge(
       summary: null,
@@ -187,6 +190,7 @@ class BiblicalKnowledge {
       weakTopics: json['weak_topics'] != null 
           ? (json['weak_topics'] as List<dynamic>).map((e) => e.toString()).toList(growable: false)
           : null,
+      studyRecommendation: json['study_recommendation'] as String?,
     );
   }
 
@@ -196,6 +200,7 @@ class BiblicalKnowledge {
         'study_targets': studyTargets,
         if (percent != null) 'percent': percent,
         if (weakTopics != null) 'weak_topics': weakTopics,
+        if (studyRecommendation != null) 'study_recommendation': studyRecommendation,
       };
 }
 

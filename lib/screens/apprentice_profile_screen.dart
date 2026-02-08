@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/api_service.dart';
+import '../services/subscription_service.dart';
 import 'simple_login_screen.dart';
 import 'support_screen.dart';
+import 'subscription_screen.dart';
 
 class ApprenticeProfileScreen extends StatefulWidget {
   const ApprenticeProfileScreen({super.key});
@@ -13,11 +15,16 @@ class ApprenticeProfileScreen extends StatefulWidget {
 
 class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
   final _api = ApiService();
+  final _subscriptionService = SubscriptionService();
   bool _loading = true;
   String? _error;
   String _name = '';
   String _email = '';
   String _role = '';
+  
+  // Subscription info
+  String _subscriptionTier = '';
+  String? _giftedByMentorName;
 
   @override
   void initState() {
@@ -34,6 +41,20 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
         _name = (profile['name'] ?? '').toString();
         _email = (profile['email'] ?? '').toString();
         _role = (profile['role'] ?? '').toString();
+        
+        // Load subscription info
+        await _subscriptionService.refreshStatus();
+        _subscriptionTier = _subscriptionService.tier.name;
+        
+        // Check if gifted by mentor
+        if (_subscriptionService.tier == SubscriptionTier.mentorGifted) {
+          try {
+            final sourceData = await _api.getApprenticeSubscriptionSource();
+            _giftedByMentorName = sourceData['gifted_by_mentor_name'];
+          } catch (_) {
+            // Silent fail - optional info
+          }
+        }
       }
     } catch (e) {
       _error = 'Failed to load profile: $e';
@@ -92,6 +113,9 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
                       label: 'Role',
                       value: _role.isNotEmpty ? _capitalizeFirst(_role) : 'Apprentice',
                     ),
+                    const SizedBox(height: 12),
+                    // Subscription Status
+                    _buildSubscriptionCard(),
                     const SizedBox(height: 40),
                     const Divider(color: Colors.grey),
                     const SizedBox(height: 16),
@@ -191,6 +215,116 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildSubscriptionCard() {
+    final isPremium = _subscriptionService.isPremium;
+    final isGifted = _subscriptionService.tier == SubscriptionTier.mentorGifted;
+    
+    return InkWell(
+      onTap: () async {
+        final result = await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+        );
+        if (result == true) {
+          _load(); // Refresh profile if subscription changed
+        }
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[850],
+          borderRadius: BorderRadius.circular(8),
+          border: isPremium ? Border.all(color: Colors.amber.withOpacity(0.5), width: 1) : null,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isPremium ? Icons.workspace_premium : Icons.card_membership,
+              color: isPremium ? Colors.amber : Colors.grey,
+              size: 24,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Subscription',
+                    style: TextStyle(color: Colors.grey, fontFamily: 'Poppins', fontSize: 12),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Text(
+                        _getSubscriptionDisplayName(),
+                        style: TextStyle(
+                          color: isPremium ? Colors.amber : Colors.white,
+                          fontFamily: 'Poppins', 
+                          fontSize: 16,
+                          fontWeight: isPremium ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                      if (isPremium) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            'PREMIUM',
+                            style: TextStyle(
+                              color: Colors.amber,
+                              fontFamily: 'Poppins',
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (isGifted && _giftedByMentorName != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.card_giftcard, color: Colors.green[400], size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Gifted by $_giftedByMentorName',
+                          style: TextStyle(
+                            color: Colors.green[400],
+                            fontFamily: 'Poppins',
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: Colors.grey[600]),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getSubscriptionDisplayName() {
+    switch (_subscriptionService.tier) {
+      case SubscriptionTier.free:
+        return 'Free Plan';
+      case SubscriptionTier.apprenticePremium:
+        return 'Apprentice Premium';
+      case SubscriptionTier.mentorPremium:
+        return 'Mentor Premium';
+      case SubscriptionTier.mentorGifted:
+        return 'Premium (Gift)';
+    }
   }
 
   Widget _buildActionCard({required IconData icon, required String label, required String subtitle, required VoidCallback onTap}) {

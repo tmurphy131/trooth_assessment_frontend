@@ -11,11 +11,19 @@ import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/mentor_note.dart';
 
+/// Exception thrown when a premium-only feature is accessed without subscription
+class PremiumRequiredException implements Exception {
+  final String message;
+  PremiumRequiredException(this.message);
+  @override
+  String toString() => message;
+}
+
 /// Default dev URL
 /// • Android emulator → 10.0.2.2
 /// • iOS sim / Flutter Web → use host machine IP for Docker
 /// • Host machine → localhost or 127.0.0.1
-const String _devBaseUrl = 'https://trooth-discipleship-api.onlyblv.com/';
+const String _devBaseUrl = 'https://trooth-discipleship-api-dev.onlyblv.com/';
 
 class ApiService {
   /* ── Singleton ────────────────────────────────────────────────────── */
@@ -472,6 +480,84 @@ class ApiService {
     final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     return r;
+  }
+
+  /// Download apprentice's own report as PDF
+  Future<http.Response> downloadMyReportPdf({required String assessmentId}) async {
+    const tag = 'API-downloadMyReportPdf';
+    await _ensureFreshToken();
+    // Use same endpoint - backend will check authorization
+    final path = '/assessments/$assessmentId/mentor-report-v2.pdf';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    return r;
+  }
+
+  /// Fetch enhanced full report (premium-only feature) - FOR MENTORS
+  /// Returns 403 if user is not premium tier
+  /// Returns full AI-enhanced report with deeper insights, resource recommendations, etc.
+  Future<Map<String, dynamic>> fetchFullReport({required String draftId}) async {
+    const tag = 'API-fetchFullReport';
+    await _ensureFreshToken();
+    final path = '/mentor/submitted-drafts/$draftId/full-report';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) {
+      return jsonDecode(r.body) as Map<String, dynamic>;
+    }
+    if (r.statusCode == 403) {
+      throw PremiumRequiredException('Premium subscription required for full reports');
+    }
+    throw Exception('fetchFullReport failed (${r.statusCode})');
+  }
+
+  /// Fetch full report for apprentice's own assessment (premium-only)
+  /// The [assessmentId] can be either an Assessment.id (from progress/reports)
+  /// or an AssessmentDraft.id - the backend handles both.
+  /// Returns 403 if apprentice is not premium tier
+  /// Returns 404 if assessment not found or not owned by apprentice
+  Future<Map<String, dynamic>> fetchMyFullReport({required String assessmentId}) async {
+    const tag = 'API-fetchMyFullReport';
+    await _ensureFreshToken();
+    final path = '/apprentice/my-assessments/$assessmentId/full-report';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) {
+      return jsonDecode(r.body) as Map<String, dynamic>;
+    }
+    if (r.statusCode == 403) {
+      throw PremiumRequiredException('Premium subscription required for full reports');
+    }
+    if (r.statusCode == 404) {
+      throw Exception('Assessment not found');
+    }
+    throw Exception('fetchMyFullReport failed (${r.statusCode})');
+  }
+
+  /// Check if the current user has premium subscription
+  /// Parses subscription_tier from /users/me endpoint
+  /// Premium tiers: mentor_premium, apprentice_premium, mentor_gifted
+  Future<bool> isPremiumUser() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        dev.log('isPremiumUser: No Firebase user');
+        return false;
+      }
+      final profile = await getUserProfile(user.uid);
+      final tier = profile['subscription_tier'] as String? ?? 'free';
+      // Check for any premium tier (not just "premium")
+      const premiumTiers = ['mentor_premium', 'apprentice_premium', 'mentor_gifted'];
+      final isPremium = premiumTiers.contains(tier);
+      dev.log('isPremiumUser: tier=$tier, isPremium=$isPremium');
+      return isPremium;
+    } catch (e) {
+      dev.log('Error checking premium status: $e');
+      return false;
+    }
   }
 
   Future<Map<String, dynamic>> emailMentorReportByAssessment({required String assessmentId, required String toEmail, bool includePdf = true}) async {
@@ -2356,5 +2442,199 @@ class ApiService {
       throw Exception('Too many requests. Please try again later.');
     }
     throw Exception('submitSupportRequest failed (${r.statusCode}) ${r.body}');
+  }
+
+  /* ─────────────────────────────────────────────────────────────────── */
+  /*  💳  Subscriptions                                                  */
+  /* ─────────────────────────────────────────────────────────────────── */
+
+  /// Get current user's subscription status
+  Future<Map<String, dynamic>> getSubscriptionStatus() async {
+    const tag = 'API-getSubscriptionStatus';
+    await _ensureFreshToken();
+    const path = '/subscriptions/status';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('getSubscriptionStatus failed (${r.statusCode}) ${r.body}');
+  }
+
+  /// Restore subscription from RevenueCat (sync with backend)
+  Future<Map<String, dynamic>> restoreSubscription() async {
+    const tag = 'API-restoreSubscription';
+    await _ensureFreshToken();
+    const path = '/subscriptions/restore';
+    _logReq(tag, 'POST', path);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('restoreSubscription failed (${r.statusCode}) ${r.body}');
+  }
+
+  /// DEBUG: Manually set subscription tier (for testing without RevenueCat webhooks)
+  /// Valid tiers: free, mentor_premium, apprentice_premium, mentor_gifted
+  Future<Map<String, dynamic>> debugSetSubscriptionTier(String tier, {int expiresDays = 30}) async {
+    const tag = 'API-debugSetSubscriptionTier';
+    await _ensureFreshToken();
+    const path = '/subscriptions/admin/set-tier';
+    final body = {'tier': tier, 'expires_days': expiresDays};
+    _logReq(tag, 'POST', path, body);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(body));
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('debugSetSubscriptionTier failed (${r.statusCode}) ${r.body}');
+  }
+
+  /* ── Mentor Gift Seats ────────────────────────────────────────────── */
+
+  /// Get list of gift seats created by the current mentor
+  Future<List<dynamic>> getMentorGiftSeats() async {
+    const tag = 'API-getMentorGiftSeats';
+    await _ensureFreshToken();
+    const path = '/mentor/seats';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
+    throw Exception('getMentorGiftSeats failed (${r.statusCode}) ${r.body}');
+  }
+
+  /// Create a gift seat for an apprentice (legacy - use confirmGiftSeatPurchase for IAP)
+  Future<Map<String, dynamic>> createMentorGiftSeat({
+    required String apprenticeEmail,
+    String? apprenticeName,
+  }) async {
+    const tag = 'API-createMentorGiftSeat';
+    await _ensureFreshToken();
+    const path = '/mentor/seats';
+    final body = {
+      'apprentice_email': apprenticeEmail,
+      if (apprenticeName != null) 'apprentice_name': apprenticeName,
+    };
+    _logReq(tag, 'POST', path, body);
+    final r = await http.post(
+      Uri.parse('$_base$path'),
+      headers: _headers(),
+      body: jsonEncode(body),
+    );
+    _logRes(tag, r);
+    if (r.statusCode == 200 || r.statusCode == 201) {
+      return jsonDecode(r.body) as Map<String, dynamic>;
+    }
+    if (r.statusCode == 403) {
+      throw PremiumRequiredException('You need a premium subscription to gift seats to apprentices.');
+    }
+    if (r.statusCode == 400) {
+      final msg = jsonDecode(r.body)['detail'] ?? 'Invalid request';
+      throw Exception(msg);
+    }
+    throw Exception('createMentorGiftSeat failed (${r.statusCode}) ${r.body}');
+  }
+
+  /// Confirm a gift seat purchase from RevenueCat IAP
+  /// This creates or retrieves a seat tied to the RevenueCat subscription
+  Future<Map<String, dynamic>> confirmGiftSeatPurchase({
+    required String subscriptionId,
+    required String productId,
+    String? platform,
+    String? apprenticeEmail,
+    String? apprenticeName,
+    String? apprenticeId,
+  }) async {
+    const tag = 'API-confirmGiftSeatPurchase';
+    await _ensureFreshToken();
+    const path = '/mentor/seats/purchase';
+    final body = {
+      'subscription_id': subscriptionId,
+      'product_id': productId,
+      if (platform != null) 'platform': platform,
+      if (apprenticeEmail != null) 'apprentice_email': apprenticeEmail,
+      if (apprenticeName != null) 'apprentice_name': apprenticeName,
+      if (apprenticeId != null) 'apprentice_id': apprenticeId,
+    };
+    _logReq(tag, 'POST', path, body);
+    final r = await http.post(
+      Uri.parse('$_base$path'),
+      headers: _headers(),
+      body: jsonEncode(body),
+    );
+    _logRes(tag, r);
+    if (r.statusCode == 200 || r.statusCode == 201) {
+      return jsonDecode(r.body) as Map<String, dynamic>;
+    }
+    if (r.statusCode == 403) {
+      throw PremiumRequiredException('You need an active subscription to purchase gift seats.');
+    }
+    if (r.statusCode == 400) {
+      final msg = jsonDecode(r.body)['detail'] ?? 'Invalid purchase request';
+      throw Exception(msg);
+    }
+    throw Exception('confirmGiftSeatPurchase failed (${r.statusCode}) ${r.body}');
+  }
+
+  /// Revoke a gift seat
+  Future<void> revokeMentorGiftSeat(String seatId) async {
+    const tag = 'API-revokeMentorGiftSeat';
+    await _ensureFreshToken();
+    final path = '/mentor/seats/$seatId/revoke';
+    _logReq(tag, 'POST', path);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200 || r.statusCode == 204) return;
+    throw Exception('revokeMentorGiftSeat failed (${r.statusCode}) ${r.body}');
+  }
+
+  /// Assign an unassigned gift seat to an apprentice
+  Future<Map<String, dynamic>> assignMentorGiftSeat({
+    required String seatId,
+    String? apprenticeId,
+    String? apprenticeEmail,
+    String? apprenticeName,
+  }) async {
+    const tag = 'API-assignMentorGiftSeat';
+    await _ensureFreshToken();
+    final path = '/mentor/seats/$seatId/assign';
+    final body = {
+      if (apprenticeId != null) 'apprentice_id': apprenticeId,
+      if (apprenticeEmail != null) 'apprentice_email': apprenticeEmail,
+      if (apprenticeName != null) 'apprentice_name': apprenticeName,
+    };
+    _logReq(tag, 'POST', path, body);
+    final r = await http.post(
+      Uri.parse('$_base$path'),
+      headers: _headers(),
+      body: jsonEncode(body),
+    );
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('assignMentorGiftSeat failed (${r.statusCode}) ${r.body}');
+  }
+
+  /// Get details of a specific gift seat
+  Future<Map<String, dynamic>> getMentorGiftSeatDetails(String seatId) async {
+    const tag = 'API-getMentorGiftSeatDetails';
+    await _ensureFreshToken();
+    final path = '/mentor/seats/$seatId';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('getMentorGiftSeatDetails failed (${r.statusCode}) ${r.body}');
+  }
+
+  /* ── Apprentice Subscription ──────────────────────────────────────── */
+
+  /// Get apprentice's subscription source (e.g., gifted by mentor)
+  Future<Map<String, dynamic>> getApprenticeSubscriptionSource() async {
+    const tag = 'API-getApprenticeSubscriptionSource';
+    await _ensureFreshToken();
+    const path = '/apprentice/subscription-source';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    if (r.statusCode == 404) return {}; // No gifted subscription
+    throw Exception('getApprenticeSubscriptionSource failed (${r.statusCode}) ${r.body}');
   }
 }

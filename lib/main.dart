@@ -13,6 +13,7 @@ import 'screens/simple_login_screen.dart';
 import 'screens/auth_gate.dart';
 import 'services/api_service.dart';
 import 'services/push_notification_service.dart';
+import 'services/subscription_service.dart';
 import 'features/assessments/screens/mentor_submission_detail_screen.dart';
 import 'features/assessments/screens/mentor_report_v2_screen.dart';
 import 'features/assessments/data/assessments_repository.dart';
@@ -86,6 +87,14 @@ void main() {
           ApiService().bearerToken = token;
           print('🔐 User signed in');
           
+          // Initialize subscription service after successful sign-in
+          try {
+            await SubscriptionService().initialize(user.uid);
+            print('💳 Subscription service initialized');
+          } catch (e) {
+            print('⚠️ Subscription service init failed: $e');
+          }
+          
           // Initialize push notifications after successful sign-in
           // Small delay to ensure auth token is fully set up
           Future.delayed(const Duration(milliseconds: 500), () async {
@@ -104,13 +113,14 @@ void main() {
       }
     } else {
       ApiService().bearerToken = null;
+      SubscriptionService().clear(); // Clear subscription state on logout
       print('👋 User signed out; cleared bearer token');
     }
   });
 
   // Point the frontend to the deployed backend for development/testing.
   // Update this URL if you deploy to a different host.
-  ApiService().baseUrlOverride = 'https://trooth-discipleship-api.onlyblv.com/';
+  ApiService().baseUrlOverride = 'https://trooth-discipleship-api-dev.onlyblv.com/';
 
   // Quick connectivity check at startup — logs the backend response.
   try {

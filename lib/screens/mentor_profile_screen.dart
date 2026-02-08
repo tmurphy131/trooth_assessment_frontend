@@ -1,8 +1,11 @@
+import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/api_service.dart';
+import '../services/subscription_service.dart';
 import 'simple_login_screen.dart';
 import 'support_screen.dart';
+import 'subscription_screen.dart';
 
 class MentorProfileScreen extends StatefulWidget {
   const MentorProfileScreen({super.key});
@@ -13,6 +16,7 @@ class MentorProfileScreen extends StatefulWidget {
 
 class _MentorProfileScreenState extends State<MentorProfileScreen> {
   final _api = ApiService();
+  final _subscriptionService = SubscriptionService();
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _roleCtrl = TextEditingController();
@@ -32,6 +36,9 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
+      // Load subscription status
+      await _subscriptionService.refreshStatus();
+      
       final p = await _api.getMyMentorProfile();
       _nameCtrl.text = (p['name'] ?? '').toString();
       _emailCtrl.text = (p['email'] ?? '').toString();
@@ -246,6 +253,10 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                     ),
                     const SizedBox(height: 40),
                     const Divider(color: Colors.grey),
+                    const SizedBox(height: 16),
+                    
+                    // Subscription Section
+                    _buildSubscriptionCard(),
                     const SizedBox(height: 16),
                     
                     // Support Section
@@ -479,6 +490,103 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
         ),
       );
     }
+  }
+
+  Widget _buildSubscriptionCard() {
+    final isPremium = _subscriptionService.isPremium;
+    final status = _subscriptionService.status;
+    
+    return InkWell(
+      onTap: () async {
+        final result = await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+        );
+        if (result == true) {
+          _load(); // Refresh if subscription changed
+        }
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[850],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isPremium ? Colors.amber.withOpacity(0.5) : Colors.amber.withOpacity(0.3),
+            width: isPremium ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: isPremium ? Colors.amber.withOpacity(0.2) : Colors.grey[800],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                isPremium ? Icons.workspace_premium : Icons.card_membership,
+                color: isPremium ? Colors.amber : Colors.grey,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Subscription',
+                        style: TextStyle(
+                          color: isPremium ? Colors.amber : Colors.white,
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      if (isPremium) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            'PREMIUM',
+                            style: TextStyle(
+                              color: Colors.amber,
+                              fontFamily: 'Poppins',
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    isPremium 
+                        ? status.tierDisplayName
+                        : 'Tap to upgrade to Premium',
+                    style: TextStyle(
+                      color: Colors.grey[400],
+                      fontFamily: 'Poppins',
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: Colors.grey[600]),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildSupportCard() {

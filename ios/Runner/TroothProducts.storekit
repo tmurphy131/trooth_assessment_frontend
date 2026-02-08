@@ -1,0 +1,173 @@
+{
+  "identifier" : "F8A8B7C6-D5E4-3F2A-1B0C-9D8E7F6A5B4C",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6738825711",
+    "_developerTeamID" : "VNPQQ23L8L",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 759513600,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ],
+    "_timeRate" : 6
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21610499",
+      "localizations" : [
+
+      ],
+      "name" : "Gift Seats",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6741044160",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Gift premium access to one apprentice",
+              "displayName" : "Gift Seat Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "mentor_gift_seat_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Mentor Gift Seat Monthly",
+          "subscriptionGroupID" : "21610499",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    },
+    {
+      "id" : "21610498",
+      "localizations" : [
+
+      ],
+      "name" : "Premium",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6741044157",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlimited apprentices, premium reports, and more",
+              "displayName" : "Mentor Premium Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "mentor_premium_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Mentor Premium Monthly",
+          "subscriptionGroupID" : "21610498",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "39.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6741044158",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Save 33% - Unlimited apprentices, premium reports, and more",
+              "displayName" : "Mentor Premium Annual",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "mentor_premium_annual",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Mentor Premium Annual",
+          "subscriptionGroupID" : "21610498",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

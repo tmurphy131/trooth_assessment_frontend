@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/api_service.dart';
+import '../services/subscription_service.dart';
+import 'subscription_screen.dart';
 
 class TemplateManagementScreen extends StatefulWidget {
   final User? user;
@@ -14,12 +16,14 @@ class TemplateManagementScreen extends StatefulWidget {
 class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
   User? get user => widget.user ?? FirebaseAuth.instance.currentUser;
   final _apiService = ApiService();
+  final _subscriptionService = SubscriptionService();
   
   List<Map<String, dynamic>> _templates = [];
   List<Map<String, dynamic>> _questions = [];
   bool _isLoading = true;
   bool _isLoadingQuestions = false;
   String? _error;
+  bool _isPremium = false;
 
   @override
   void initState() {
@@ -31,6 +35,21 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
     try {
       print('🔄 Template Management: Initializing...');
       print('👤 User: ${user?.email ?? 'null'}');
+      
+      // Check premium status from API service (which checks backend)
+      await _subscriptionService.refreshStatus();
+      
+      // Use ApiService.isPremiumUser() which checks the actual backend tier
+      _isPremium = await _apiService.isPremiumUser();
+      print('💎 Premium status: $_isPremium');
+      
+      // If not premium, don't load templates - show gate instead
+      if (!_isPremium) {
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
       
       // Test basic connectivity first
       try {
@@ -119,6 +138,11 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Show premium gate if not premium
+    if (!_isPremium && !_isLoading) {
+      return _buildPremiumGate();
+    }
+    
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -204,6 +228,170 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
           'Create Template',
           style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold),
         ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumGate() {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text(
+          'Template Management',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.bold,
+            color: Colors.amber,
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.black,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.amber),
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Lock icon
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.lock_outline,
+                  size: 64,
+                  color: Colors.amber,
+                ),
+              ),
+              const SizedBox(height: 24),
+              
+              // Title
+              const Text(
+                'Premium Feature',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+              const SizedBox(height: 12),
+              
+              // Description
+              Text(
+                'Create custom assessment templates to guide your apprentices on their spiritual journey.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: 16,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+              const SizedBox(height: 32),
+              
+              // Features list
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.grey[900],
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey[800]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'With Premium you can:',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildFeatureRow(Icons.edit_document, 'Create custom assessment templates'),
+                    _buildFeatureRow(Icons.category, 'Organize questions by category'),
+                    _buildFeatureRow(Icons.publish, 'Publish templates for apprentices'),
+                    _buildFeatureRow(Icons.people, 'Mentor unlimited apprentices'),
+                    _buildFeatureRow(Icons.insights, 'Access detailed AI-powered insights'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+              
+              // Upgrade button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.amber,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Upgrade to Premium',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              
+              // Back button
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'Maybe Later',
+                  style: TextStyle(
+                    color: Colors.grey[500],
+                    fontSize: 14,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.amber, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontFamily: 'Poppins',
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

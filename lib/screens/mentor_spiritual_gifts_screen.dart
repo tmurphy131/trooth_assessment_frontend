@@ -4,8 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shimmer/shimmer.dart';
 import '../models/spiritual_gifts_models.dart';
 import '../services/api_service.dart';
+import '../services/subscription_service.dart';
 import '../widgets/version_badge.dart';
 import 'spiritual_gifts_definitions_screen.dart';
+import 'subscription_screen.dart';
 import '../utils/haptics.dart';
 import 'spiritual_gifts_full_report_screen.dart';
 
@@ -21,7 +23,9 @@ class MentorSpiritualGiftsScreen extends StatefulWidget {
 
 class _MentorSpiritualGiftsScreenState extends State<MentorSpiritualGiftsScreen> {
   final _api = ApiService();
-  List<dynamic> _apprentices = [];
+  final _subscriptionService = SubscriptionService();
+  List<dynamic> _apprentices = [];       // Full list from API
+  List<dynamic> _accessibleApprentices = []; // Filtered for freemium
   String? _selectedApprenticeId;
   SpiritualGiftsResult? _latest;
   bool _loadingList = true;
@@ -37,9 +41,17 @@ class _MentorSpiritualGiftsScreenState extends State<MentorSpiritualGiftsScreen>
   Future<void> _loadApprentices() async {
     setState(() { _loadingList = true; _error = null; });
     try {
+      await _subscriptionService.refreshStatus();
       final list = await _api.listApprentices();
       setState(() {
         _apprentices = list;
+        // Freemium: only first apprentice is accessible for free mentors
+        final status = _subscriptionService.status;
+        if (!status.isPremium && !status.isGrandfathered && list.isNotEmpty) {
+          _accessibleApprentices = [list.first];
+        } else {
+          _accessibleApprentices = list;
+        }
         _loadingList = false;
       });
       await _restoreLastSelection();
@@ -51,17 +63,17 @@ class _MentorSpiritualGiftsScreenState extends State<MentorSpiritualGiftsScreen>
   Future<void> _restoreLastSelection() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      // Prefer explicitly provided apprentice if valid
+      // Prefer explicitly provided apprentice if valid AND accessible
       final provided = widget.initialApprenticeId;
-      if (provided != null && _apprentices.any((a) => a['id'].toString() == provided)) {
+      if (provided != null && _accessibleApprentices.any((a) => a['id'].toString() == provided)) {
         setState(() { _selectedApprenticeId = provided; });
         await _saveLast(provided);
         _loadLatest(provided);
         return;
       }
-      // Otherwise fall back to last selection from preferences
+      // Otherwise fall back to last selection from preferences if accessible
       final last = prefs.getString('last_apprentice_id');
-      if (last != null && _apprentices.any((a) => a['id'].toString() == last)) {
+      if (last != null && _accessibleApprentices.any((a) => a['id'].toString() == last)) {
         setState(() { _selectedApprenticeId = last; });
         _loadLatest(last);
       }
@@ -69,6 +81,15 @@ class _MentorSpiritualGiftsScreenState extends State<MentorSpiritualGiftsScreen>
   }
 
   Future<void> _loadLatest(String apprenticeId) async {
+    // Freemium guard: don't load data for inaccessible apprentices
+    if (!_accessibleApprentices.any((a) => a['id'].toString() == apprenticeId)) {
+      setState(() { 
+        _error = 'Upgrade to Premium to view this apprentice\'s spiritual gifts';
+        _loadingResult = false;
+      });
+      return;
+    }
+    
     setState(() { _loadingResult = true; _error = null; });
     try {
       final json = await _api.mentorGetApprenticeSpiritualGiftsLatest(apprenticeId);
@@ -161,46 +182,85 @@ class _MentorSpiritualGiftsScreenState extends State<MentorSpiritualGiftsScreen>
   }
 
   Widget _buildApprenticePicker() {
+    final status = _subscriptionService.status;
+    final isFreeUser = !status.isPremium && !status.isGrandfathered;
+    final lockedCount = _apprentices.length - _accessibleApprentices.length;
+    
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
       decoration: BoxDecoration(color: Colors.grey[900], boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 6)]),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Semantics(
-              label: 'Select apprentice dropdown',
-              hint: 'Choose an apprentice to view their spiritual gifts report',
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedApprenticeId,
-                  dropdownColor: Colors.grey[900],
-                  hint: const Text('Select Apprentice', style: TextStyle(color: Colors.white70, fontFamily: 'Poppins')),
-                  icon: const Icon(Icons.arrow_drop_down, color: Colors.white70),
-                  items: _apprentices.map((a) {
-                    final id = a['id']?.toString() ?? '';
-                    final name = a['name']?.toString() ?? 'Unnamed';
-                    return DropdownMenuItem(
-                      value: id,
-                      child: Text(name, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    setState(() { _selectedApprenticeId = val; _latest = null; });
-                    if (val != null) {
-                      Haptics.selection();
-                      _loadLatest(val);
-                      _saveLast(val);
-                    }
-                  },
+          Row(
+            children: [
+              Expanded(
+                child: Semantics(
+                  label: 'Select apprentice dropdown',
+                  hint: 'Choose an apprentice to view their spiritual gifts report',
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedApprenticeId,
+                      dropdownColor: Colors.grey[900],
+                      hint: const Text('Select Apprentice', style: TextStyle(color: Colors.white70, fontFamily: 'Poppins')),
+                      icon: const Icon(Icons.arrow_drop_down, color: Colors.white70),
+                      items: _accessibleApprentices.map((a) {
+                        final id = a['id']?.toString() ?? '';
+                        final name = a['name']?.toString() ?? 'Unnamed';
+                        return DropdownMenuItem(
+                          value: id,
+                          child: Text(name, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setState(() { _selectedApprenticeId = val; _latest = null; });
+                        if (val != null) {
+                          Haptics.selection();
+                          _loadLatest(val);
+                          _saveLast(val);
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: _loadApprentices,
+                icon: const Icon(Icons.refresh, color: Colors.amber),
+                tooltip: 'Refresh list',
+              )
+            ],
+          ),
+          // Show upgrade prompt for free users with locked apprentices
+          if (isFreeUser && lockedCount > 0)
+            GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+              ),
+              child: Container(
+                margin: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.amber.withOpacity(0.4)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.lock_outline, color: Colors.amber, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '$lockedCount more apprentice${lockedCount > 1 ? 's' : ''} available with Premium',
+                        style: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontSize: 12),
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios, color: Colors.amber, size: 12),
+                  ],
                 ),
               ),
             ),
-          ),
-          IconButton(
-            onPressed: _loadApprentices,
-            icon: const Icon(Icons.refresh, color: Colors.amber),
-            tooltip: 'Refresh list',
-          )
         ],
       ),
     );
