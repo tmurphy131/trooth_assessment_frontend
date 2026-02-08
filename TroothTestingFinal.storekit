@@ -1,0 +1,191 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
+  "identifier" : "FC97A735",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6757311543",
+    "_askToBuyEnabled" : false,
+    "_billingGracePeriodEnabled" : false,
+    "_billingIssuesEnabled" : false,
+    "_developerTeamID" : "69DZGC7C98",
+    "_disableDialogs" : false,
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 792192865.81691301,
+    "_locale" : "en_US",
+    "_renewalBillingIssuesEnabled" : false,
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ],
+    "_timeRate" : 0
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21917871",
+      "localizations" : [
+
+      ],
+      "name" : "T[root]H Discipleship Premium",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "49.99",
+          "familyShareable" : false,
+          "groupNumber" : 3,
+          "internalID" : "6758682724",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlock all assessments and content.",
+              "displayName" : "Apprentice Premium Annual",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "apprentice_premium_annual",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Apprentice Premium Annual",
+          "subscriptionGroupID" : "21917871",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 3,
+          "internalID" : "6758682908",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlock all assessments and detailed AI insights.",
+              "displayName" : "Apprentice Premium Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "apprentice_premium_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Apprentice Premium Monthly",
+          "subscriptionGroupID" : "21917871",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 4,
+          "internalID" : "6758683409",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Monthly gift subscription for an apprentice",
+              "displayName" : "Mentor Gift Seat Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "mentor_gift_seat_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Mentor Gift Seat Monthly",
+          "subscriptionGroupID" : "21917871",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "49.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6758682765",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Full access to all mentor features.",
+              "displayName" : "Mentor Premium",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "mentor_premium_annual",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Mentor Premium Annual",
+          "subscriptionGroupID" : "21917871",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6758682819",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Full access to all mentor features and AI insights.",
+              "displayName" : "Mentor Premium",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "mentor_premium_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Mentor Premium Monthly",
+          "subscriptionGroupID" : "21917871",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

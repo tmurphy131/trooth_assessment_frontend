@@ -58,6 +58,7 @@ dependencies:
   tutorial_coach_mark: ^1.2.11
   firebase_messaging: ^15.1.6
   flutter_local_notifications: ^18.0.1
+  purchases_flutter: ^8.5.1  # RevenueCat SDK for subscription management
 
 dev_dependencies:
   flutter_test:

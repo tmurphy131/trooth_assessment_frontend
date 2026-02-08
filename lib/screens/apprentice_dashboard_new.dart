@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/base_dashboard.dart';
 import '../services/api_service.dart';
+import '../services/subscription_service.dart';
 import '../mixins/apprentice_dashboard_tutorial.dart';
 import 'assessment_screen.dart';
 import 'assessment_preview_screen.dart';
@@ -14,6 +15,7 @@ import 'spiritual_gifts_history_screen.dart';
 import 'progress_screen.dart';
 import 'apprentice_resources_screen.dart';
 import 'apprentice_profile_screen.dart';
+import 'subscription_screen.dart';
 
 class ApprenticeDashboardNew extends StatefulWidget {
   const ApprenticeDashboardNew({super.key});
@@ -1045,6 +1047,9 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
   }
   
   Future<Map<String, dynamic>?> _showAssessmentSelectionDialog(List<dynamic> templates) async {
+    final subscriptionService = SubscriptionService();
+    final isPremium = subscriptionService.isPremium;
+    
     return showDialog<Map<String, dynamic>>(
       context: context,
       builder: (BuildContext context) {
@@ -1066,19 +1071,42 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
               itemBuilder: (context, index) {
                 final template = templates[index] as Map<String, dynamic>;
                 final isMaster = template['is_master_assessment'] == true;
+                final isLocked = template['is_locked'] as bool? ?? true;
+                final canAccess = !isLocked || isPremium;
                 
                 return Card(
                   color: isMaster ? Colors.amber[700] : Colors.grey[800],
                   margin: const EdgeInsets.symmetric(vertical: 4),
                   child: ListTile(
-                    leading: Icon(
-                      isMaster ? Icons.star : Icons.assignment,
-                      color: isMaster ? Colors.white : Colors.amber,
+                    leading: Stack(
+                      children: [
+                        Icon(
+                          isMaster ? Icons.star : Icons.assignment,
+                          color: isMaster ? Colors.white : (canAccess ? Colors.amber : Colors.grey),
+                        ),
+                        if (!canAccess)
+                          Positioned(
+                            right: -2,
+                            bottom: -2,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[900],
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.lock,
+                                size: 12,
+                                color: Colors.amber,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     title: Text(
                       template['name'] ?? 'Unnamed Assessment',
                       style: TextStyle(
-                        color: isMaster ? Colors.white : Colors.white,
+                        color: canAccess ? Colors.white : Colors.grey[500],
                         fontFamily: 'Poppins',
                         fontWeight: isMaster ? FontWeight.bold : FontWeight.normal,
                       ),
@@ -1087,7 +1115,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
                       ? Text(
                           template['description'],
                           style: TextStyle(
-                            color: isMaster ? Colors.white70 : Colors.grey[400],
+                            color: isMaster ? Colors.white70 : (canAccess ? Colors.grey[400] : Colors.grey[600]),
                             fontFamily: 'Poppins',
                             fontSize: 12,
                           ),
@@ -1095,26 +1123,15 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
                           overflow: TextOverflow.ellipsis,
                         )
                       : null,
-                    trailing: isMaster 
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Text(
-                            'OFFICIAL',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Poppins',
-                            ),
-                          ),
-                        )
-                      : null,
+                    trailing: _buildTrailingBadge(isMaster, isLocked, canAccess),
                     onTap: () {
-                      Navigator.of(context).pop(template);
+                      if (canAccess) {
+                        Navigator.of(context).pop(template);
+                      } else {
+                        // Show upgrade prompt
+                        Navigator.of(context).pop(); // Close dialog first
+                        _showUpgradePrompt();
+                      }
                     },
                   ),
                 );
@@ -1135,6 +1152,128 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
           ],
         );
       },
+    );
+  }
+  
+  Widget? _buildTrailingBadge(bool isMaster, bool isLocked, bool canAccess) {
+    if (!canAccess) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.amber.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.amber.withOpacity(0.5)),
+        ),
+        child: const Text(
+          'PREMIUM',
+          style: TextStyle(
+            color: Colors.amber,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Poppins',
+          ),
+        ),
+      );
+    }
+    if (isMaster) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Text(
+          'OFFICIAL',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Poppins',
+          ),
+        ),
+      );
+    }
+    return null;
+  }
+  
+  void _showUpgradePrompt() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: Row(
+          children: [
+            const Icon(Icons.lock, color: Colors.amber),
+            const SizedBox(width: 8),
+            const Text(
+              'Premium Required',
+              style: TextStyle(
+                color: Colors.amber,
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This assessment requires a premium subscription.',
+              style: TextStyle(
+                color: Colors.white,
+                fontFamily: 'Poppins',
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Upgrade to unlock:',
+              style: TextStyle(
+                color: Colors.grey,
+                fontFamily: 'Poppins',
+                fontSize: 13,
+              ),
+            ),
+            SizedBox(height: 8),
+            _FeatureRow(icon: Icons.check, text: 'All assessment templates'),
+            _FeatureRow(icon: Icons.check, text: 'Detailed AI insights'),
+            _FeatureRow(icon: Icons.check, text: 'Full progress reports'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Maybe Later',
+              style: TextStyle(
+                color: Colors.grey,
+                fontFamily: 'Poppins',
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber,
+              foregroundColor: Colors.black,
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+              );
+            },
+            child: const Text(
+              'Upgrade Now',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1419,5 +1558,36 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
         );
       }
     }
+  }
+}
+
+/// Feature row widget for upgrade prompt
+class _FeatureRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  
+  const _FeatureRow({required this.icon, required this.text});
+  
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.green, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontFamily: 'Poppins',
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

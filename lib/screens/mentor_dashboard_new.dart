@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
+import 'dart:developer' as dev;
 import '../widgets/base_dashboard.dart';
 import '../services/api_service.dart';
+import '../services/subscription_service.dart';
 import 'template_management_screen.dart';
 import 'apprentice_invite_screen.dart';
 import 'assessment_results_screen.dart';
 import 'mentor_agreements_screen.dart';
 import 'mentor_notifications_screen.dart';
 import 'mentor_assessment_results_screen.dart';
-import 'dart:async';
+import 'mentor_gift_seats_screen.dart';
+import 'subscription_screen.dart';
 import 'mentor_profile_screen.dart';
 import 'mentor_resources_screen.dart';
 import 'mentor_spiritual_gifts_screen.dart';
@@ -39,6 +43,11 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   String? _error;
   int _activeNotificationCount = 0;
   Timer? _notifTimer;
+  
+  // Subscription state
+  final _subscriptionService = SubscriptionService();
+  int _giftSeatsCount = 0;
+  int _usedGiftSeatsCount = 0;
 
   @override
   void initState() {
@@ -63,6 +72,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
         _loadCompletedAssessments(),
         _loadInactiveApprentices(),
         _refreshNotificationCount(),
+        _loadSubscriptionData(),
       ]);
       _startNotificationPolling();
     } catch (e) {
@@ -71,6 +81,32 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
         _isLoadingApprentices = false;
         _isLoadingAssessments = false;
       });
+    }
+  }
+
+  Future<void> _loadSubscriptionData() async {
+    try {
+      // Refresh subscription status
+      await _subscriptionService.refreshStatus();
+      
+      // Trigger rebuild to show/hide premium features
+      if (mounted) {
+        setState(() {});
+      }
+      
+      // Load gift seats count if premium mentor
+      if (_subscriptionService.isPremium) {
+        final seats = await _apiService.getMentorGiftSeats();
+        if (mounted) {
+          setState(() {
+            _giftSeatsCount = seats.length;
+            _usedGiftSeatsCount = seats.where((s) => s['status'] == 'active').length;
+          });
+        }
+      }
+    } catch (e) {
+      // Silent fail - subscription features are optional
+      dev.log('MentorDashboard: Failed to load subscription data: $e');
     }
   }
 
@@ -124,9 +160,32 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
         _error = null;
       });
       Map<String, List<Map<String, dynamic>>> grouped = {};
-      final targets = _selectedApprenticeId == '_all'
+      
+      // Filter apprentices based on selection
+      var targets = _selectedApprenticeId == '_all'
           ? _apprentices
-          : _apprentices.where((a) => a['id'] == _selectedApprenticeId);
+          : _apprentices.where((a) => a['id'] == _selectedApprenticeId).toList();
+      
+      // For free mentors, only load assessments for the first apprentice
+      final status = _subscriptionService.status;
+      final isPremium = status.isPremium;
+      final isGrandfathered = status.isGrandfathered;
+      
+      // Use print() to ensure visibility in console
+      print('🔒 FREEMIUM CHECK: isPremium=$isPremium, isGrandfathered=$isGrandfathered, tier=${status.tier}');
+      print('🔒 FREEMIUM CHECK: total apprentices=${_apprentices.length}, targets before filter=${targets.length}');
+      
+      if (!isPremium && !isGrandfathered) {
+        // Free user - only allow first apprentice
+        if (_apprentices.isNotEmpty) {
+          final firstApprenticeId = _apprentices[0]['id'];
+          targets = targets.where((a) => a['id'] == firstApprenticeId).toList();
+        }
+        print('🔒 FREEMIUM CHECK: FREE USER → filtered to ${targets.length} apprentice(s)');
+      } else {
+        print('🔒 FREEMIUM CHECK: PREMIUM/GRANDFATHERED → all ${targets.length} apprentice(s) allowed');
+      }
+      
       for (final apprentice in targets) {
         final apprenticeId = apprentice['id'] as String;
         final assessments = await _apiService.getApprenticeSubmittedAssessments(apprenticeId, limit: 100);
@@ -153,14 +212,38 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
     return BaseDashboard(
       logoHeight: 64,
       additionalActions: [
+        // Premium badge indicator
+        if (_subscriptionService.isPremium)
+          const Padding(
+            padding: EdgeInsets.only(right: 4),
+            child: Icon(Icons.workspace_premium, color: Color(0xFFFFD700), size: 20),
+          ),
+        // Gift Seats icon - next to profile for premium mentors
+        if (_subscriptionService.isPremium)
+          IconButton(
+            icon: const Icon(Icons.card_giftcard, color: Color(0xFFFFD700)),
+            tooltip: 'Gift Seats',
+            onPressed: () async {
+              final result = await Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const MentorGiftSeatsScreen()),
+              );
+              if (result == true) {
+                _loadSubscriptionData();
+              }
+            },
+          ),
         IconButton(
           key: profileButtonKey,
           icon: const Icon(Icons.account_circle, color: Color(0xFFFFD700)),
           tooltip: 'My Profile',
-          onPressed: () {
-            Navigator.of(context).push(
+          onPressed: () async {
+            await Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const MentorProfileScreen()),
             );
+            // Reload subscription and assessments in case tier changed in profile
+            dev.log('FREEMIUM DEBUG: Returning from profile, reloading data...');
+            await _loadSubscriptionData();
+            await _loadCompletedAssessments();
           },
         ),
       ],
@@ -315,7 +398,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                         : ListView.builder(
                             itemCount: _apprentices.length,
                             itemBuilder: (context, index) {
-                              return _buildApprenticeCard(_apprentices[index]);
+                              return _buildApprenticeCard(_apprentices[index], index);
                             },
                           ),
           ),
@@ -492,10 +575,18 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
     );
   }
 
-  Widget _buildApprenticeCard(Map<String, dynamic> apprentice) {
+  Widget _buildApprenticeCard(Map<String, dynamic> apprentice, int index) {
     final name = apprentice['name'] ?? 'Unknown';
     final email = apprentice['email'] ?? '';
     final apprenticeId = apprentice['id'] as String;
+    
+    // Check if this apprentice is accessible based on subscription
+    final isAccessible = _subscriptionService.status.canAccessApprentice(index);
+    
+    // If not accessible, show locked card
+    if (!isAccessible) {
+      return _buildLockedApprenticeCard(name, email, index);
+    }
     
     return Card(
       elevation: 2,
@@ -547,6 +638,14 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
               case 'meeting':
                 await _showMeetingInfo(apprenticeId, email, name);
                 break;
+              case 'gift_premium':
+                final result = await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MentorGiftSeatsScreen()),
+                );
+                if (result == true) {
+                  _loadSubscriptionData();
+                }
+                break;
               case 'terminate':
                 await _showTerminateDialog(apprenticeId, name);
                 break;
@@ -583,6 +682,17 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                 ],
               ),
             ),
+            if (_subscriptionService.isPremium)
+              const PopupMenuItem(
+                value: 'gift_premium',
+                child: Row(
+                  children: [
+                    Icon(Icons.card_giftcard, color: Color(0xFFFFD700)),
+                    SizedBox(width: 8),
+                    Text('Gift Premium', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
+              ),
             const PopupMenuItem(
               value: 'terminate',
               child: Row(
@@ -595,6 +705,163 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildLockedApprenticeCard(String name, String email, int index) {
+    return Card(
+      elevation: 2,
+      color: Colors.grey[900],
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: _showUpgradeForApprenticesDialog,
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          children: [
+            // Dimmed content
+            Opacity(
+              opacity: 0.4,
+              child: ListTile(
+                leading: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Icon(Icons.person, color: Colors.grey),
+                ),
+                title: Text(
+                  name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+                subtitle: Text(
+                  email,
+                  style: TextStyle(color: Colors.grey[400], fontFamily: 'Poppins', fontSize: 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            // Lock overlay
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      margin: const EdgeInsets.only(right: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.lock, color: Colors.black, size: 16),
+                          SizedBox(width: 6),
+                          Text(
+                            'Upgrade',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showUpgradeForApprenticesDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.workspace_premium, color: Colors.amber),
+            const SizedBox(width: 12),
+            const Text('Premium Required', style: TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Free accounts can only access one apprentice.',
+              style: TextStyle(color: Colors.white70, fontFamily: 'Poppins'),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Upgrade to Premium to:',
+              style: TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            _buildUpgradeFeatureRow(Icons.people, 'Mentor unlimited apprentices'),
+            _buildUpgradeFeatureRow(Icons.auto_awesome, 'Access all assessment reports'),
+            _buildUpgradeFeatureRow(Icons.edit_note, 'Create custom templates'),
+            _buildUpgradeFeatureRow(Icons.card_giftcard, 'Gift premium to apprentices'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Maybe Later', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber,
+              foregroundColor: Colors.black,
+            ),
+            child: const Text('Upgrade Now', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUpgradeFeatureRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.green, size: 18),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontSize: 13))),
+        ],
       ),
     );
   }
@@ -746,6 +1013,12 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   // Local minimal time holder (avoid importing apprentice screen private class)
 
   Widget _buildAssessmentsTab() {
+    // For free mentors, only show assessments for the first apprentice
+    final status = _subscriptionService.status;
+    final accessibleApprentices = (!status.isPremium && !status.isGrandfathered)
+        ? (_apprentices.isNotEmpty ? [_apprentices.first] : <Map<String, dynamic>>[])
+        : _apprentices;
+    
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -780,8 +1053,8 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                     ? _buildEmptyAssessmentsState()
                     : ListView(
                         children: (_selectedApprenticeId == '_all'
-                                ? _apprentices
-                                : _apprentices.where((a) => a['id'] == _selectedApprenticeId).toList())
+                                ? accessibleApprentices
+                                : accessibleApprentices.where((a) => a['id'] == _selectedApprenticeId).toList())
                             .map((apprentice) {
                           final apprenticeId = apprentice['id'] as String;
                           final assessments = _completedAssessmentsByApprentice[apprenticeId] ?? [];
@@ -1295,6 +1568,16 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   
 
   void _navigateToInviteApprentices() {
+    // Check if mentor can add more apprentices
+    final status = _subscriptionService.status;
+    
+    // Free mentors can only have 1 apprentice
+    // If they already have any apprentices and are not premium/grandfathered, block them
+    if (!status.isPremium && !status.isGrandfathered && _apprentices.isNotEmpty) {
+      _showUpgradeForApprenticesDialog();
+      return;
+    }
+    
     Navigator.push(
       context,
       MaterialPageRoute(

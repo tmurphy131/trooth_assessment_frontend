@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import '../models/mentor_report_v2.dart';
 import '../../../services/api_service.dart';
+import '../../../screens/subscription_screen.dart';
 import 'dart:developer' as dev;
 
 /// Simplified mentor report with three-tier progressive disclosure:
@@ -935,9 +936,15 @@ class _MentorReportSimplifiedScreenState extends State<MentorReportSimplifiedScr
               child: const Text('Maybe Later'),
             ),
             FilledButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.of(dialogContext).pop();
-                // TODO: Navigate to subscription screen
+                // Navigate to subscription screen
+                final result = await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+                );
+                if (result == true && mounted) {
+                  setState(() => _isPremium = true);
+                }
               },
               child: const Text('Upgrade to Premium'),
             ),
@@ -995,7 +1002,7 @@ class _MentorReportSimplifiedScreenState extends State<MentorReportSimplifiedScr
                   const SizedBox(width: 8),
                   const Expanded(
                     child: Text(
-                      'Premium subscription coming soon!',
+                      'Upgrade to unlock all premium features!',
                       style: TextStyle(fontSize: 13),
                     ),
                   ),
@@ -1010,17 +1017,17 @@ class _MentorReportSimplifiedScreenState extends State<MentorReportSimplifiedScr
             child: const Text('Maybe Later'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Premium subscriptions coming soon!')),
+              await Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
               );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.amber.shade700,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Notify Me'),
+            child: const Text('Upgrade Now'),
           ),
         ],
       ),

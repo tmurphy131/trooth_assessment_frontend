@@ -18,6 +18,7 @@ import '../widgets/kpi_card.dart';
 // import '../widgets/level_badge.dart';
 import '../widgets/insight_card.dart';
 import 'mentor_report_simplified_screen.dart';
+import '../../../screens/subscription_screen.dart';
 
 class MentorSubmissionDetailScreen extends StatefulWidget {
   final String assessmentId;
@@ -1042,12 +1043,16 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: () {
+                onPressed: () async {
                   Navigator.pop(context);
-                  // TODO: Navigate to subscription page
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Premium subscriptions coming soon!')),
+                  // Navigate to subscription page
+                  final result = await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
                   );
+                  // Refresh premium status if subscription changed
+                  if (result == true) {
+                    _checkPremiumAndLoadFullReport();
+                  }
                 },
                 icon: const Icon(Icons.star, color: Colors.black),
                 label: const Text('Upgrade to Premium', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
