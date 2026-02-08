@@ -247,12 +247,23 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
   }
 
   /// Filter out apprentices who already have an active gift seat from this mentor
+  /// or who already have a premium subscription
   List<dynamic> _getAvailableApprentices() {
+    // Get IDs of apprentices who already have a gift seat from this mentor
     final giftedIds = _seats
         .where((s) => s.apprenticeId != null && s.isActive)
         .map((s) => s.apprenticeId)
         .toSet();
-    return _apprentices.where((a) => !giftedIds.contains(a['id']?.toString())).toList();
+    
+    return _apprentices.where((a) {
+      final id = a['id']?.toString();
+      // Exclude if already has a gift seat
+      if (giftedIds.contains(id)) return false;
+      // Exclude if already has premium (from their own subscription or other source)
+      final hasPremium = a['has_premium'] == true;
+      if (hasPremium) return false;
+      return true;
+    }).toList();
   }
 
   Future<Map<String, String>?> _showCreateSeatDialog() async {
