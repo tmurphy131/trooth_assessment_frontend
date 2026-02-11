@@ -56,6 +56,24 @@
       debugServiceExtension = "internal"
       enableGPUValidationMode = "1"
       allowLocationSimulation = "YES">
+      <PreActions>
+         <ExecutionAction
+            ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
+            <ActionContent
+               title = "Run Script"
+               scriptText = "# Type a script or drag a script file from your workspace to insert its path.&#10;export PATH=&quot;$PATH:/opt/homebrew/bin:/usr/local/bin&quot;&#10;&#10;# Fetch secret from GCloud&#10;REVENUECAT_KEY=$(gcloud secrets versions access latest --secret=REVENUECAT_APPLE_KEY --project=trooth-prod 2&gt;/dev/null)&#10;&#10;if [ -n &quot;$REVENUECAT_KEY&quot; ]; then&#10;    # Base64 encode for DART_DEFINES format (required by Flutter)&#10;    ENCODED_KEY=$(echo -n &quot;REVENUECAT_APPLE_KEY=$REVENUECAT_KEY&quot; | base64)&#10;    echo &quot;DART_DEFINES=$ENCODED_KEY&quot; &gt; &quot;${SRCROOT}/Flutter/DartDefines.xcconfig&quot;&#10;    echo &quot;&#x2705; RevenueCat key loaded from Secret Manager&quot;&#10;else&#10;    echo &quot;&#x26a0;&#xfe0f; Could not fetch RevenueCat key from Secret Manager&quot;&#10;    # Create empty file to avoid build errors&#10;    echo &quot;&quot; &gt; &quot;${SRCROOT}/Flutter/DartDefines.xcconfig&quot;&#10;fi&#10;">
+               <EnvironmentBuildable>
+                  <BuildableReference
+                     BuildableIdentifier = "primary"
+                     BlueprintIdentifier = "97C146ED1CF9000F007C117D"
+                     BuildableName = "Runner.app"
+                     BlueprintName = "Runner"
+                     ReferencedContainer = "container:Runner.xcodeproj">
+                  </BuildableReference>
+               </EnvironmentBuildable>
+            </ActionContent>
+         </ExecutionAction>
+      </PreActions>
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
          <BuildableReference

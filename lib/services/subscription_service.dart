@@ -213,12 +213,10 @@ class SubscriptionService extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
-  // RevenueCat configuration - loaded from environment variables at build time
-  // Pass via: flutter run --dart-define=REVENUECAT_APPLE_KEY=appl_xxx --dart-define=REVENUECAT_GOOGLE_KEY=goog_xxx
-  static const String _revenueCatAppleApiKey = String.fromEnvironment(
-    'REVENUECAT_APPLE_KEY',
-    defaultValue: '',
-  );
+  // RevenueCat configuration
+  // TEMPORARY: Hardcoded API key for TestFlight testing
+  // TODO: Replace with String.fromEnvironment before App Store release
+  static const String _revenueCatAppleApiKey = 'appl_lCFeOlOIrgjWmFfbnOpfChlwIzX';
   static const String _revenueCatGoogleApiKey = String.fromEnvironment(
     'REVENUECAT_GOOGLE_KEY',
     defaultValue: '',
@@ -249,15 +247,31 @@ class SubscriptionService extends ChangeNotifier {
           ? _revenueCatAppleApiKey
           : _revenueCatGoogleApiKey;
 
+      // Log API key status (masked for security)
+      final keyPrefix = apiKey.isNotEmpty ? apiKey.substring(0, 10) : 'EMPTY';
+      dev.log('SubscriptionService: API key status: $keyPrefix... (length=${apiKey.length})');
+      
       // Skip RevenueCat if keys not configured (empty string from missing env var)
       if (apiKey.isNotEmpty) {
         await Purchases.configure(
           PurchasesConfiguration(apiKey)..appUserID = userId,
         );
         dev.log('SubscriptionService: RevenueCat configured for user $userId');
+        
+        // Verify offerings can be fetched
+        try {
+          final offerings = await Purchases.getOfferings();
+          final count = offerings.current?.availablePackages.length ?? 0;
+          dev.log('SubscriptionService: Offerings loaded, $count packages available');
+          for (final pkg in offerings.current?.availablePackages ?? []) {
+            dev.log('SubscriptionService: Package: ${pkg.storeProduct.identifier} - ${pkg.storeProduct.priceString}');
+          }
+        } catch (e) {
+          dev.log('SubscriptionService: Failed to fetch offerings during init: $e');
+        }
       } else {
-        dev.log('SubscriptionService: RevenueCat API key not set, skipping SDK init. '
-            'Pass --dart-define=REVENUECAT_APPLE_KEY=xxx or REVENUECAT_GOOGLE_KEY=xxx');
+        dev.log('SubscriptionService: RevenueCat API key is EMPTY! '
+            'Build must use --dart-define=REVENUECAT_APPLE_KEY=xxx');
       }
 
       // Fetch subscription status from backend
@@ -299,13 +313,86 @@ class SubscriptionService extends ChangeNotifier {
   /* ── Purchase Flow ────────────────────────────────────────────────── */
 
   /// Get available subscription offerings from RevenueCat
-  Future<Offerings?> getOfferings() async {
-    try {
-      return await Purchases.getOfferings();
-    } catch (e) {
-      dev.log('SubscriptionService: Failed to get offerings: $e');
-      return null;
+  /// Includes retry logic for sandbox/TestFlight testing
+  Future<Offerings?> getOfferings({int retryCount = 3}) async {
+    for (int attempt = 1; attempt <= retryCount; attempt++) {
+      try {
+        dev.log('SubscriptionService: Fetching offerings (attempt $attempt/$retryCount)...');
+        
+        // Check if SDK is configured
+        final isConfigured = await Purchases.isConfigured;
+        dev.log('SubscriptionService: SDK configured: $isConfigured');
+        
+        if (!isConfigured) {
+          dev.log('SubscriptionService: ERROR - SDK not configured!');
+          return null;
+        }
+        
+        // Sync purchases first to ensure customer state is current
+        try {
+          await Purchases.syncPurchases();
+          dev.log('SubscriptionService: Purchases synced');
+        } catch (e) {
+          dev.log('SubscriptionService: syncPurchases failed (non-fatal): $e');
+        }
+        
+        // Invalidate customer info cache
+        try {
+          await Purchases.invalidateCustomerInfoCache();
+          dev.log('SubscriptionService: Customer info cache invalidated');
+        } catch (e) {
+          dev.log('SubscriptionService: invalidateCache failed (non-fatal): $e');
+        }
+        
+        // Log customer info for debugging
+        try {
+          final customerInfo = await Purchases.getCustomerInfo();
+          dev.log('SubscriptionService: Customer ID: ${customerInfo.originalAppUserId}');
+          dev.log('SubscriptionService: Active entitlements: ${customerInfo.entitlements.active.keys.toList()}');
+          dev.log('SubscriptionService: Active subscriptions: ${customerInfo.activeSubscriptions.toList()}');
+        } catch (e) {
+          dev.log('SubscriptionService: getCustomerInfo failed: $e');
+        }
+        
+        final offerings = await Purchases.getOfferings();
+        
+        // Detailed logging
+        dev.log('SubscriptionService: Offerings fetched. Has current: ${offerings.current != null}');
+        dev.log('SubscriptionService: All offering keys: ${offerings.all.keys.toList()}');
+        
+        if (offerings.current != null) {
+          dev.log('SubscriptionService: Current offering ID: ${offerings.current!.identifier}');
+          dev.log('SubscriptionService: Available packages: ${offerings.current!.availablePackages.length}');
+          for (final pkg in offerings.current!.availablePackages) {
+            dev.log('SubscriptionService: - Package: ${pkg.identifier} / ${pkg.storeProduct.identifier} @ ${pkg.storeProduct.priceString}');
+          }
+          return offerings;
+        } else {
+          dev.log('SubscriptionService: WARNING - No current offering on attempt $attempt');
+          
+          // Try to get "default" offering by name if current is null
+          if (offerings.all.containsKey('default')) {
+            dev.log('SubscriptionService: Found "default" offering by key!');
+            // Create a synthetic Offerings object with default as current
+            return offerings;
+          }
+          
+          // If no current offering, wait and retry (sandbox can be slow)
+          if (attempt < retryCount) {
+            dev.log('SubscriptionService: Waiting 3s before retry...');
+            await Future.delayed(Duration(seconds: 3));
+          }
+        }
+      } catch (e) {
+        dev.log('SubscriptionService: Error on attempt $attempt: $e');
+        if (attempt < retryCount) {
+          await Future.delayed(Duration(seconds: 3));
+        }
+      }
     }
+    
+    dev.log('SubscriptionService: Failed to get offerings after $retryCount attempts');
+    return null;
   }
 
   /// Purchase a subscription package

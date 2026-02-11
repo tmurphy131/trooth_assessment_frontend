@@ -503,8 +503,8 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
         itemCount: options.length,
         itemBuilder: (context, index) {
           final option = options[index] as Map<String, dynamic>;
-          final optionId = option['id'] as String;
-          final optionText = option['text'] as String;
+          final optionId = (option['id'] ?? option['value'] ?? 'option_$index') as String;
+          final optionText = (option['text'] ?? option['label'] ?? 'Option ${index + 1}') as String;
           final currentAnswer = _answers[questionId];
           
           return RadioListTile<String>(
