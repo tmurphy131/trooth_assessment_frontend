@@ -6809,7 +6809,7 @@ Sometimes the right answer is a warm handoff to a local mentor.
 ## Making Distance Work
 
 ### Technology Options
-- **Video calls**: Zoom, FaceTime, Google Meet (closest to in-person)
+- **Video calls**: Zoom, FaceTime, or other video apps (closest to in-person)
 - **Phone calls**: Still powerful, more flexible
 - **Texting**: Quick check-ins, ongoing connection
 - **Voice messages**: More personal than text, asynchronous

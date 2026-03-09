@@ -23,7 +23,7 @@ class PremiumRequiredException implements Exception {
 /// • Android emulator → 10.0.2.2
 /// • iOS sim / Flutter Web → use host machine IP for Docker
 /// • Host machine → localhost or 127.0.0.1
-const String _devBaseUrl = 'https://trooth-discipleship-api-dev.onlyblv.com/';
+const String _devBaseUrl = 'https://trooth-discipleship-api.onlyblv.com/';
 
 class ApiService {
   /* ── Singleton ────────────────────────────────────────────────────── */
@@ -2461,15 +2461,28 @@ class ApiService {
   }
 
   /// Restore subscription from RevenueCat (sync with backend)
-  Future<Map<String, dynamic>> restoreSubscription() async {
+  /// [syncData] optional map of entitlement info from RevenueCat SDK
+  Future<Map<String, dynamic>> restoreSubscription({Map<String, dynamic>? syncData}) async {
     const tag = 'API-restoreSubscription';
     await _ensureFreshToken();
     const path = '/subscriptions/restore';
-    _logReq(tag, 'POST', path);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
-    _logRes(tag, r);
-    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
-    throw Exception('restoreSubscription failed (${r.statusCode}) ${r.body}');
+    if (syncData != null) {
+      _logReq(tag, 'POST', path, syncData);
+      final r = await http.post(
+        Uri.parse('$_base$path'),
+        headers: _headers(),
+        body: jsonEncode(syncData),
+      );
+      _logRes(tag, r);
+      if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+      throw Exception('restoreSubscription failed (${r.statusCode}) ${r.body}');
+    } else {
+      _logReq(tag, 'POST', path);
+      final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+      _logRes(tag, r);
+      if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+      throw Exception('restoreSubscription failed (${r.statusCode}) ${r.body}');
+    }
   }
 
   /// DEBUG: Manually set subscription tier (for testing without RevenueCat webhooks)

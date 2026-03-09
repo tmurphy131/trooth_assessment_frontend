@@ -4,6 +4,7 @@
 // Shows current subscription status and upgrade options
 // ─────────────────────────────────────────────────────────────
 
+import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -36,30 +37,101 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     _loadOfferings();
   }
 
+  String _debugStatus = 'Loading...';
+  String _detailedDebug = '';
+  
   Future<void> _loadOfferings() async {
     setState(() {
       _isLoading = true;
       _error = null;
+      _debugStatus = 'Starting...';
+      _detailedDebug = '';
     });
+
+    final debugLog = StringBuffer();
+    void addDebug(String msg) {
+      dev.log('SubscriptionScreen: $msg');
+      debugLog.writeln(msg);
+      if (mounted) setState(() => _detailedDebug = debugLog.toString());
+    }
 
     try {
       // Get user role from Firestore
       final user = FirebaseAuth.instance.currentUser;
+      addDebug('Firebase UID: ${user?.uid ?? "null"}');
+      
       if (user != null) {
         final doc = await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .get();
         _userRole = doc.data()?['role'] as String?;
+        addDebug('User role: $_userRole');
+      }
+      
+      // Check SDK configuration status
+      final isConfigured = await Purchases.isConfigured;
+      addDebug('SDK configured: $isConfigured');
+      
+      if (!isConfigured) {
+        addDebug('SDK not configured! Initializing...');
+        await _subscriptionService.initialize(user?.uid ?? 'anonymous');
+        final nowConfigured = await Purchases.isConfigured;
+        addDebug('After init, SDK configured: $nowConfigured');
+      }
+      
+      // Direct call to Purchases.getOfferings() for diagnostics
+      addDebug('Calling Purchases.getOfferings() directly...');
+      try {
+        final directOfferings = await Purchases.getOfferings();
+        addDebug('Direct call result:');
+        addDebug('  - current: ${directOfferings.current?.identifier ?? "NULL"}');
+        addDebug('  - all.keys: ${directOfferings.all.keys.toList()}');
+        addDebug('  - all.length: ${directOfferings.all.length}');
+        
+        if (directOfferings.current != null) {
+          addDebug('  - current.packages: ${directOfferings.current!.availablePackages.length}');
+          for (final pkg in directOfferings.current!.availablePackages) {
+            addDebug('    * ${pkg.identifier}: ${pkg.storeProduct.identifier} @ ${pkg.storeProduct.priceString}');
+          }
+        }
+        
+        // Also check each offering in all
+        for (final entry in directOfferings.all.entries) {
+          addDebug('  Offering "${entry.key}": ${entry.value.availablePackages.length} packages');
+        }
+        
+        _offerings = directOfferings;
+      } catch (e, stack) {
+        addDebug('ERROR fetching offerings: $e');
+        addDebug('Stack: ${stack.toString().split('\n').take(3).join('\n')}');
+      }
+      
+      // Try to get customer info
+      addDebug('Getting customer info...');
+      try {
+        final customerInfo = await Purchases.getCustomerInfo();
+        addDebug('Customer ID: ${customerInfo.originalAppUserId}');
+        addDebug('Entitlements: ${customerInfo.entitlements.all.keys.toList()}');
+        addDebug('Active: ${customerInfo.entitlements.active.keys.toList()}');
+      } catch (e) {
+        addDebug('Customer info error: $e');
       }
       
       await _subscriptionService.refreshStatus();
-      _offerings = await _subscriptionService.getOfferings();
+      
+      // Log final state
+      final pkgCount = _offerings?.current?.availablePackages.length ?? 
+                       _offerings?.all['default']?.availablePackages.length ?? 0;
+      final allKeys = _offerings?.all.keys.toList() ?? [];
+      setState(() => _debugStatus = 'current=${_offerings?.current != null}, pkgs=$pkgCount, keys=$allKeys');
       
       // Also check premium status from API (more reliable after purchase)
       _isPremiumFromApi = await _apiService.isPremiumUser();
-    } catch (e) {
+    } catch (e, stack) {
       _error = 'Failed to load subscription options: $e';
+      addDebug('FATAL ERROR: $e');
+      addDebug('Stack: ${stack.toString().split('\n').take(5).join('\n')}');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -296,7 +368,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Payment will be charged to your Apple/Google account.\nSubscription automatically renews unless cancelled.',
+            'Payment will be charged to your App Store account.\nSubscription automatically renews unless cancelled.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.grey[600],
@@ -848,9 +920,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     final isMentor = _userRole == 'mentor';
     
     // If RevenueCat offerings are available, show them filtered by role
-    if (_offerings?.current != null) {
+    // Try current first, then fall back to 'default' offering
+    final activeOffering = _offerings?.current ?? _offerings?.all['default'];
+    
+    if (activeOffering != null) {
       // Filter packages based on user role
-      final filteredPackages = _offerings!.current!.availablePackages.where((package) {
+      final filteredPackages = activeOffering.availablePackages.where((package) {
         final productId = package.storeProduct.identifier.toLowerCase();
         
         // Don't show gift seat packages in regular subscription screen
@@ -895,12 +970,64 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     }
 
     // Fallback: show placeholder pricing based on role
+    // This means RevenueCat offerings failed to load (API key issue or network error)
+    dev.log('SubscriptionScreen: Showing fallback UI - offerings not loaded');
     final annualPrice = isMentor ? '\$49.99/year' : '\$49.99/year';
     final monthlyPrice = isMentor ? '\$4.99/month' : '\$4.99/month';
     final roleLabel = isMentor ? 'Mentor' : 'Apprentice';
     
+    // Build debug info string
+    String debugInfo = _debugStatus;
+    
     return Column(
       children: [
+        // TEMPORARY DEBUG INFO - REMOVE BEFORE RELEASE
+        Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.red.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.red),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '⚠️ RevenueCat Debug',
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Status: $debugInfo',
+                style: const TextStyle(color: Colors.white70, fontSize: 11),
+              ),
+              if (_detailedDebug.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 200),
+                  child: SingleChildScrollView(
+                    child: Text(
+                      _detailedDebug,
+                      style: const TextStyle(color: Colors.white60, fontSize: 9, fontFamily: 'monospace'),
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 4),
+              TextButton(
+                onPressed: () async {
+                  setState(() {
+                    _debugStatus = 'Retrying...';
+                    _detailedDebug = '';
+                  });
+                  await _loadOfferings();
+                },
+                child: const Text('Retry', style: TextStyle(color: Colors.amber)),
+              ),
+            ],
+          ),
+        ),
         _buildPricingCard(
           title: '$roleLabel Premium Annual',
           price: annualPrice,
@@ -909,7 +1036,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           onTap: () {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Subscription coming soon!'),
+                content: Text('Unable to connect to store. Please try again later.'),
                 backgroundColor: Colors.orange,
               ),
             );
@@ -924,7 +1051,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           onTap: () {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Subscription coming soon!'),
+                content: Text('Unable to connect to store. Please try again later.'),
                 backgroundColor: Colors.orange,
               ),
             );
