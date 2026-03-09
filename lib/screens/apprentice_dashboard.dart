@@ -707,8 +707,11 @@ class _ApprenticeDashboardState extends State<ApprenticeDashboard> {
                   color: isMaster ? Colors.amber[700] : Colors.grey[800],
                   margin: const EdgeInsets.symmetric(vertical: 4),
                   child: ListTile(
+                    dense: true,
+                    visualDensity: const VisualDensity(horizontal: -2, vertical: 0),
                     leading: Icon(
                       isMaster ? Icons.star : Icons.assignment,
+                      size: 22,
                       color: isMaster ? Colors.white : Colors.amber,
                     ),
                     title: Text(
@@ -716,6 +719,7 @@ class _ApprenticeDashboardState extends State<ApprenticeDashboard> {
                       style: TextStyle(
                         color: isMaster ? Colors.white : Colors.white,
                         fontFamily: 'Poppins',
+                        fontSize: 14,
                         fontWeight: isMaster ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),

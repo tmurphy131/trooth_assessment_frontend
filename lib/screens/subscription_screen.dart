@@ -368,7 +368,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Payment will be charged to your Apple/Google account.\nSubscription automatically renews unless cancelled.',
+            'Payment will be charged to your App Store account.\nSubscription automatically renews unless cancelled.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.grey[600],

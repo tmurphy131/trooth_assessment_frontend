@@ -60,6 +60,8 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
       setState(() {
         _templates = list.cast<Map<String, dynamic>>();
         if (_templates.isNotEmpty) {
+          // Always use the latest (highest) version
+          _templates.sort((a, b) => (b['version'] as int).compareTo(a['version'] as int));
           _selectedVersion = _templates.first['version'] as int?;
         }
         _loadingTemplates = false;
@@ -285,17 +287,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            DropdownButtonFormField<int>(
-              value: _selectedVersion,
-              decoration: const InputDecoration(labelText: 'Template Version', labelStyle: TextStyle(color: Colors.white70)),
-              dropdownColor: Colors.grey[900],
-              items: _templates.map((t) => DropdownMenuItem<int>(
-                value: t['version'] as int?,
-                child: Text('v${t['version']} - ${(t['notes'] ?? '')}'.trim(), style: const TextStyle(color: Colors.white)),
-              )).toList(),
-              onChanged: (v) => setState(() => _selectedVersion = v),
-            ),
-            const SizedBox(height: 12),
+
             TextFormField(
               controller: _apprenticeNameCtrl,
               style: const TextStyle(color: Colors.white),

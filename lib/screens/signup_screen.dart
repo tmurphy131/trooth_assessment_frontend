@@ -180,7 +180,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'You\'ve signed in with Google/Apple. Just complete your profile below.',
+                              'You\'ve signed in with your account. Just complete your profile below.',
                               style: TextStyle(color: Colors.blue.shade200, fontSize: 13),
                             ),
                           ),

@@ -217,10 +217,7 @@ class SubscriptionService extends ChangeNotifier {
   // TEMPORARY: Hardcoded API key for TestFlight testing
   // TODO: Replace with String.fromEnvironment before App Store release
   static const String _revenueCatAppleApiKey = 'appl_lCFeOlOIrgjWmFfbnOpfChlwIzX';
-  static const String _revenueCatGoogleApiKey = String.fromEnvironment(
-    'REVENUECAT_GOOGLE_KEY',
-    defaultValue: '',
-  );
+  static const String _revenueCatGoogleApiKey = 'goog_lWDiKQFGjNEuhnkVOoowvfUOSPz';
 
   /* ── Getters ──────────────────────────────────────────────────────── */
   SubscriptionStatus get status => _status;
@@ -405,8 +402,8 @@ class SubscriptionService extends ChangeNotifier {
       
       // Check if purchase granted premium entitlement
       if (result.entitlements.active.containsKey('premium')) {
-        // Notify backend to sync subscription
-        await _api.restoreSubscription();
+        // Sync full entitlement info to backend
+        await _syncSubscriptionToBackend(result);
         await refreshStatus();
         return true;
       }
@@ -434,10 +431,10 @@ class SubscriptionService extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      await Purchases.restorePurchases();
+      final customerInfo = await Purchases.restorePurchases();
       
-      // Sync with backend
-      await _api.restoreSubscription();
+      // Sync with backend using entitlement data
+      await _syncSubscriptionToBackend(customerInfo);
       await refreshStatus();
       
       return _status.isPremium;
@@ -448,6 +445,34 @@ class SubscriptionService extends ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  /// Extract entitlement info from RevenueCat CustomerInfo and sync to backend
+  Future<void> _syncSubscriptionToBackend(CustomerInfo customerInfo) async {
+    try {
+      final Map<String, dynamic> syncData = {};
+
+      // Send RevenueCat customer ID (this is the app_user_id / Firebase UID)
+      syncData['revenuecat_customer_id'] = customerInfo.originalAppUserId;
+
+      // Extract premium entitlement details
+      final premiumEntitlement = customerInfo.entitlements.active['premium'];
+      if (premiumEntitlement != null) {
+        syncData['product_id'] = premiumEntitlement.productIdentifier;
+        syncData['entitlement_id'] = premiumEntitlement.identifier;
+        syncData['is_active'] = premiumEntitlement.isActive;
+        syncData['store'] = premiumEntitlement.store.name;
+        if (premiumEntitlement.expirationDate != null) {
+          syncData['expiration_date'] = premiumEntitlement.expirationDate!;
+        }
+      }
+
+      dev.log('SubscriptionService: Syncing to backend: $syncData');
+      await _api.restoreSubscription(syncData: syncData);
+    } catch (e) {
+      dev.log('SubscriptionService: Failed to sync to backend: $e');
+      // Don't rethrow - the purchase succeeded even if backend sync fails
     }
   }
 
