@@ -398,6 +398,10 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                         : ListView.builder(
                             itemCount: _apprentices.length,
                             itemBuilder: (context, index) {
+                              // Bounds check to prevent RangeError during list updates
+                              if (index >= _apprentices.length) {
+                                return const SizedBox.shrink();
+                              }
                               return _buildApprenticeCard(_apprentices[index], index);
                             },
                           ),
