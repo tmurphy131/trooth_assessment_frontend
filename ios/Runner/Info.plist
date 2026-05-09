@@ -17,9 +17,9 @@
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>
-		<string>1.0.24</string>
+		<string>1.0.26</string>
 		<key>CFBundleVersion</key>
-	<string>24</string>
+	<string>26</string>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
 		<key>UILaunchStoryboardName</key>
@@ -61,6 +61,14 @@
 				<key>CFBundleURLSchemes</key>
 				<array>
 					<string>com.googleusercontent.apps.557349072084-f5e9d8dkkg9rp05oaqgra6878d8lthfg</string>
+				</array>
+			</dict>
+			<dict>
+				<key>CFBundleURLName</key>
+				<string>com.trooth.flutterTroothAssessment</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>trooth</string>
 				</array>
 			</dict>
 		</array>

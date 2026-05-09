@@ -7,6 +7,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'firebase_options.dart';
 import 'package:app_links/app_links.dart';
 import 'screens/agreement_sign_public_screen.dart';
+import 'screens/assessment_screen.dart';
 import 'theme.dart';
 // import 'screens/splash_screen.dart'; // legacy complex splash (kept for later)
 import 'screens/simple_login_screen.dart';
@@ -120,7 +121,7 @@ void main() {
 
   // Point the frontend to the deployed backend for development/testing.
   // Update this URL if you deploy to a different host.
-  ApiService().baseUrlOverride = 'https://trooth-discipleship-api.onlyblv.com/';
+  ApiService().baseUrlOverride = 'https://trooth-discipleship-api-dev.onlyblv.com/';
 
   // Quick connectivity check at startup — logs the backend response.
   try {
@@ -159,6 +160,16 @@ void main() {
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void _handleIncomingUri(Uri link) {
+  // trooth://assessment/draft/{draftId}
+  if (link.host == 'assessment' &&
+      link.pathSegments.length == 2 &&
+      link.pathSegments[0] == 'draft') {
+    final draftId = link.pathSegments[1];
+    navigatorKey.currentState?.pushNamed('/assessment/draft/$draftId');
+    return;
+  }
+
+  // trooth://agreements/sign/{tokenType}/{token}  (or https://links.onlyblv.com/agreements/sign/...)
   if (link.pathSegments.length == 4 && link.pathSegments[0] == 'agreements' && link.pathSegments[1] == 'sign') {
     final tokenType = link.pathSegments[2];
     final token = link.pathSegments[3];
@@ -240,8 +251,20 @@ class MyApp extends StatelessWidget {
         navigatorKey: navigatorKey,
         home: const AuthGate(), // Check auth state and route to appropriate screen
       onGenerateRoute: (settings) {
-        // Expected pattern: /agreements/sign/:tokenType/:token
         final uri = Uri.parse(settings.name ?? '');
+
+        // /assessment/draft/:draftId — deep link from draft reminder email
+        if (uri.pathSegments.length == 3 &&
+            uri.pathSegments[0] == 'assessment' &&
+            uri.pathSegments[1] == 'draft') {
+          final draftId = uri.pathSegments[2];
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => AssessmentScreen(draftId: draftId),
+          );
+        }
+
+        // Expected pattern: /agreements/sign/:tokenType/:token
         if (uri.pathSegments.length == 4 && uri.pathSegments[0] == 'agreements' && uri.pathSegments[1] == 'sign') {
           final tokenType = uri.pathSegments[2];
           final token = uri.pathSegments[3];
