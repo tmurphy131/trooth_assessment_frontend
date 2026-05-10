@@ -9,6 +9,7 @@ class MentorNoteCard extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final bool showActions;
+  final String? currentUserId;
 
   const MentorNoteCard({
     super.key,
@@ -16,6 +17,7 @@ class MentorNoteCard extends StatelessWidget {
     this.onEdit,
     this.onDelete,
     this.showActions = true,
+    this.currentUserId,
   });
 
   @override
@@ -45,6 +47,20 @@ class MentorNoteCard extends StatelessWidget {
             ),
             child: Row(
               children: [
+                // Author name
+                if (note.mentorName != null) ...[
+                  Text(
+                    note.mentorName!,
+                    style: TextStyle(
+                      color: troothGold,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text('·', style: TextStyle(color: Colors.grey[600])),
+                  const SizedBox(width: 8),
+                ],
                 // Timestamp
                 Icon(
                   Icons.access_time,
@@ -119,7 +135,7 @@ class MentorNoteCard extends StatelessWidget {
             ),
           ),
           // Actions
-          if (showActions && (onEdit != null || onDelete != null))
+          if (showActions && currentUserId == note.mentorId && (onEdit != null || onDelete != null))
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               decoration: BoxDecoration(

@@ -23,11 +23,10 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
   bool _loading = true;
   String? _error;
   List<Map<String, dynamic>> _agreements = [];
-  Map<String, dynamic>? _primaryAgreement; // most recent, non-revoked if available
-  Map<String, dynamic>? _mentorProfile; // loaded from users service
-  Map<String, dynamic>? _mentorStatus; // from /apprentice/mentor/status
-  List<Map<String, dynamic>> _pendingAgreements = []; // from /apprentice/agreements/pending
-  List<Map<String, dynamic>> _sharedResources = []; // from /apprentice/resources
+  List<Map<String, dynamic>> _activeMentors = [];
+  List<Map<String, dynamic>> _mentorProfiles = [];
+  List<Map<String, dynamic>> _pendingAgreements = [];
+  List<Map<String, dynamic>> _sharedResources = [];
 
   @override
   void initState() {
@@ -38,28 +37,16 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
   Future<void> _fetch() async {
     setState(() { _loading = true; _error = null; });
     try {
-      // Agreements
       final res = await _api.listMyAgreements(limit: 100);
       final list = res.cast<Map<String, dynamic>>();
-      Map<String, dynamic>? primary = list.firstWhere(
-        (a) => a['status'] != 'revoked',
-        orElse: () => list.isNotEmpty ? list.first : <String, dynamic>{},
-      );
-      if (primary.isEmpty) primary = null;
 
-      // Mentor profile (legacy fallback via primary agreement's mentor_id)
-      Map<String, dynamic>? mentor;
-      if (primary != null && primary['mentor_id'] != null) {
-        try { mentor = await _api.getUserProfile(primary['mentor_id']); } catch (_) { mentor = null; }
-      }
-
-      // New mentor status + pending agreements
       Map<String, dynamic>? status;
       List<Map<String, dynamic>> pending = [];
-      try { status = await _api.getMentorStatus(); } catch (_) { status = null; }
+      List<dynamic> profiles = [];
+      try { status = await _api.getMentorStatus(); } catch (_) {}
       try { final p = await _api.listPendingAgreements(); pending = p.cast<Map<String, dynamic>>(); } catch (_) {}
+      try { profiles = await _api.getAllMentorProfilesForApprentice(); } catch (_) {}
 
-      // Shared resources for apprentice
       List<Map<String, dynamic>> resources = [];
       try {
         final r = await _api.listMySharedResources();
@@ -68,11 +55,10 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
 
       setState(() {
         _agreements = list;
-        _primaryAgreement = primary;
-        _mentorProfile = mentor;
-        _mentorStatus = status;
+        _activeMentors = (status?['mentors'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
+        _mentorProfiles = profiles.cast<Map<String, dynamic>>();
         _pendingAgreements = pending;
-  _sharedResources = resources;
+        _sharedResources = resources;
         _loading = false;
       });
     } catch (e) {
@@ -170,6 +156,74 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
     }
   }
 
+  Future<void> _confirmRevoke(String mentorId, String mentorName) async {
+    final reasonCtrl = TextEditingController();
+    bool submitting = false;
+    await showDialog(
+      context: context,
+      barrierDismissible: !submitting,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setState) => AlertDialog(
+            backgroundColor: Colors.grey[900],
+            title: Text('End Mentorship with $mentorName',
+                style: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Optional reason (shared with mentor):',
+                    style: TextStyle(color: Colors.white70, fontFamily: 'Poppins')),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: reasonCtrl,
+                  maxLines: 3,
+                  style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'),
+                  decoration: const InputDecoration(
+                    enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.amber)),
+                    focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.amber, width: 2)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                    'This will notify the mentor and archive the relationship. Your other mentorships are unaffected.',
+                    style: TextStyle(color: Colors.white54, fontSize: 12, fontFamily: 'Poppins')),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: submitting ? null : () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+                onPressed: submitting ? null : () async {
+                  setState(() { submitting = true; });
+                  try {
+                    await _api.revokeMentor(mentorId: mentorId, reason: reasonCtrl.text.trim());
+                    if (!mounted) return;
+                    Navigator.of(ctx).pop();
+                    _snack('Mentorship ended');
+                    await _fetch();
+                  } catch (e) {
+                    setState(() { submitting = false; });
+                    _snack('Failed: $e');
+                  }
+                },
+                child: submitting
+                    ? const SizedBox(
+                        width: 18, height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text('Confirm End'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _snack(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -205,18 +259,20 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
           ? const Center(child: CircularProgressIndicator(color: Colors.amber))
           : _error != null
               ? Center(child: Text(_error!, style: const TextStyle(color: Colors.white)))
-              : (_agreements.isEmpty)
+              : (_agreements.isEmpty && _activeMentors.isEmpty)
                   ? Center(child: Text('No mentorship agreement yet. Your mentor will share one when ready.', style: TextStyle(color: Colors.grey[400], fontFamily: 'Poppins'), textAlign: TextAlign.center))
                   : ListView(
                       padding: const EdgeInsets.all(16),
                       children: [
-                        if (_mentorProfile != null || _primaryAgreement != null) _buildMentorOverviewCard(),
+                        _buildMentorOverviewCard(),
                         if (_pendingAgreements.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           _buildPendingAgreementsSection(),
                         ],
                         const SizedBox(height: 12),
-                        if (_primaryAgreement != null) _buildMeetingsCard(_primaryAgreement!),
+                        ..._agreements
+                            .where((ag) => ag['status'] != 'revoked')
+                            .map((ag) => _buildMeetingsCard(ag)),
                         const SizedBox(height: 12),
                         _buildSharedResourcesCard(),
                         const SizedBox(height: 12),
@@ -327,138 +383,151 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
   }
 
   Widget _buildMentorOverviewCard() {
-    final name = _mentorProfile?['name'] ?? _primaryAgreement?['mentor_name'] ?? 'Mentor';
-    final emailRaw = _mentorProfile?['email'] ?? _primaryAgreement?['mentor_email'] ?? '';
-    final role = _mentorProfile?['role'] ?? 'Mentor';
-    final org = _mentorProfile?['organization'] ?? _mentorProfile?['church'] ?? '';
-    final avatarUrl = _mentorProfile?['avatar_url'];
-    final isActive = _mentorStatus != null && _mentorStatus!['has_active'] == true;
-    final isEnded = !isActive; // paused state not yet implemented
-    // Mask email if privacy: simple heuristic (show first char + domain)
-    String displayEmail = emailRaw;
-    if (emailRaw.isNotEmpty && emailRaw.contains('@')) {
-      final parts = emailRaw.split('@');
-      if (parts.first.length > 2) {
-        displayEmail = parts.first.substring(0,1) + '***@' + parts.last;
-      }
+    if (_activeMentors.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.redAccent.withOpacity(.12),
+          border: Border.all(color: Colors.redAccent),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Text(
+            'No active mentors. Historical agreements and resources are available in read-only mode.',
+            style: TextStyle(color: Colors.redAccent, fontFamily: 'Poppins')),
+      );
     }
-    return Card(
-      color: Colors.grey[850],
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (isEnded) ...[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(10),
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: Colors.redAccent.withOpacity(.12),
-                  border: Border.all(color: Colors.redAccent),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text('This mentorship has ended. You can still review past agreements and history.', style: TextStyle(color: Colors.redAccent, fontFamily: 'Poppins')),
-              )
-            ],
-            Row(
+    return Column(
+      children: _activeMentors.map((mentor) {
+        final mentorId = mentor['id'] as String;
+        final name = mentor['name'] as String? ?? 'Mentor';
+        final emailRaw = mentor['email'] as String? ?? '';
+        final profile = _mentorProfiles.firstWhere(
+          (p) => p['user_id'] == mentorId,
+          orElse: () => <String, dynamic>{},
+        );
+        final role = profile['role_title'] as String? ?? 'Mentor';
+        final org = profile['organization'] as String? ?? '';
+        final avatarUrl = profile['avatar_url'] as String?;
+        String displayEmail = emailRaw;
+        if (emailRaw.isNotEmpty && emailRaw.contains('@')) {
+          final parts = emailRaw.split('@');
+          if (parts.first.length > 2) {
+            displayEmail = '${parts.first.substring(0, 1)}***@${parts.last}';
+          }
+        }
+        return Card(
+          color: Colors.grey[850],
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildMentorAvatar(avatarUrl, 56),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(name, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 18)),
-                      const SizedBox(height: 4),
-                      Text(role + (org.isNotEmpty ? ' • $org' : ''), style: const TextStyle(color: Colors.white70, fontFamily: 'Poppins')),
-                      if (emailRaw.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        GestureDetector(
-                          onTap: () async {
-                            await Clipboard.setData(ClipboardData(text: emailRaw));
-                            _snack('Mentor email copied');
-                          },
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.email, size: 16, color: Colors.amber),
-                              const SizedBox(width: 4),
-                              Text(displayEmail, style: TextStyle(color: Colors.grey[300], fontFamily: 'Poppins')),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildMentorAvatar(avatarUrl, 56),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(name, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 18)),
+                          const SizedBox(height: 4),
+                          Text(role + (org.isNotEmpty ? ' • $org' : ''), style: const TextStyle(color: Colors.white70, fontFamily: 'Poppins')),
+                          if (emailRaw.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            GestureDetector(
+                              onTap: () async {
+                                await Clipboard.setData(ClipboardData(text: emailRaw));
+                                _snack('Mentor email copied');
+                              },
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.email, size: 16, color: Colors.amber),
+                                  const SizedBox(width: 4),
+                                  Text(displayEmail, style: TextStyle(color: Colors.grey[300], fontFamily: 'Poppins')),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(.15),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.green),
+                      ),
+                      child: const Text('Active', style: TextStyle(color: Colors.green, fontFamily: 'Poppins')),
+                    ),
+                  ],
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: (isActive ? Colors.green : Colors.red).withOpacity(.15),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isActive ? Colors.green : Colors.red),
-                  ),
-                  child: Text(isActive ? 'Active' : 'Ended', style: TextStyle(color: isActive ? Colors.green : Colors.red, fontFamily: 'Poppins')),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        try {
+                          final p = await _api.getMentorProfileForApprentice(mentorId);
+                          if (!mounted) return;
+                          showDialog(
+                            context: context,
+                            builder: (_) => AlertDialog(
+                              backgroundColor: Colors.grey[900],
+                              title: const Text('Mentor Profile', style: TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if ((p['avatar_url'] ?? '').toString().isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 12.0),
+                                      child: _buildMentorAvatar(p['avatar_url']?.toString(), 56),
+                                    ),
+                                  Text('Name: ${p['name'] ?? 'N/A'}', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+                                  Text('Email: ${p['email'] ?? 'N/A'}', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+                                  if ((p['role_title'] ?? '').toString().isNotEmpty)
+                                    Text('Role: ${p['role_title']}', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+                                  if ((p['organization'] ?? '').toString().isNotEmpty)
+                                    Text('Organization: ${p['organization']}', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+                                  if ((p['phone'] ?? '').toString().isNotEmpty)
+                                    Text('Phone: ${p['phone']}', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+                                  if ((p['bio'] ?? '').toString().isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Text(p['bio'].toString(), style: const TextStyle(color: Colors.white70, fontFamily: 'Poppins')),
+                                  ],
+                                ],
+                              ),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close', style: TextStyle(color: Colors.grey)))
+                              ],
+                            ),
+                          );
+                        } catch (e) {
+                          _snack('Failed to load mentor profile: $e');
+                        }
+                      },
+                      icon: const Icon(Icons.person, size: 18, color: Colors.amber),
+                      label: const Text('Profile', style: TextStyle(color: Colors.amber, fontFamily: 'Poppins')),
+                      style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.amber)),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: () => _confirmRevoke(mentorId, name),
+                      child: const Text('End Mentorship', style: TextStyle(color: Colors.redAccent, fontFamily: 'Poppins')),
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 14),
-            // Mentor Profile button
-            Align(
-              alignment: Alignment.centerLeft,
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  try {
-                    final p = await _api.getActiveMentorProfileForApprentice();
-                    if (!mounted) return;
-                    showDialog(
-                      context: context,
-                      builder: (_) => AlertDialog(
-                        backgroundColor: Colors.grey[900],
-                        title: const Text('Mentor Profile', style: TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if ((p['avatar_url'] ?? '').toString().isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 12.0),
-                                child: _buildMentorAvatar(p['avatar_url']?.toString(), 56),
-                              ),
-                            Text('Name: ${p['name'] ?? 'N/A'}', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
-                            Text('Email: ${p['email'] ?? 'N/A'}', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
-                            if ((p['role_title'] ?? '').toString().isNotEmpty)
-                              Text('Role: ${p['role_title']}', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
-                            if ((p['organization'] ?? '').toString().isNotEmpty)
-                              Text('Organization: ${p['organization']}', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
-                            if ((p['phone'] ?? '').toString().isNotEmpty)
-                              Text('Phone: ${p['phone']}', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
-                            if ((p['bio'] ?? '').toString().isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              Text(p['bio'], style: const TextStyle(color: Colors.white70, fontFamily: 'Poppins')),
-                            ],
-                          ],
-                        ),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close', style: TextStyle(color: Colors.grey)))
-                        ],
-                      ),
-                    );
-                  } catch (e) {
-                    _snack('Failed to load mentor profile: $e');
-                  }
-                },
-                icon: const Icon(Icons.person, size: 18, color: Colors.amber),
-                label: const Text('Mentor Profile', style: TextStyle(color: Colors.amber, fontFamily: 'Poppins')),
-                style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.amber)),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      }).toList(),
     );
   }
 

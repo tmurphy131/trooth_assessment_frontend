@@ -3,6 +3,7 @@ class MentorNote {
   final String id;
   final String assessmentId;
   final String mentorId;
+  final String? mentorName;
   final String content;
   final String? followUpPlan;
   final bool isPrivate;
@@ -13,6 +14,7 @@ class MentorNote {
     required this.id,
     required this.assessmentId,
     required this.mentorId,
+    this.mentorName,
     required this.content,
     this.followUpPlan,
     required this.isPrivate,
@@ -25,6 +27,7 @@ class MentorNote {
       id: json['id'] as String,
       assessmentId: json['assessment_id'] as String,
       mentorId: json['mentor_id'] as String,
+      mentorName: json['mentor_name'] as String?,
       content: json['content'] as String,
       followUpPlan: json['follow_up_plan'] as String?,
       isPrivate: json['is_private'] as bool? ?? true,
@@ -53,6 +56,7 @@ class MentorNote {
     String? id,
     String? assessmentId,
     String? mentorId,
+    String? mentorName,
     String? content,
     String? followUpPlan,
     bool? isPrivate,
@@ -63,6 +67,7 @@ class MentorNote {
       id: id ?? this.id,
       assessmentId: assessmentId ?? this.assessmentId,
       mentorId: mentorId ?? this.mentorId,
+      mentorName: mentorName ?? this.mentorName,
       content: content ?? this.content,
       followUpPlan: followUpPlan ?? this.followUpPlan,
       isPrivate: isPrivate ?? this.isPrivate,
