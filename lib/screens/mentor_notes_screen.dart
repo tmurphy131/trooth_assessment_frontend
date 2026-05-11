@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/mentor_note.dart';
 import '../services/api_service.dart';
 import '../theme.dart';
@@ -27,10 +28,12 @@ class _MentorNotesScreenState extends State<MentorNotesScreen> {
   List<MentorNote> _notes = [];
   bool _isLoading = true;
   String? _errorMessage;
+  String? _currentUserId;
 
   @override
   void initState() {
     super.initState();
+    _currentUserId = FirebaseAuth.instance.currentUser?.uid;
     _loadNotes();
   }
 
@@ -340,6 +343,7 @@ class _MentorNotesScreenState extends State<MentorNotesScreen> {
               note: note,
               onEdit: () => _editNote(note),
               onDelete: () => _deleteNote(note),
+              currentUserId: _currentUserId,
             ),
           );
         },

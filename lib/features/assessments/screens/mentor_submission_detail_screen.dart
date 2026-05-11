@@ -2515,6 +2515,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
               note: note,
               onEdit: () => _editNote(note),
               onDelete: () => _deleteNote(note),
+              currentUserId: FirebaseAuth.instance.currentUser?.uid,
             ),
           );
         },

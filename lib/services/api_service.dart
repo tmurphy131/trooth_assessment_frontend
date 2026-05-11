@@ -23,7 +23,7 @@ class PremiumRequiredException implements Exception {
 /// • Android emulator → 10.0.2.2
 /// • iOS sim / Flutter Web → use host machine IP for Docker
 /// • Host machine → localhost or 127.0.0.1
-const String _devBaseUrl = 'https://trooth-discipleship-api.onlyblv.com/';
+const String _devBaseUrl = 'https://trooth-discipleship-api-dev.onlyblv.com/';
 
 class ApiService {
   /* ── Singleton ────────────────────────────────────────────────────── */
@@ -263,11 +263,12 @@ class ApiService {
     throw Exception('listPendingAgreements failed (${r.statusCode}) ${r.body}');
   }
 
-  Future<Map<String, dynamic>> revokeMentor({String? reason}) async {
+  Future<Map<String, dynamic>> revokeMentor({required String mentorId, String? reason}) async {
     const tag = 'API-revokeMentor';
     await _ensureFreshToken();
     const path = '/apprentice/mentor/revoke';
-    final payload = reason == null || reason.trim().isEmpty ? {} : { 'reason': reason.trim() };
+    final payload = <String, dynamic>{'mentor_id': mentorId};
+    if (reason != null && reason.trim().isNotEmpty) payload['reason'] = reason.trim();
     _logReq(tag, 'POST', path, payload);
     final r = await http.post(
       Uri.parse('$_base$path'),
@@ -276,10 +277,7 @@ class ApiService {
     );
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
-    // Surface 409 specially
-    if (r.statusCode == 409) {
-      throw Exception('Cannot revoke: pending agreement (409)');
-    }
+    if (r.statusCode == 409) throw Exception('Cannot revoke: pending agreement (409)');
     throw Exception('revokeMentor failed (${r.statusCode}) ${r.body}');
   }
 
@@ -611,10 +609,23 @@ class ApiService {
     throw Exception('updateMyMentorProfile failed (${r.statusCode}) ${r.body}');
   }
 
-  Future<Map<String, dynamic>> getActiveMentorProfileForApprentice() async {
-    const tag = 'API-getMentorProfileForApprentice';
+  /// Returns profiles for all active mentors of the current apprentice.
+  Future<List<dynamic>> getAllMentorProfilesForApprentice() async {
+    const tag = 'API-getAllMentorProfilesForApprentice';
     await _ensureFreshToken();
     const path = '/mentor-profile/for-apprentice';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
+    throw Exception('getAllMentorProfilesForApprentice failed (${r.statusCode}) ${r.body}');
+  }
+
+  /// Returns the profile for a specific active mentor of the current apprentice.
+  Future<Map<String, dynamic>> getMentorProfileForApprentice(String mentorId) async {
+    const tag = 'API-getMentorProfileForApprentice';
+    await _ensureFreshToken();
+    final path = '/mentor-profile/for-apprentice/$mentorId';
     _logReq(tag, 'GET', path);
     final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
