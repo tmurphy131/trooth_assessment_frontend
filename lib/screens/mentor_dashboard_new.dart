@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 import 'dart:developer' as dev;
-import '../widgets/base_dashboard.dart';
+import '../utils/logout_util.dart';
 import '../services/api_service.dart';
 import '../services/subscription_service.dart';
 import 'template_management_screen.dart';
@@ -53,6 +53,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   void initState() {
     super.initState();
   _tabController = TabController(length: 5, vsync: this); // Removed History tab; Resources now a tab
+    _tabController.addListener(() { if (mounted) setState(() {}); });
     _initializeAndLoadData();
     // Initialize tutorial after data loads
     initMentorTutorial();
@@ -209,82 +210,51 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
 
   @override
   Widget build(BuildContext context) {
-    return BaseDashboard(
-      logoHeight: 64,
-      additionalActions: [
-        // Premium badge indicator
-        if (_subscriptionService.isPremium)
-          const Padding(
-            padding: EdgeInsets.only(right: 4),
-            child: Icon(Icons.workspace_premium, color: Color(0xFFFFD700), size: 20),
-          ),
-        // Gift Seats icon - next to profile for premium mentors
-        if (_subscriptionService.isPremium)
+    return Scaffold(
+      backgroundColor: const Color(0xFF1A1A2E),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF1A1A2E),
+        elevation: 0,
+        title: Image.asset(
+          'assets/logo.png',
+          height: 40,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => const Text('Trooth', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+        ),
+        actions: [
+          if (_subscriptionService.isPremium)
+            const Padding(
+              padding: EdgeInsets.only(right: 4),
+              child: Icon(Icons.workspace_premium, color: Color(0xFFFFD700), size: 20),
+            ),
+          if (_subscriptionService.isPremium)
+            IconButton(
+              icon: const Icon(Icons.card_giftcard, color: Color(0xFFFFD700)),
+              tooltip: 'Gift Seats',
+              onPressed: () async {
+                final result = await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MentorGiftSeatsScreen()),
+                );
+                if (result == true) _loadSubscriptionData();
+              },
+            ),
           IconButton(
-            icon: const Icon(Icons.card_giftcard, color: Color(0xFFFFD700)),
-            tooltip: 'Gift Seats',
+            key: profileButtonKey,
+            icon: const Icon(Icons.account_circle, color: Color(0xFFFFD700)),
+            tooltip: 'My Profile',
             onPressed: () async {
-              final result = await Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const MentorGiftSeatsScreen()),
+              await Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const MentorProfileScreen()),
               );
-              if (result == true) {
-                _loadSubscriptionData();
-              }
+              dev.log('FREEMIUM DEBUG: Returning from profile, reloading data...');
+              await _loadSubscriptionData();
+              await _loadCompletedAssessments();
             },
           ),
-        IconButton(
-          key: profileButtonKey,
-          icon: const Icon(Icons.account_circle, color: Color(0xFFFFD700)),
-          tooltip: 'My Profile',
-          onPressed: () async {
-            await Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const MentorProfileScreen()),
-            );
-            // Reload subscription and assessments in case tier changed in profile
-            dev.log('FREEMIUM DEBUG: Returning from profile, reloading data...');
-            await _loadSubscriptionData();
-            await _loadCompletedAssessments();
-          },
-        ),
-      ],
-      bottom: TabBar(
-        controller: _tabController,
-        indicatorColor: Colors.amber,
-        labelColor: Colors.amber,
-        unselectedLabelColor: Colors.grey[500],
-        labelStyle: const TextStyle(
-          fontFamily: 'Poppins',
-          fontWeight: FontWeight.bold,
-        ),
-        tabs: [
-          Tab(key: apprenticesTabKey, icon: const Icon(Icons.people), text: 'Apprentices'),
-          Tab(key: assessmentsTabKey, icon: const Icon(Icons.assignment), text: 'Assessments'),
-          Tab(key: agreementsTabKey, icon: const Icon(Icons.description), text: 'Agreements'),
-          Tab(key: resourcesTabKey, icon: const Icon(Icons.link), text: 'Resources'),
-          Tab(
-            key: alertsTabKey,
-            icon: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Icon(Icons.notifications),
-                if (_activeNotificationCount > 0) Positioned(
-                  right: -6,
-                  top: -4,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.redAccent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      _activeNotificationCount > 99 ? '99+' : _activeNotificationCount.toString(),
-                      style: const TextStyle(color: Colors.white, fontSize: 10, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            text: 'Alerts',
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white54),
+            tooltip: 'Sign Out',
+            onPressed: () => logoutAndRedirect(context),
           ),
         ],
       ),
@@ -293,12 +263,80 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
         children: [
           _buildApprenticesTab(),
           _buildAssessmentsTab(),
-            const MentorAgreementsScreen(),
+          const MentorAgreementsScreen(),
           const MentorResourcesScreen(),
           MentorNotificationsScreen(
             onActivity: () async { await _refreshNotificationCount(); },
           ),
         ],
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.grey[900],
+          border: Border(top: BorderSide(color: Colors.grey[800]!)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: BottomNavigationBar(
+            currentIndex: _tabController.index,
+            onTap: (i) => _tabController.animateTo(i),
+            backgroundColor: Colors.grey[900],
+            selectedItemColor: const Color(0xFFFFD700),
+            unselectedItemColor: Colors.grey[500],
+            type: BottomNavigationBarType.fixed,
+            elevation: 0,
+            selectedLabelStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 11),
+            unselectedLabelStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 11),
+            items: [
+              BottomNavigationBarItem(
+                key: apprenticesTabKey,
+                icon: const Icon(Icons.people),
+                label: 'Apprentices',
+              ),
+              BottomNavigationBarItem(
+                key: assessmentsTabKey,
+                icon: const Icon(Icons.assignment),
+                label: 'Assessments',
+              ),
+              BottomNavigationBarItem(
+                key: agreementsTabKey,
+                icon: const Icon(Icons.description),
+                label: 'Agreements',
+              ),
+              BottomNavigationBarItem(
+                key: resourcesTabKey,
+                icon: const Icon(Icons.link),
+                label: 'Resources',
+              ),
+              BottomNavigationBarItem(
+                key: alertsTabKey,
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(Icons.notifications),
+                    if (_activeNotificationCount > 0)
+                      Positioned(
+                        right: -6,
+                        top: -4,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            _activeNotificationCount > 99 ? '99+' : _activeNotificationCount.toString(),
+                            style: const TextStyle(color: Colors.white, fontSize: 9, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                label: 'Alerts',
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
