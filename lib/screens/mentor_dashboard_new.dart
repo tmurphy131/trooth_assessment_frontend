@@ -211,9 +211,9 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: Colors.black,
         elevation: 0,
         title: Image.asset(
           'assets/logo.png',
