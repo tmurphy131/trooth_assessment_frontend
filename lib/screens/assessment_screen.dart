@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/api_service.dart';
 import 'assessment_results_screen.dart';
+import 'apprentice_report_screen.dart';
 
 class AssessmentScreen extends StatefulWidget {
   final String? templateId;
@@ -111,113 +112,121 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
       }
 
       await _loadOrCreateDraft();
-      
+
       // Only load questions if they weren't already loaded from the draft
       if (_questions.isEmpty) {
         await _loadQuestions();
       }
-      
+
     } catch (e) {
       print('Error initializing assessment: $e');
-      // Use sample questions if backend fails
-      setState(() {
-        _questions = _sampleQuestions;
-        _isLoading = false;
-      });
+      if (widget.templateId != null || widget.draftId != null) {
+        final errStr = e.toString();
+        final isPremiumError = errStr.contains('403') || errStr.toLowerCase().contains('premium');
+        setState(() {
+          _error = isPremiumError
+              ? 'A premium subscription is required to access this assessment. Please upgrade and try again.'
+              : 'Failed to load assessment. Please go back and try again.';
+          _isLoading = false;
+        });
+      } else {
+        // Legacy no-param path — fall back to sample questions so the screen isn't broken
+        setState(() {
+          _questions = _sampleQuestions;
+          _isLoading = false;
+        });
+      }
     }
   }
 
   Future<void> _loadOrCreateDraft() async {
+    // ── Specific draft ID path ──────────────────────────────────────────────
+    // No try-catch: errors propagate directly to _initializeAssessment(), which
+    // shows an error UI instead of silently loading the wrong questions.
+    if (widget.draftId != null) {
+      final draft = await _apiService.getDraftById(widget.draftId!);
+      setState(() {
+        _currentDraft = draft;
+        final existingAnswers = draft['answers'] as Map<String, dynamic>? ?? {};
+        _answers = existingAnswers.map((key, value) => MapEntry(key, value.toString()));
+        final questionsFromDraft = draft['questions'] as List<dynamic>? ?? [];
+        _questions = questionsFromDraft.cast<Map<String, dynamic>>();
+        _isLoading = false;
+        print('📝 Loaded ${_questions.length} questions from draft ${widget.draftId}');
+        if (_questions.isNotEmpty) {
+          print('🔍 First question structure: ${_questions[0]}');
+        }
+        _updateTextControllers();
+        // Jump to first unanswered question
+        int firstUnanswered = 0;
+        for (int i = 0; i < _questions.length; i++) {
+          final qid = _questions[i]['id'].toString();
+          if (!_answers.containsKey(qid) || (_answers[qid]?.trim().isEmpty ?? true)) {
+            firstUnanswered = i;
+            break;
+          }
+        }
+        _currentQuestionIndex = firstUnanswered;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_pageController.hasClients) {
+            _pageController.jumpToPage(_currentQuestionIndex);
+          }
+        });
+      });
+      return;
+    }
+
+    // ── Specific template ID path ───────────────────────────────────────────
+    // Same: no try-catch so failures surface as error UI, not 600+ questions.
+    if (widget.templateId != null) {
+      print('🔄 Starting draft for template: ${widget.templateId}');
+      final draft = await _apiService.startDraft(widget.templateId!);
+      print('✅ Draft started successfully: ${draft['id']}');
+      setState(() {
+        _currentDraft = draft;
+        final existingAnswers = draft['answers'] as Map<String, dynamic>? ?? {};
+        _answers = existingAnswers.map((key, value) => MapEntry(key, value.toString()));
+        final questionsFromDraft = draft['questions'] as List<dynamic>? ?? [];
+        _questions = questionsFromDraft.cast<Map<String, dynamic>>();
+        _isLoading = false;
+        print('📝 Loaded ${_questions.length} questions from draft for template ${widget.templateId}');
+        if (_questions.isNotEmpty) {
+          print('🔍 First question structure: ${_questions[0]}');
+        }
+        _updateTextControllers();
+        // Restore position when resuming an existing draft (same logic as draftId path)
+        if (_answers.isNotEmpty && _questions.isNotEmpty) {
+          int firstUnanswered = 0;
+          for (int i = 0; i < _questions.length; i++) {
+            final qid = _questions[i]['id'].toString();
+            if (!_answers.containsKey(qid) || (_answers[qid]?.trim().isEmpty ?? true)) {
+              firstUnanswered = i;
+              break;
+            }
+          }
+          _currentQuestionIndex = firstUnanswered;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_pageController.hasClients) {
+              _pageController.jumpToPage(_currentQuestionIndex);
+            }
+          });
+        }
+      });
+      return;
+    }
+
+    // ── Legacy no-param fallback ────────────────────────────────────────────
+    // Only this path silently swallows errors (no specific target was requested).
     try {
-      // If we have a draftId, load that specific draft
-      if (widget.draftId != null) {
-        try {
-          final draft = await _apiService.getDraftById(widget.draftId!);
-          setState(() {
-            _currentDraft = draft;
-            // Load existing answers
-            final existingAnswers = draft['answers'] as Map<String, dynamic>? ?? {};
-            _answers = existingAnswers.map((key, value) => MapEntry(key, value.toString()));
-            // Load questions from the draft response
-            final questionsFromDraft = draft['questions'] as List<dynamic>? ?? [];
-            _questions = questionsFromDraft.cast<Map<String, dynamic>>();
-            _isLoading = false; // Set loading to false since we loaded questions from draft
-            print('📝 Loaded ${_questions.length} questions from draft ${widget.draftId}');
-            // Debug: Print first question to see structure
-            if (_questions.isNotEmpty) {
-              print('🔍 First question structure: ${_questions[0]}');
-            }
-            // Update text controllers with existing answers
-            _updateTextControllers();
-            // Set to first unanswered question
-            int firstUnanswered = 0;
-            for (int i = 0; i < _questions.length; i++) {
-              final qid = _questions[i]['id'].toString();
-              if (!_answers.containsKey(qid) || (_answers[qid]?.trim().isEmpty ?? true)) {
-                firstUnanswered = i;
-                break;
-              }
-            }
-            _currentQuestionIndex = firstUnanswered;
-            // Animate to the correct page if the PageController is ready
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (_pageController.hasClients) {
-                _pageController.jumpToPage(_currentQuestionIndex);
-              }
-            });
-          });
-          return;
-        } catch (e) {
-          print('Failed to load draft ${widget.draftId}: $e');
-          rethrow; // Re-throw to show error to user
-        }
-      }
-      
-      // If we have a templateId, try to start/resume a draft for that template
-      if (widget.templateId != null) {
-        try {
-          print('🔄 Starting draft for template: ${widget.templateId}');
-          final draft = await _apiService.startDraft(widget.templateId!);
-          print('✅ Draft started successfully: ${draft['id']}');
-          setState(() {
-            _currentDraft = draft;
-            // Load existing answers
-            final existingAnswers = draft['answers'] as Map<String, dynamic>? ?? {};
-            _answers = existingAnswers.map((key, value) => MapEntry(key, value.toString()));
-            // Load questions from the draft response
-            final questionsFromDraft = draft['questions'] as List<dynamic>? ?? [];
-            _questions = questionsFromDraft.cast<Map<String, dynamic>>();
-            _isLoading = false; // Set loading to false since we loaded questions from draft
-            print('📝 Loaded ${_questions.length} questions from draft for template ${widget.templateId}');
-            
-            // Debug: Print first question to see structure
-            if (_questions.isNotEmpty) {
-              print('🔍 First question structure: ${_questions[0]}');
-            }
-            
-            // Update text controllers with existing answers
-            _updateTextControllers();
-          });
-          return;
-        } catch (e) {
-          print('❌ Failed to start/resume draft for template: $e');
-          // Continue to fallback but log the issue
-        }
-      }
-      
-      // Try to get existing draft (fallback for legacy behavior)
       final draft = await _apiService.getCurrentDraft();
       setState(() {
         _currentDraft = draft;
-        // Load existing answers
         final existingAnswers = draft['answers'] as Map<String, dynamic>? ?? {};
         _answers = existingAnswers.map((key, value) => MapEntry(key, value.toString()));
-        // Update text controllers with existing answers
         _updateTextControllers();
       });
     } catch (e) {
-      print('No existing draft found, will create new one when saving: $e');
-      // No existing draft, will create one when saving
+      print('No existing draft found, will create one when saving: $e');
     }
   }
 
@@ -921,23 +930,14 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
                 content: const Text('Your assessment results are ready.'),
                 action: SnackBarAction(
                   label: 'VIEW RESULTS',
-                  onPressed: () async {
-                    // Fetch full results then navigate
-                    try {
-                      final full = await _apiService.getAssessmentResults(assessmentId);
-                      if (!mounted) return;
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => AssessmentResultsScreen(assessment: full),
-                        ),
-                      );
-                    } catch (e) {
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to open results: $e')),
-                      );
-                    }
+                  onPressed: () {
+                    if (!mounted) return;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ApprenticeReportScreen(assessmentId: assessmentId),
+                      ),
+                    );
                   },
                 ),
                 duration: const Duration(seconds: 6),
@@ -1023,7 +1023,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
           ),
         ),
         content: const Text(
-          'Are you ready to submit your final assessment for review? This will convert your draft into a completed assessment that your mentor can review. You won\'t be able to make changes after submission.',
+          'Are you ready to submit your final assessment for review? This will convert your draft into a completed assessment. You won\'t be able to make changes after submission.',
           style: TextStyle(
             color: Colors.white,
             fontFamily: 'Poppins',

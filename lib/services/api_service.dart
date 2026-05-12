@@ -23,7 +23,7 @@ class PremiumRequiredException implements Exception {
 /// • Android emulator → 10.0.2.2
 /// • iOS sim / Flutter Web → use host machine IP for Docker
 /// • Host machine → localhost or 127.0.0.1
-const String _devBaseUrl = 'https://trooth-discipleship-api-dev.onlyblv.com/';
+const String _devBaseUrl = 'https://trooth-discipleship-api.onlyblv.com/';
 
 class ApiService {
   /* ── Singleton ────────────────────────────────────────────────────── */
@@ -535,6 +535,21 @@ class ApiService {
     throw Exception('fetchMyFullReport failed (${r.statusCode})');
   }
 
+  /// Fetch full premium report for the current user's own assessment.
+  /// Works for any role (apprentice or mentor). Throws [PremiumRequiredException] if not premium.
+  Future<Map<String, dynamic>> fetchOwnFullReport({required String assessmentId}) async {
+    const tag = 'API-fetchOwnFullReport';
+    await _ensureFreshToken();
+    final path = '/assessments/$assessmentId/my-full-report';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    if (r.statusCode == 403) throw PremiumRequiredException('Premium subscription required for full reports');
+    if (r.statusCode == 404) throw Exception('Assessment not found');
+    throw Exception('fetchOwnFullReport failed (${r.statusCode})');
+  }
+
   /// Check if the current user has premium subscription
   /// Parses subscription_tier from /users/me endpoint
   /// Premium tiers: mentor_premium, apprentice_premium, mentor_gifted
@@ -879,6 +894,17 @@ class ApiService {
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body);
     throw Exception('submitDraft failed (${r.statusCode})');
+  }
+
+  Future<List<dynamic>> getMentorOwnAssessments() async {
+    const tag = 'API-getMentorOwnAssessments';
+    await _ensureFreshToken();
+    const path = '/assessments/self';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
+    throw Exception('getMentorOwnAssessments failed (${r.statusCode}) ${r.body}');
   }
 
   Future<Map<String, dynamic>> getAssessmentStatus(String assessmentId) async {
