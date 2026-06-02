@@ -19,6 +19,10 @@ import 'features/assessments/screens/mentor_submission_detail_screen.dart';
 import 'features/assessments/screens/mentor_report_v2_screen.dart';
 import 'features/assessments/data/assessments_repository.dart';
 import 'features/assessments/models/mentor_report_v2.dart';
+import 'screens/weekly_tip_detail_screen.dart';
+import 'screens/apprentice_weekly_tip_detail_screen.dart';
+import 'data/weekly_tips_data.dart';
+import 'data/apprentice_weekly_tips_data.dart';
 
 void main() {
   // Wrap everything so uncaught async errors surface in logs & UI.
@@ -199,9 +203,18 @@ void _handleNotificationTap(Map<String, dynamic> data) {
       break;
       
     case 'weekly_tip':
-      // Weekly tips are informational - just show the notification
-      // No navigation needed, user stays on current screen
-      debugPrint('🔔 Weekly tip notification - no navigation');
+      final isMentor = data['is_mentor'] != 'false';
+      if (isMentor) {
+        final tip = getCurrentWeekTip();
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(builder: (_) => WeeklyTipDetailScreen(tip: tip)),
+        );
+      } else {
+        final tip = getApprenticeCurrentWeekTip();
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(builder: (_) => ApprenticeWeeklyTipDetailScreen(tip: tip)),
+        );
+      }
       break;
       
     case 'invitation_received':
