@@ -65,17 +65,20 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
     if (!silent) setState(() { _isLoading = true; _error = null; });
     try {
       final data = await _api.triviaGetChallenge(widget.challengeId);
-      if (mounted) {
-        final wasMyTurn = _challenge?['is_my_turn'] as bool? ?? false;
-        final isNowMyTurn = data['is_my_turn'] as bool? ?? false;
-        setState(() {
-          _challenge = data;
-          _isLoading = false;
-          // If it just became our turn, start answering mode
-          if (!wasMyTurn && isNowMyTurn && !_isAnswering) {
-            _startAnswering();
-          }
-        });
+      if (!mounted) return;
+      final prevQIndex = _challenge?['current_question_index'] as int? ?? -1;
+      final newQIndex = data['current_question_index'] as int? ?? -1;
+      final isNowMyTurn = data['is_my_turn'] as bool? ?? false;
+      setState(() {
+        _challenge = data;
+        _isLoading = false;
+      });
+      // Start the answer timer when it's our turn and either:
+      // 1. We haven't started answering yet (transitioned from waiting state), OR
+      // 2. The question index advanced — both players answered the previous question
+      //    and the next question unlocked while is_my_turn stayed true.
+      if (isNowMyTurn && (!_isAnswering || prevQIndex != newQIndex)) {
+        _startAnswering();
       }
     } catch (e) {
       if (mounted) setState(() { _error = e.toString(); _isLoading = false; });

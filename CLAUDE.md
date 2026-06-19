@@ -45,3 +45,4 @@ Both must match the intended environment before building.
 |-------|---------|--------------|
 | `/deploy-dev` | "deploy to dev" | Builds backend image, deploys to Cloud Run dev, fixes frontend URLs to dev, rebuilds Flutter (flutter clean → pub get → pod install) |
 | `/deploy-prod` | "deploy to production", "release to prod" | Builds backend image, deploys to Cloud Run prod, fixes frontend URLs to prod, rebuilds Flutter (flutter clean → pub get → pod install) |
+| `/bump-version <version>` | "bump version", "update version to X.Y.Z" | Updates pubspec.yaml and Info.plist, commits the change |
