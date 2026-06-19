@@ -20,6 +20,7 @@ import 'mentor_resources_screen.dart';
 import 'mentor_spiritual_gifts_screen.dart';
 import '../utils/assessments.dart';
 import '../mixins/mentor_dashboard_tutorial.dart';
+import 'trivia_home_screen.dart';
 
 class MentorDashboardNew extends StatefulWidget {
   const MentorDashboardNew({super.key});
@@ -48,6 +49,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   // bool _loadingInactive = false; // Removed unused inactive apprentice state
   String? _error;
   int _activeNotificationCount = 0;
+  int _triviaPendingCount = 0;
   Timer? _notifTimer;
   
   // Subscription state
@@ -58,8 +60,16 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   @override
   void initState() {
     super.initState();
-  _tabController = TabController(length: 5, vsync: this); // Removed History tab; Resources now a tab
-    _tabController.addListener(() { if (mounted) setState(() {}); });
+  _tabController = TabController(length: 5, vsync: this); // Alerts moved to AppBar icon
+    _tabController.addListener(() {
+      if (mounted) {
+        setState(() {});
+        // Only fire once per tab switch — when animation has fully settled
+        if (!_tabController.indexIsChanging && _tabController.index == 4) {
+          _refreshTriviaPendingCount();
+        }
+      }
+    });
     _initializeAndLoadData();
     // Initialize tutorial after data loads
     initMentorTutorial();
@@ -82,6 +92,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
         _loadInactiveApprentices(),
         _refreshNotificationCount(),
         _loadSubscriptionData(),
+        _refreshTriviaPendingCount(),
       ]);
       _startNotificationPolling();
     } catch (e) {
@@ -128,9 +139,25 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
     }
   }
 
+  Future<void> _refreshTriviaPendingCount() async {
+    try {
+      final challenges = await _apiService.triviaListChallenges();
+      final count = challenges.where((c) {
+        final status = c['status'] as String? ?? '';
+        final isMyTurn = c['is_my_turn'] == true;
+        final myRole = c['my_role'] as String? ?? '';
+        return isMyTurn || (status == 'pending' && myRole == 'challenged');
+      }).length;
+      if (mounted) setState(() => _triviaPendingCount = count);
+    } catch (_) {}
+  }
+
   void _startNotificationPolling() {
     _notifTimer?.cancel();
-    _notifTimer = Timer.periodic(const Duration(seconds: 60), (_) => _refreshNotificationCount());
+    _notifTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      _refreshNotificationCount();
+      _refreshTriviaPendingCount();
+    });
   }
 
   @override
@@ -384,6 +411,39 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                 if (result == true) _loadSubscriptionData();
               },
             ),
+          Stack(
+            key: alertsTabKey,
+            alignment: Alignment.topRight,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications, color: Color(0xFFFFD700)),
+                tooltip: 'Alerts',
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => MentorNotificationsScreen(
+                      onActivity: () async { await _refreshNotificationCount(); },
+                    ),
+                  ),
+                ).then((_) => _refreshNotificationCount()),
+              ),
+              if (_activeNotificationCount > 0)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      _activeNotificationCount > 99 ? '99+' : _activeNotificationCount.toString(),
+                      style: const TextStyle(color: Colors.white, fontSize: 9, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+            ],
+          ),
           IconButton(
             key: profileButtonKey,
             icon: const Icon(Icons.account_circle, color: Color(0xFFFFD700)),
@@ -411,9 +471,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
           _buildAssessmentsTab(),
           const MentorAgreementsScreen(),
           const MentorResourcesScreen(),
-          MentorNotificationsScreen(
-            onActivity: () async { await _refreshNotificationCount(); },
-          ),
+          const TriviaHomeScreen(),
         ],
       ),
       bottomNavigationBar: Container(
@@ -455,30 +513,16 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                 label: 'Resources',
               ),
               BottomNavigationBarItem(
-                key: alertsTabKey,
-                icon: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    const Icon(Icons.notifications),
-                    if (_activeNotificationCount > 0)
-                      Positioned(
-                        right: -6,
-                        top: -4,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.redAccent,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            _activeNotificationCount > 99 ? '99+' : _activeNotificationCount.toString(),
-                            style: const TextStyle(color: Colors.white, fontSize: 9, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ),
-                  ],
+                icon: Badge(
+                  isLabelVisible: _triviaPendingCount > 0,
+                  backgroundColor: Colors.redAccent,
+                  label: Text(
+                    _triviaPendingCount > 9 ? '9+' : '$_triviaPendingCount',
+                    style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                  ),
+                  child: const Icon(Icons.quiz),
                 ),
-                label: 'Alerts',
+                label: 'Trivia',
               ),
             ],
           ),
