@@ -60,12 +60,12 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   @override
   void initState() {
     super.initState();
-  _tabController = TabController(length: 5, vsync: this); // Alerts moved to AppBar icon
+  _tabController = TabController(length: 4, vsync: this); // Alerts moved to AppBar icon
     _tabController.addListener(() {
       if (mounted) {
         setState(() {});
         // Only fire once per tab switch — when animation has fully settled
-        if (!_tabController.indexIsChanging && _tabController.index == 4) {
+        if (!_tabController.indexIsChanging && _tabController.index == 3) {
           _refreshTriviaPendingCount();
         }
       }
@@ -469,7 +469,6 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
         children: [
           _buildApprenticesTab(),
           _buildAssessmentsTab(),
-          const MentorAgreementsScreen(),
           const MentorResourcesScreen(),
           const TriviaHomeScreen(),
         ],
@@ -501,11 +500,6 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                 key: assessmentsTabKey,
                 icon: const Icon(Icons.assignment),
                 label: 'Assessments',
-              ),
-              BottomNavigationBarItem(
-                key: agreementsTabKey,
-                icon: const Icon(Icons.description),
-                label: 'Agreements',
               ),
               BottomNavigationBarItem(
                 key: resourcesTabKey,
@@ -870,6 +864,11 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
               case 'meeting':
                 await _showMeetingInfo(apprenticeId, email, name);
                 break;
+              case 'agreement':
+                await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MentorAgreementsScreen()),
+                );
+                break;
               case 'gift_premium':
                 final result = await Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const MentorGiftSeatsScreen()),
@@ -911,6 +910,16 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                   Icon(Icons.event, color: Colors.amber),
                   SizedBox(width: 8),
                   Text('Meeting Info', style: TextStyle(color: Colors.white)),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'agreement',
+              child: Row(
+                children: [
+                  Icon(Icons.description, color: Colors.amber),
+                  SizedBox(width: 8),
+                  Text('Manage Agreement', style: TextStyle(color: Colors.white)),
                 ],
               ),
             ),

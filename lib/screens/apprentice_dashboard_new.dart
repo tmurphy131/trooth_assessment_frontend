@@ -130,11 +130,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
   String? _error;
   String? _name; // backend 'name' field
   int _inviteCount = 0;
-  int _pendingAgreementCount = 0;
   int _triviaPendingCount = 0;
-
-  /// Total badge count = invites + pending agreements
-  int get _totalNotificationCount => _inviteCount + _pendingAgreementCount;
 
   @override
   void initState() {
@@ -148,7 +144,6 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
       _loadUserProfile(),
       _loadAssessments(),
       _loadInviteCount(),
-      _loadPendingAgreementCount(),
       _loadTriviaPendingCount(),
     ]);
   }
@@ -161,18 +156,6 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
       if (mounted) setState(() { _inviteCount = invites.length; });
     } catch (e) {
       debugPrint('Failed to load invites: $e');
-    }
-  }
-
-  Future<void> _loadPendingAgreementCount() async {
-    try {
-      final agreements = await _apiService.listMyAgreements();
-      final pendingCount = agreements
-          .where((a) => a['status'] == 'awaiting_apprentice')
-          .length;
-      if (mounted) setState(() { _pendingAgreementCount = pendingCount; });
-    } catch (e) {
-      debugPrint('Failed to load pending agreements: $e');
     }
   }
 
@@ -303,14 +286,10 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
               tooltip: 'Invitations',
               onPressed: () async {
                 _viewInvitations();
-                // Refresh both counts after returning from invitations screen
-                await Future.wait([
-                  _loadInviteCount(),
-                  _loadPendingAgreementCount(),
-                ]);
+                await _loadInviteCount();
               },
             ),
-            if (_totalNotificationCount > 0)
+            if (_inviteCount > 0)
               Positioned(
                 right: 6,
                 top: 6,
@@ -321,7 +300,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    _totalNotificationCount.toString(),
+                    _inviteCount.toString(),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 10,
