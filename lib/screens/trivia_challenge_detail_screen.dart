@@ -73,12 +73,14 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
         _challenge = data;
         _isLoading = false;
       });
-      // Start the answer timer when it's our turn and either:
-      // 1. We haven't started answering yet (transitioned from waiting state), OR
-      // 2. The question index advanced — both players answered the previous question
-      //    and the next question unlocked while is_my_turn stayed true.
       if (isNowMyTurn && (!_isAnswering || prevQIndex != newQIndex)) {
+        // Start the answer timer when it's our turn and either:
+        // 1. We haven't started answering yet (transitioned from waiting state), OR
+        // 2. The question index advanced — both players answered the previous question.
         _startAnswering();
+      } else if (!isNowMyTurn && _isAnswering) {
+        // We submitted our answer; server confirmed it's no longer our turn.
+        _stopAnswering();
       }
     } catch (e) {
       if (mounted) setState(() { _error = e.toString(); _isLoading = false; });
@@ -210,8 +212,56 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
     return qs.cast<Map<String, dynamic>>();
   }
 
+  Future<void> _quitChallenge() async {
+    final status = _challenge?['status'] as String? ?? '';
+    final currentQIdx = _challenge?['current_question_index'] as int? ?? 0;
+    final gameStarted = status == 'active' && currentQIdx > 0;
+
+    final title = gameStarted ? 'Forfeit Challenge?' : 'Cancel Challenge?';
+    final body = gameStarted
+        ? 'You\'ll take a loss and your opponent will be declared the winner. Are you sure?'
+        : 'This will cancel the challenge. No win or loss will be recorded.';
+    final actionLabel = gameStarted ? 'Forfeit' : 'Cancel Challenge';
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: Text(title, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+        content: Text(body, style: const TextStyle(color: Colors.white70, fontFamily: 'Poppins')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Stay')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(actionLabel, style: const TextStyle(color: Colors.redAccent, fontFamily: 'Poppins')),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    try {
+      if (gameStarted) {
+        await _api.triviaForfeitChallenge(widget.challengeId);
+      } else {
+        await _api.triviaCancelChallenge(widget.challengeId);
+      }
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final status = _challenge?['status'] as String?;
+    final myRole = _challenge?['my_role'] as String?;
+    final canQuit = status == 'active' || (status == 'pending' && myRole == 'challenger');
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -223,6 +273,12 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
         ),
         actions: [
           IconButton(icon: const Icon(Icons.refresh, color: Color(0xFFFFD700)), onPressed: () => _load()),
+          if (canQuit)
+            IconButton(
+              icon: const Icon(Icons.exit_to_app, color: Colors.white54),
+              tooltip: 'Quit challenge',
+              onPressed: _quitChallenge,
+            ),
         ],
       ),
       body: _isLoading
@@ -378,14 +434,14 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Question $current / $total', style: const TextStyle(color: Colors.white54, fontFamily: 'Poppins', fontSize: 12)),
+            Text('Question ${current + 1} / $total', style: const TextStyle(color: Colors.white54, fontFamily: 'Poppins', fontSize: 12)),
           ],
         ),
         const SizedBox(height: 6),
         ClipRRect(
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
-            value: total > 0 ? current / total : 0,
+            value: total > 0 ? (current + 1) / total : 0,
             backgroundColor: Colors.grey[800],
             valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
             minHeight: 4,
@@ -454,8 +510,9 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
     );
 
     if (qState.isEmpty) {
-      // My answer already submitted — waiting for opponent reveal
-      return _waitingCard('Your answer has been submitted. Waiting for your opponent…');
+      // Question not yet available — backend may still be syncing. Auto-retry.
+      Future.microtask(() { if (mounted) _load(silent: true); });
+      return _waitingCard('Loading next question…');
     }
 
     final myAnswer = qState['my_answer'] as String?;

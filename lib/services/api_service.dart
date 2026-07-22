@@ -2786,6 +2786,26 @@ class ApiService {
     if (r.statusCode != 200) throw Exception('triviaDeclineChallenge failed (${r.statusCode}) ${r.body}');
   }
 
+  Future<void> triviaCancelChallenge(String challengeId) async {
+    const tag = 'API-triviaCancelChallenge';
+    await _ensureFreshToken();
+    final path = '/trivia/challenges/$challengeId';
+    _logReq(tag, 'DELETE', path);
+    final r = await http.delete(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode != 200) throw Exception('triviaCancelChallenge failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<void> triviaForfeitChallenge(String challengeId) async {
+    const tag = 'API-triviaForfeitChallenge';
+    await _ensureFreshToken();
+    final path = '/trivia/challenges/$challengeId/forfeit';
+    _logReq(tag, 'POST', path);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode != 200) throw Exception('triviaForfeitChallenge failed (${r.statusCode}) ${r.body}');
+  }
+
   Future<Map<String, dynamic>> triviaSubmitChallengeAnswer(
     String challengeId,
     Map<String, dynamic> answer,
@@ -2809,16 +2829,6 @@ class ApiService {
     final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode != 200) throw Exception('triviaNudge failed (${r.statusCode}) ${r.body}');
-  }
-
-  Future<void> triviaCancelChallenge(String challengeId) async {
-    const tag = 'API-triviaCancelChallenge';
-    await _ensureFreshToken();
-    final path = '/trivia/challenges/$challengeId';
-    _logReq(tag, 'DELETE', path);
-    final r = await http.delete(Uri.parse('$_base$path'), headers: _headers());
-    _logRes(tag, r);
-    if (r.statusCode != 200) throw Exception('triviaCancelChallenge failed (${r.statusCode}) ${r.body}');
   }
 
   Future<Map<String, dynamic>> triviaGetProfile(String userId) async {
