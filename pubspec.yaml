@@ -58,7 +58,7 @@ dependencies:
   tutorial_coach_mark: ^1.2.11
   firebase_messaging: ^15.1.6
   flutter_local_notifications: ^18.0.1
-  purchases_flutter: ^8.5.1  # RevenueCat SDK for subscription management
+  purchases_flutter: ^10.4.2  # RevenueCat SDK for subscription management (bundles Google Play Billing Library 8.x)
 
 dev_dependencies:
   flutter_test:

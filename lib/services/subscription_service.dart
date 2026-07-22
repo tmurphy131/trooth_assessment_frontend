@@ -398,12 +398,15 @@ class SubscriptionService extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      final result = await Purchases.purchasePackage(package);
-      
+      // purchases_flutter 9+ returns a PurchaseResult; the updated
+      // CustomerInfo lives on the .customerInfo field.
+      final purchaseResult = await Purchases.purchasePackage(package);
+      final customerInfo = purchaseResult.customerInfo;
+
       // Check if purchase granted premium entitlement
-      if (result.entitlements.active.containsKey('premium')) {
+      if (customerInfo.entitlements.active.containsKey('premium')) {
         // Sync full entitlement info to backend
-        await _syncSubscriptionToBackend(result);
+        await _syncSubscriptionToBackend(customerInfo);
         await refreshStatus();
         return true;
       }
@@ -533,8 +536,10 @@ class SubscriptionService extends ChangeNotifier {
       dev.log('SubscriptionService: Purchasing gift seat package: ${giftSeatPackage.storeProduct.identifier}');
 
       // Purchase the gift seat subscription
-      final result = await Purchases.purchasePackage(giftSeatPackage);
-      
+      // purchases_flutter 9+ returns a PurchaseResult; unwrap the CustomerInfo.
+      final purchaseResult = await Purchases.purchasePackage(giftSeatPackage);
+      final result = purchaseResult.customerInfo;
+
       // Debug: Log all entitlements after purchase
       dev.log('SubscriptionService: Purchase result - active entitlements: ${result.entitlements.active.keys.toList()}');
       for (final entry in result.entitlements.active.entries) {

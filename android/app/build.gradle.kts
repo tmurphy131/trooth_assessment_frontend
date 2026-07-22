@@ -39,7 +39,7 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 24  // Android 7.0 - supports ~98% of devices
-        targetSdk = 35  // Android 15 - required by Google Play as of Aug 2025
+        targetSdk = 36  // Android 16 - required by Google Play as of Aug 31, 2026
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         // Required for flutter_local_notifications
