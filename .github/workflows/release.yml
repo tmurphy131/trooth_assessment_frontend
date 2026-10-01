@@ -3,12 +3,20 @@ name: Release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Which store(s) to build and upload
+        type: choice
+        options: [both, ios, android]
+        default: both
 
 env:
   API_BASE_URL: https://trooth-discipleship-api.onlyblv.com/
 
 jobs:
   android:
+    if: github.event_name == 'push' || inputs.platform != 'ios'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,6 +41,7 @@ jobs:
           status: completed
 
   ios:
+    if: github.event_name == 'push' || inputs.platform != 'android'
     runs-on: macos-15
     steps:
       # Don't persist GITHUB_TOKEN in git config: match adds its own
@@ -44,6 +53,16 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with: { ruby-version: '3.3', bundler-cache: true, working-directory: ios }
       - run: flutter pub get && cd ios && pod install
+      # match expects base64("user:token"); accept a raw github_pat_ token too.
+      - name: Prepare match git auth
+        env:
+          MATCH_AUTH: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+        run: |
+          case "$MATCH_AUTH" in
+            github_pat_*|ghp_*) MATCH_AUTH=$(printf '%s' "tmurphy131:$MATCH_AUTH" | base64 | tr -d '\n') ;;
+          esac
+          echo "::add-mask::$MATCH_AUTH"
+          echo "MATCH_GIT_BASIC_AUTHORIZATION=$MATCH_AUTH" >> "$GITHUB_ENV"
       - run: bundle exec fastlane beta
         working-directory: ios
         env:
@@ -51,4 +70,3 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
