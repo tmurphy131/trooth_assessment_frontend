@@ -69,7 +69,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
         final token = await user!.getIdToken();
         print('🔑 Token obtained: ${token?.substring(0, 20) ?? 'null'}...');
         _apiService.bearerToken = token;
-        print('🔗 API Base URL: ${_apiService.baseUrlOverride ?? 'http://127.0.0.1:8000'}');
+        print('🔗 API Base URL: ${_apiService.baseUrl}');
       } else {
         print('❌ No user found! Cannot authenticate API calls.');
         setState(() {

@@ -33,7 +33,7 @@ class _AgreementSignPublicScreenState extends State<AgreementSignPublicScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       // Using public endpoints directly (no auth required); not yet exposed in ApiService
-      final uri = Uri.parse('${_api.baseUrlOverride ?? ''}/agreements/public/${widget.token}');
+      final uri = Uri.parse('${_api.baseUrl}/agreements/public/${widget.token}');
       final r = await ApiServiceHttpShim.get(uri); // see shim below
       if (r.statusCode == 200) {
         setState(() { _agreement = r.jsonBody; _loading = false; });
@@ -49,7 +49,7 @@ class _AgreementSignPublicScreenState extends State<AgreementSignPublicScreen> {
     if (_typedNameCtrl.text.trim().isEmpty) return;
     setState(() { _signing = true; _error = null; });
     try {
-      final uri = Uri.parse('${_api.baseUrlOverride ?? ''}/agreements/public/${widget.token}/sign');
+      final uri = Uri.parse('${_api.baseUrl}/agreements/public/${widget.token}/sign');
       final r = await ApiServiceHttpShim.post(uri, {'typed_name': _typedNameCtrl.text.trim()});
       if (r.statusCode == 200) {
         setState(() { _agreement = r.jsonBody; });

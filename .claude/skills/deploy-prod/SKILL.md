@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 ## What This Skill Does
 
-Deploys the backend to the GCloud production environment and prepares the Flutter frontend to point at the prod API. Runs four phases in order: build → deploy → frontend URL fix → Flutter rebuild.
+Deploys the backend to the GCloud production environment and prepares the Flutter frontend to point at the prod API. Runs four phases in order: build → deploy → frontend URL check → Flutter rebuild.
 
 ---
 
@@ -51,21 +51,16 @@ Do not proceed until the user decides.
 
 ---
 
-## Step 3 — Verify and Fix Frontend API URLs
+## Step 3 — Frontend API URL (no edit needed)
 
-The prod API base URL must be: `https://trooth-discipleship-api.onlyblv.com/`
+The frontend picks its backend at build time via `--dart-define=API_BASE_URL=...` (see `lib/services/api_service.dart`). The default is dev; do **not** change it. Prod store builds come from the GitHub Actions release workflow, which passes the prod URL.
 
-Check both files:
+If the user wants a local prod build, remind them to pass the define:
 
-**File 1:** `lib/services/api_service.dart` line ~22
-- Must read: `const String _devBaseUrl = 'https://trooth-discipleship-api.onlyblv.com/';`
-- If it contains any other URL, replace that URL with the prod URL.
-
-**File 2:** `lib/main.dart` line ~129
-- Must read: `ApiService().baseUrlOverride = 'https://trooth-discipleship-api.onlyblv.com/';`
-- If it contains any other URL on that line, replace it with the prod URL.
-
-Use the Edit tool to make the replacements. Report what was changed (or confirm no change was needed).
+```
+flutter build ipa --release --dart-define=API_BASE_URL=https://trooth-discipleship-api.onlyblv.com/
+flutter run --dart-define=API_BASE_URL=https://trooth-discipleship-api.onlyblv.com/
+```
 
 ---
 
@@ -114,7 +109,7 @@ After all steps complete, print a summary:
 
 - [x] Backend image built
 - [x] Deployed to Cloud Run (trooth-backend, us-east4)
-- [x] Frontend API URLs verified → prod
+- [x] Frontend API URL: prod via --dart-define (no edit)
 - [x] DerivedData: [cleaned / skipped — X GB free]
 - [x] flutter clean + pub get
 - [x] pod install

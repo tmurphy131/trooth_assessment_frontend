@@ -19,7 +19,13 @@ class PremiumRequiredException implements Exception {
   String toString() => message;
 }
 
-const String _devBaseUrl = 'https://trooth-discipleship-api.onlyblv.com/';
+/// Backend URL, chosen at build time:
+/// `flutter build ipa --dart-define=API_BASE_URL=https://trooth-discipleship-api.onlyblv.com/`
+/// Defaults to dev so local `flutter run` never hits prod.
+const String _defaultBaseUrl = String.fromEnvironment(
+  'API_BASE_URL',
+  defaultValue: 'https://trooth-discipleship-api-dev.onlyblv.com/',
+);
 
 class ApiService {
   /* ── Singleton ────────────────────────────────────────────────────── */
@@ -31,7 +37,8 @@ class ApiService {
   /// Override for e2e / staging builds before the first call:
   /// `ApiService().baseUrlOverride = 'https://api.prod.trooth.app';`
   String? baseUrlOverride;
-  String get _base => baseUrlOverride ?? _devBaseUrl;
+  String get _base => baseUrlOverride ?? _defaultBaseUrl;
+  String get baseUrl => _base;
 
   /// Set after Firebase sign-in:
   /// `ApiService().bearerToken = await user.getIdToken();`
