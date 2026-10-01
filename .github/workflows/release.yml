@@ -29,13 +29,16 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.trooth.flutterTroothAssessment
           releaseFiles: build/app/outputs/bundle/release/app-release.aab
-          track: internal
+          tracks: internal
           status: completed
 
   ios:
     runs-on: macos-15
     steps:
+      # Don't persist GITHUB_TOKEN in git config: match adds its own
+      # Authorization header, and two headers make GitHub return HTTP 400.
       - uses: actions/checkout@v4
+        with: { persist-credentials: false }
       - uses: subosito/flutter-action@v2
         with: { channel: stable, flutter-version: '3.47.5', cache: true }
       - uses: ruby/setup-ruby@v1
