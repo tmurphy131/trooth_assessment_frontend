@@ -19,11 +19,7 @@ class PremiumRequiredException implements Exception {
   String toString() => message;
 }
 
-/// Default dev URL
-/// • Android emulator → 10.0.2.2
-/// • iOS sim / Flutter Web → use host machine IP for Docker
-/// • Host machine → localhost or 127.0.0.1
-const String _devBaseUrl = 'https://trooth-discipleship-api-dev.onlyblv.com/';
+const String _devBaseUrl = 'https://trooth-discipleship-api.onlyblv.com/';
 
 class ApiService {
   /* ── Singleton ────────────────────────────────────────────────────── */
@@ -535,6 +531,21 @@ class ApiService {
     throw Exception('fetchMyFullReport failed (${r.statusCode})');
   }
 
+  /// Fetch full premium report for the current user's own assessment.
+  /// Works for any role (apprentice or mentor). Throws [PremiumRequiredException] if not premium.
+  Future<Map<String, dynamic>> fetchOwnFullReport({required String assessmentId}) async {
+    const tag = 'API-fetchOwnFullReport';
+    await _ensureFreshToken();
+    final path = '/assessments/$assessmentId/my-full-report';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    if (r.statusCode == 403) throw PremiumRequiredException('Premium subscription required for full reports');
+    if (r.statusCode == 404) throw Exception('Assessment not found');
+    throw Exception('fetchOwnFullReport failed (${r.statusCode})');
+  }
+
   /// Check if the current user has premium subscription
   /// Parses subscription_tier from /users/me endpoint
   /// Premium tiers: mentor_premium, apprentice_premium, mentor_gifted
@@ -879,6 +890,17 @@ class ApiService {
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body);
     throw Exception('submitDraft failed (${r.statusCode})');
+  }
+
+  Future<List<dynamic>> getMentorOwnAssessments() async {
+    const tag = 'API-getMentorOwnAssessments';
+    await _ensureFreshToken();
+    const path = '/assessments/self';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
+    throw Exception('getMentorOwnAssessments failed (${r.statusCode}) ${r.body}');
   }
 
   Future<Map<String, dynamic>> getAssessmentStatus(String assessmentId) async {
@@ -2660,5 +2682,174 @@ class ApiService {
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     if (r.statusCode == 404) return {}; // No gifted subscription
     throw Exception('getApprenticeSubscriptionSource failed (${r.statusCode}) ${r.body}');
+  }
+
+  /* ─────────────────────────────────────────────────────────────────── */
+  /*  🎮  Trivia                                                          */
+  /* ─────────────────────────────────────────────────────────────────── */
+
+  Future<List<Map<String, dynamic>>> triviaDrawQuestions({
+    required String category,
+    required String difficulty,
+    int count = 20,
+  }) async {
+    const tag = 'API-triviaDrawQuestions';
+    await _ensureFreshToken();
+    final path = '/trivia/questions/draw?category=$category&difficulty=$difficulty&count=$count';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return List<Map<String, dynamic>>.from(jsonDecode(r.body));
+    throw Exception('triviaDrawQuestions failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<Map<String, dynamic>> triviaSubmitSingleGame(Map<String, dynamic> payload) async {
+    const tag = 'API-triviaSubmitSingleGame';
+    await _ensureFreshToken();
+    const path = '/trivia/single/submit';
+    _logReq(tag, 'POST', path, payload);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('triviaSubmitSingleGame failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<List<Map<String, dynamic>>> triviaGetLeaderboard({
+    String? category,
+    String? difficulty,
+    int limit = 50,
+  }) async {
+    const tag = 'API-triviaGetLeaderboard';
+    await _ensureFreshToken();
+    final params = <String>[];
+    if (category != null) params.add('category=$category');
+    if (difficulty != null) params.add('difficulty=$difficulty');
+    params.add('limit=$limit');
+    final path = '/trivia/leaderboard?${params.join('&')}';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return List<Map<String, dynamic>>.from(jsonDecode(r.body));
+    throw Exception('triviaGetLeaderboard failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<Map<String, dynamic>> triviaCreateChallenge(Map<String, dynamic> payload) async {
+    const tag = 'API-triviaCreateChallenge';
+    await _ensureFreshToken();
+    const path = '/trivia/challenges';
+    _logReq(tag, 'POST', path, payload);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('triviaCreateChallenge failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<List<Map<String, dynamic>>> triviaListChallenges() async {
+    const tag = 'API-triviaListChallenges';
+    await _ensureFreshToken();
+    const path = '/trivia/challenges';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return List<Map<String, dynamic>>.from(jsonDecode(r.body));
+    throw Exception('triviaListChallenges failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<Map<String, dynamic>> triviaGetChallenge(String challengeId) async {
+    const tag = 'API-triviaGetChallenge';
+    await _ensureFreshToken();
+    final path = '/trivia/challenges/$challengeId';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('triviaGetChallenge failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<void> triviaAcceptChallenge(String challengeId) async {
+    const tag = 'API-triviaAcceptChallenge';
+    await _ensureFreshToken();
+    final path = '/trivia/challenges/$challengeId/accept';
+    _logReq(tag, 'POST', path);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode != 200) throw Exception('triviaAcceptChallenge failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<void> triviaDeclineChallenge(String challengeId) async {
+    const tag = 'API-triviaDeclineChallenge';
+    await _ensureFreshToken();
+    final path = '/trivia/challenges/$challengeId/decline';
+    _logReq(tag, 'POST', path);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode != 200) throw Exception('triviaDeclineChallenge failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<void> triviaCancelChallenge(String challengeId) async {
+    const tag = 'API-triviaCancelChallenge';
+    await _ensureFreshToken();
+    final path = '/trivia/challenges/$challengeId';
+    _logReq(tag, 'DELETE', path);
+    final r = await http.delete(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode != 200) throw Exception('triviaCancelChallenge failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<void> triviaForfeitChallenge(String challengeId) async {
+    const tag = 'API-triviaForfeitChallenge';
+    await _ensureFreshToken();
+    final path = '/trivia/challenges/$challengeId/forfeit';
+    _logReq(tag, 'POST', path);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode != 200) throw Exception('triviaForfeitChallenge failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<Map<String, dynamic>> triviaSubmitChallengeAnswer(
+    String challengeId,
+    Map<String, dynamic> answer,
+  ) async {
+    const tag = 'API-triviaSubmitChallengeAnswer';
+    await _ensureFreshToken();
+    final path = '/trivia/challenges/$challengeId/answer';
+    final payload = {'answer': answer};
+    _logReq(tag, 'POST', path, payload);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('triviaSubmitChallengeAnswer failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<void> triviaNudge(String challengeId) async {
+    const tag = 'API-triviaNudge';
+    await _ensureFreshToken();
+    final path = '/trivia/challenges/$challengeId/nudge';
+    _logReq(tag, 'POST', path);
+    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode != 200) throw Exception('triviaNudge failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<Map<String, dynamic>> triviaGetProfile(String userId) async {
+    const tag = 'API-triviaGetProfile';
+    await _ensureFreshToken();
+    final path = '/trivia/profile/$userId';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('triviaGetProfile failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<Map<String, dynamic>> triviaGetConnections() async {
+    const tag = 'API-triviaGetConnections';
+    await _ensureFreshToken();
+    const path = '/trivia/connections';
+    _logReq(tag, 'GET', path);
+    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    _logRes(tag, r);
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    throw Exception('triviaGetConnections failed (${r.statusCode}) ${r.body}');
   }
 }

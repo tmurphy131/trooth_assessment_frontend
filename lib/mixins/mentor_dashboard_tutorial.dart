@@ -13,7 +13,6 @@ mixin MentorDashboardTutorial<T extends StatefulWidget> on State<T> {
   // Global keys for tutorial targets
   final GlobalKey apprenticesTabKey = GlobalKey();
   final GlobalKey assessmentsTabKey = GlobalKey();
-  final GlobalKey agreementsTabKey = GlobalKey();
   final GlobalKey resourcesTabKey = GlobalKey();
   final GlobalKey alertsTabKey = GlobalKey();
   final GlobalKey inviteButtonKey = GlobalKey();
@@ -98,17 +97,6 @@ mixin MentorDashboardTutorial<T extends StatefulWidget> on State<T> {
         title: 'Assessments Tab',
         description: 'Track all completed assessments here. Review detailed reports, see AI-generated insights, and identify areas to focus on with each apprentice.',
         icon: Icons.assignment,
-        contentAlign: ContentAlign.bottom,
-      ));
-    }
-
-    // Agreements tab
-    if (agreementsTabKey.currentContext != null) {
-      targets.add(TutorialService.createTarget(
-        key: agreementsTabKey,
-        title: 'Agreements Tab',
-        description: 'Manage mentorship agreements. Create new agreements, track signing progress, and maintain clear expectations with your apprentices.',
-        icon: Icons.description,
         contentAlign: ContentAlign.bottom,
       ));
     }

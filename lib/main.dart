@@ -19,6 +19,11 @@ import 'features/assessments/screens/mentor_submission_detail_screen.dart';
 import 'features/assessments/screens/mentor_report_v2_screen.dart';
 import 'features/assessments/data/assessments_repository.dart';
 import 'features/assessments/models/mentor_report_v2.dart';
+import 'screens/weekly_tip_detail_screen.dart';
+import 'screens/apprentice_weekly_tip_detail_screen.dart';
+import 'data/weekly_tips_data.dart';
+import 'data/apprentice_weekly_tips_data.dart';
+import 'screens/trivia_challenge_detail_screen.dart';
 
 void main() {
   // Wrap everything so uncaught async errors surface in logs & UI.
@@ -121,7 +126,7 @@ void main() {
 
   // Point the frontend to the deployed backend for development/testing.
   // Update this URL if you deploy to a different host.
-  ApiService().baseUrlOverride = 'https://trooth-discipleship-api-dev.onlyblv.com/';
+  ApiService().baseUrlOverride = 'https://trooth-discipleship-api.onlyblv.com/';
 
   // Quick connectivity check at startup — logs the backend response.
   try {
@@ -199,9 +204,18 @@ void _handleNotificationTap(Map<String, dynamic> data) {
       break;
       
     case 'weekly_tip':
-      // Weekly tips are informational - just show the notification
-      // No navigation needed, user stays on current screen
-      debugPrint('🔔 Weekly tip notification - no navigation');
+      final isMentor = data['is_mentor'] != 'false';
+      if (isMentor) {
+        final tip = getCurrentWeekTip();
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(builder: (_) => WeeklyTipDetailScreen(tip: tip)),
+        );
+      } else {
+        final tip = getApprenticeCurrentWeekTip();
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(builder: (_) => ApprenticeWeeklyTipDetailScreen(tip: tip)),
+        );
+      }
       break;
       
     case 'invitation_received':
@@ -219,6 +233,21 @@ void _handleNotificationTap(Map<String, dynamic> data) {
       }
       break;
       
+    case 'trivia_challenge_received':
+    case 'trivia_question_unlocked':
+    case 'trivia_challenge_result':
+    case 'trivia_nudge':
+    case 'trivia_challenge_expired':
+      final challengeId = data['challenge_id'] as String?;
+      if (challengeId != null) {
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (_) => TriviaChallengeDetailScreen(challengeId: challengeId),
+          ),
+        );
+      }
+      break;
+
     default:
       debugPrint('🔔 Unknown notification type: $type');
   }
@@ -314,6 +343,17 @@ class MyApp extends StatelessWidget {
             );
           });
         }
+        // /trivia/challenges/:challengeId — deep link from push notifications
+        if (uri.pathSegments.length == 3 &&
+            uri.pathSegments[0] == 'trivia' &&
+            uri.pathSegments[1] == 'challenges') {
+          final challengeId = uri.pathSegments[2];
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => TriviaChallengeDetailScreen(challengeId: challengeId),
+          );
+        }
+
         return null; // fall back to unknown
       },
       ),

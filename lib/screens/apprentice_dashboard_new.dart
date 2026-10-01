@@ -16,6 +16,7 @@ import 'progress_screen.dart';
 import 'apprentice_resources_screen.dart';
 import 'apprentice_profile_screen.dart';
 import 'subscription_screen.dart';
+import 'trivia_home_screen.dart';
 
 class ApprenticeDashboardNew extends StatefulWidget {
   const ApprenticeDashboardNew({super.key});
@@ -129,10 +130,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
   String? _error;
   String? _name; // backend 'name' field
   int _inviteCount = 0;
-  int _pendingAgreementCount = 0;
-
-  /// Total badge count = invites + pending agreements
-  int get _totalNotificationCount => _inviteCount + _pendingAgreementCount;
+  int _triviaPendingCount = 0;
 
   @override
   void initState() {
@@ -146,7 +144,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
       _loadUserProfile(),
       _loadAssessments(),
       _loadInviteCount(),
-      _loadPendingAgreementCount(),
+      _loadTriviaPendingCount(),
     ]);
   }
 
@@ -161,16 +159,17 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
     }
   }
 
-  Future<void> _loadPendingAgreementCount() async {
+  Future<void> _loadTriviaPendingCount() async {
     try {
-      final agreements = await _apiService.listMyAgreements();
-      final pendingCount = agreements
-          .where((a) => a['status'] == 'awaiting_apprentice')
-          .length;
-      if (mounted) setState(() { _pendingAgreementCount = pendingCount; });
-    } catch (e) {
-      debugPrint('Failed to load pending agreements: $e');
-    }
+      final challenges = await _apiService.triviaListChallenges();
+      final count = challenges.where((c) {
+        final status = c['status'] as String? ?? '';
+        final isMyTurn = c['is_my_turn'] == true;
+        final myRole = c['my_role'] as String? ?? '';
+        return isMyTurn || (status == 'pending' && myRole == 'challenged');
+      }).length;
+      if (mounted) setState(() => _triviaPendingCount = count);
+    } catch (_) {}
   }
 
   String _deriveDisplayName() {
@@ -251,6 +250,8 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
               height: 300,
               child: _buildQuickActions(),
             ),
+            const SizedBox(height: 12),
+            _buildTriviaTile(),
             const SizedBox(height: 20),
             Expanded(child: _buildRecentAssessments()),
           ],
@@ -285,14 +286,10 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
               tooltip: 'Invitations',
               onPressed: () async {
                 _viewInvitations();
-                // Refresh both counts after returning from invitations screen
-                await Future.wait([
-                  _loadInviteCount(),
-                  _loadPendingAgreementCount(),
-                ]);
+                await _loadInviteCount();
               },
             ),
-            if (_totalNotificationCount > 0)
+            if (_inviteCount > 0)
               Positioned(
                 right: 6,
                 top: 6,
@@ -303,7 +300,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    _totalNotificationCount.toString(),
+                    _inviteCount.toString(),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 10,
@@ -474,6 +471,75 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildTriviaTile() {
+    return GestureDetector(
+      onTap: () => Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => const TriviaHomeScreen()))
+          .then((_) => _loadTriviaPendingCount()),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.grey[850],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[800]!),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFD700).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Stack(
+                children: [
+                  const Center(child: Icon(Icons.quiz, color: Color(0xFFFFD700), size: 22)),
+                  if (_triviaPendingCount > 0)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          _triviaPendingCount > 9 ? '9+' : '$_triviaPendingCount',
+                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Bible Trivia',
+                    style: TextStyle(color: Color(0xFFFFD700), fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  Text(
+                    _triviaPendingCount > 0
+                        ? '$_triviaPendingCount challenge${_triviaPendingCount > 1 ? 's' : ''} waiting for you'
+                        : 'Test your knowledge & challenge others',
+                    style: TextStyle(color: Colors.grey[400], fontFamily: 'Poppins', fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: Colors.grey[600]),
+          ],
+        ),
+      ),
     );
   }
 

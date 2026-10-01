@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 import 'dart:developer' as dev;
-import '../widgets/base_dashboard.dart';
+import '../utils/logout_util.dart';
 import '../services/api_service.dart';
 import '../services/subscription_service.dart';
 import 'template_management_screen.dart';
 import 'apprentice_invite_screen.dart';
 import 'assessment_results_screen.dart';
+import 'assessment_screen.dart';
+import 'apprentice_report_screen.dart';
 import 'mentor_agreements_screen.dart';
 import 'mentor_notifications_screen.dart';
 import 'mentor_assessment_results_screen.dart';
@@ -18,6 +20,7 @@ import 'mentor_resources_screen.dart';
 import 'mentor_spiritual_gifts_screen.dart';
 import '../utils/assessments.dart';
 import '../mixins/mentor_dashboard_tutorial.dart';
+import 'trivia_home_screen.dart';
 
 class MentorDashboardNew extends StatefulWidget {
   const MentorDashboardNew({super.key});
@@ -35,6 +38,10 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   List<Map<String, dynamic>> _apprentices = [];
   // Inactive apprentice data moved to ApprenticeInviteScreen
   Map<String, List<Map<String, dynamic>>> _completedAssessmentsByApprentice = {};
+  List<Map<String, dynamic>> _mentorOwnAssessments = [];
+  bool _isLoadingMentorAssessments = true;
+  List<Map<String, dynamic>> _mentorOwnDrafts = [];
+  bool _isLoadingMentorDrafts = true;
   bool _isLoadingApprentices = true;
   bool _isLoadingAssessments = true;
   // Filter: '_all' sentinel means show all apprentices
@@ -42,6 +49,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   // bool _loadingInactive = false; // Removed unused inactive apprentice state
   String? _error;
   int _activeNotificationCount = 0;
+  int _triviaPendingCount = 0;
   Timer? _notifTimer;
   
   // Subscription state
@@ -52,7 +60,16 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   @override
   void initState() {
     super.initState();
-  _tabController = TabController(length: 5, vsync: this); // Removed History tab; Resources now a tab
+  _tabController = TabController(length: 4, vsync: this); // Alerts moved to AppBar icon
+    _tabController.addListener(() {
+      if (mounted) {
+        setState(() {});
+        // Only fire once per tab switch — when animation has fully settled
+        if (!_tabController.indexIsChanging && _tabController.index == 3) {
+          _refreshTriviaPendingCount();
+        }
+      }
+    });
     _initializeAndLoadData();
     // Initialize tutorial after data loads
     initMentorTutorial();
@@ -70,9 +87,12 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
       await _loadApprentices();
       await Future.wait([
         _loadCompletedAssessments(),
+        _loadMentorOwnAssessments(),
+        _loadMentorOwnDrafts(),
         _loadInactiveApprentices(),
         _refreshNotificationCount(),
         _loadSubscriptionData(),
+        _refreshTriviaPendingCount(),
       ]);
       _startNotificationPolling();
     } catch (e) {
@@ -119,9 +139,25 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
     }
   }
 
+  Future<void> _refreshTriviaPendingCount() async {
+    try {
+      final challenges = await _apiService.triviaListChallenges();
+      final count = challenges.where((c) {
+        final status = c['status'] as String? ?? '';
+        final isMyTurn = c['is_my_turn'] == true;
+        final myRole = c['my_role'] as String? ?? '';
+        return isMyTurn || (status == 'pending' && myRole == 'challenged');
+      }).length;
+      if (mounted) setState(() => _triviaPendingCount = count);
+    } catch (_) {}
+  }
+
   void _startNotificationPolling() {
     _notifTimer?.cancel();
-    _notifTimer = Timer.periodic(const Duration(seconds: 60), (_) => _refreshNotificationCount());
+    _notifTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      _refreshNotificationCount();
+      _refreshTriviaPendingCount();
+    });
   }
 
   @override
@@ -152,6 +188,144 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   }
 
   Future<void> _loadInactiveApprentices() async { /* no-op: feature relocated */ }
+
+  Future<void> _loadMentorOwnAssessments() async {
+    try {
+      final results = await _apiService.getMentorOwnAssessments();
+      if (mounted) setState(() {
+        _mentorOwnAssessments = results.cast<Map<String, dynamic>>();
+        _isLoadingMentorAssessments = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingMentorAssessments = false);
+    }
+  }
+
+  Future<void> _loadMentorOwnDrafts() async {
+    try {
+      final results = await _apiService.getAllDrafts();
+      if (mounted) setState(() {
+        _mentorOwnDrafts = results.cast<Map<String, dynamic>>();
+        _isLoadingMentorDrafts = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingMentorDrafts = false);
+    }
+  }
+
+  Future<void> _startSelfAssessment() async {
+    try {
+      final templates = await _apiService.getPublishedTemplates();
+      if (templates.isEmpty || !mounted) return;
+
+      Map<String, dynamic>? selected;
+      if (templates.length == 1) {
+        selected = templates.first as Map<String, dynamic>;
+      } else {
+        selected = await _showSelfAssessmentSelectionDialog(templates);
+      }
+      if (selected == null || !mounted) return;
+
+      final templateId = selected['id']?.toString();
+      if (templateId == null || !mounted) return;
+
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AssessmentScreen(templateId: templateId),
+        ),
+      );
+      // Always reload drafts (user may have saved progress without submitting)
+      _loadMentorOwnDrafts();
+      if (result == true) _loadMentorOwnAssessments();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not load assessment: $e')),
+      );
+    }
+  }
+
+  Future<Map<String, dynamic>?> _showSelfAssessmentSelectionDialog(List<dynamic> templates) {
+    return showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text(
+          'Choose Assessment',
+          style: TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: templates.length,
+            itemBuilder: (context, index) {
+              final template = templates[index] as Map<String, dynamic>;
+              final isMaster = template['is_master_assessment'] == true;
+              final isLocked = template['is_locked'] == true;
+              return Card(
+                color: isLocked
+                    ? Colors.grey[850]
+                    : (isMaster ? Colors.amber[700] : Colors.grey[800]),
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                child: ListTile(
+                  dense: true,
+                  leading: Icon(
+                    isLocked
+                        ? Icons.lock
+                        : (isMaster ? Icons.star : Icons.assignment),
+                    size: 22,
+                    color: isLocked
+                        ? Colors.grey
+                        : (isMaster ? Colors.white : Colors.amber),
+                  ),
+                  title: Text(
+                    template['name'] ?? 'Unnamed Assessment',
+                    style: TextStyle(
+                      color: isLocked ? Colors.grey : Colors.white,
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      fontWeight: isMaster ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                  subtitle: isLocked
+                      ? const Text(
+                          'Premium subscription required',
+                          style: TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontSize: 12),
+                        )
+                      : (template['description'] != null
+                          ? Text(
+                              template['description'],
+                              style: TextStyle(color: Colors.grey[400], fontFamily: 'Poppins', fontSize: 12),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            )
+                          : null),
+                  trailing: isLocked
+                      ? const Icon(Icons.workspace_premium, color: Colors.amber, size: 18)
+                      : null,
+                  onTap: isLocked
+                      ? () {
+                          Navigator.of(ctx).pop();
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+                          );
+                        }
+                      : () => Navigator.of(ctx).pop(template),
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey, fontFamily: 'Poppins')),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _loadCompletedAssessments() async {
     try {
@@ -209,82 +383,84 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
 
   @override
   Widget build(BuildContext context) {
-    return BaseDashboard(
-      logoHeight: 64,
-      additionalActions: [
-        // Premium badge indicator
-        if (_subscriptionService.isPremium)
-          const Padding(
-            padding: EdgeInsets.only(right: 4),
-            child: Icon(Icons.workspace_premium, color: Color(0xFFFFD700), size: 20),
-          ),
-        // Gift Seats icon - next to profile for premium mentors
-        if (_subscriptionService.isPremium)
-          IconButton(
-            icon: const Icon(Icons.card_giftcard, color: Color(0xFFFFD700)),
-            tooltip: 'Gift Seats',
-            onPressed: () async {
-              final result = await Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const MentorGiftSeatsScreen()),
-              );
-              if (result == true) {
-                _loadSubscriptionData();
-              }
-            },
-          ),
-        IconButton(
-          key: profileButtonKey,
-          icon: const Icon(Icons.account_circle, color: Color(0xFFFFD700)),
-          tooltip: 'My Profile',
-          onPressed: () async {
-            await Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const MentorProfileScreen()),
-            );
-            // Reload subscription and assessments in case tier changed in profile
-            dev.log('FREEMIUM DEBUG: Returning from profile, reloading data...');
-            await _loadSubscriptionData();
-            await _loadCompletedAssessments();
-          },
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        elevation: 0,
+        title: Image.asset(
+          'assets/logo.png',
+          height: 40,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => const Text('Trooth', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
         ),
-      ],
-      bottom: TabBar(
-        controller: _tabController,
-        indicatorColor: Colors.amber,
-        labelColor: Colors.amber,
-        unselectedLabelColor: Colors.grey[500],
-        labelStyle: const TextStyle(
-          fontFamily: 'Poppins',
-          fontWeight: FontWeight.bold,
-        ),
-        tabs: [
-          Tab(key: apprenticesTabKey, icon: const Icon(Icons.people), text: 'Apprentices'),
-          Tab(key: assessmentsTabKey, icon: const Icon(Icons.assignment), text: 'Assessments'),
-          Tab(key: agreementsTabKey, icon: const Icon(Icons.description), text: 'Agreements'),
-          Tab(key: resourcesTabKey, icon: const Icon(Icons.link), text: 'Resources'),
-          Tab(
+        actions: [
+          if (_subscriptionService.isPremium)
+            const Padding(
+              padding: EdgeInsets.only(right: 4),
+              child: Icon(Icons.workspace_premium, color: Color(0xFFFFD700), size: 20),
+            ),
+          if (_subscriptionService.isPremium)
+            IconButton(
+              icon: const Icon(Icons.card_giftcard, color: Color(0xFFFFD700)),
+              tooltip: 'Gift Seats',
+              onPressed: () async {
+                final result = await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MentorGiftSeatsScreen()),
+                );
+                if (result == true) _loadSubscriptionData();
+              },
+            ),
+          Stack(
             key: alertsTabKey,
-            icon: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Icon(Icons.notifications),
-                if (_activeNotificationCount > 0) Positioned(
-                  right: -6,
-                  top: -4,
+            alignment: Alignment.topRight,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications, color: Color(0xFFFFD700)),
+                tooltip: 'Alerts',
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => MentorNotificationsScreen(
+                      onActivity: () async { await _refreshNotificationCount(); },
+                    ),
+                  ),
+                ).then((_) => _refreshNotificationCount()),
+              ),
+              if (_activeNotificationCount > 0)
+                Positioned(
+                  right: 6,
+                  top: 6,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.redAccent,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       _activeNotificationCount > 99 ? '99+' : _activeNotificationCount.toString(),
-                      style: const TextStyle(color: Colors.white, fontSize: 10, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
+                      style: const TextStyle(color: Colors.white, fontSize: 9, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
-              ],
-            ),
-            text: 'Alerts',
+            ],
+          ),
+          IconButton(
+            key: profileButtonKey,
+            icon: const Icon(Icons.account_circle, color: Color(0xFFFFD700)),
+            tooltip: 'My Profile',
+            onPressed: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const MentorProfileScreen()),
+              );
+              dev.log('FREEMIUM DEBUG: Returning from profile, reloading data...');
+              await _loadSubscriptionData();
+              await _loadCompletedAssessments();
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white54),
+            tooltip: 'Sign Out',
+            onPressed: () => logoutAndRedirect(context),
           ),
         ],
       ),
@@ -293,12 +469,58 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
         children: [
           _buildApprenticesTab(),
           _buildAssessmentsTab(),
-            const MentorAgreementsScreen(),
           const MentorResourcesScreen(),
-          MentorNotificationsScreen(
-            onActivity: () async { await _refreshNotificationCount(); },
-          ),
+          const TriviaHomeScreen(),
         ],
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.grey[900],
+          border: Border(top: BorderSide(color: Colors.grey[800]!)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: BottomNavigationBar(
+            currentIndex: _tabController.index,
+            onTap: (i) => _tabController.animateTo(i),
+            backgroundColor: Colors.grey[900],
+            selectedItemColor: const Color(0xFFFFD700),
+            unselectedItemColor: Colors.grey[500],
+            type: BottomNavigationBarType.fixed,
+            elevation: 0,
+            selectedLabelStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 11),
+            unselectedLabelStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 11),
+            items: [
+              BottomNavigationBarItem(
+                key: apprenticesTabKey,
+                icon: const Icon(Icons.people),
+                label: 'Apprentices',
+              ),
+              BottomNavigationBarItem(
+                key: assessmentsTabKey,
+                icon: const Icon(Icons.assignment),
+                label: 'Assessments',
+              ),
+              BottomNavigationBarItem(
+                key: resourcesTabKey,
+                icon: const Icon(Icons.link),
+                label: 'Resources',
+              ),
+              BottomNavigationBarItem(
+                icon: Badge(
+                  isLabelVisible: _triviaPendingCount > 0,
+                  backgroundColor: Colors.redAccent,
+                  label: Text(
+                    _triviaPendingCount > 9 ? '9+' : '$_triviaPendingCount',
+                    style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                  ),
+                  child: const Icon(Icons.quiz),
+                ),
+                label: 'Trivia',
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -642,6 +864,11 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
               case 'meeting':
                 await _showMeetingInfo(apprenticeId, email, name);
                 break;
+              case 'agreement':
+                await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MentorAgreementsScreen()),
+                );
+                break;
               case 'gift_premium':
                 final result = await Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const MentorGiftSeatsScreen()),
@@ -683,6 +910,16 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                   Icon(Icons.event, color: Colors.amber),
                   SizedBox(width: 8),
                   Text('Meeting Info', style: TextStyle(color: Colors.white)),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'agreement',
+              child: Row(
+                children: [
+                  Icon(Icons.description, color: Colors.amber),
+                  SizedBox(width: 8),
+                  Text('Manage Agreement', style: TextStyle(color: Colors.white)),
                 ],
               ),
             ),
@@ -1016,6 +1253,213 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
 
   // Local minimal time holder (avoid importing apprentice screen private class)
 
+  void _confirmDeleteMentorDraft(String? draftId) {
+    if (draftId == null) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text(
+          'Delete Draft',
+          style: TextStyle(color: Colors.red, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Are you sure you want to delete this draft? This action cannot be undone.',
+          style: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey, fontFamily: 'Poppins')),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _deleteMentorDraft(draftId);
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteMentorDraft(String draftId) async {
+    try {
+      await _apiService.deleteDraft(draftId);
+      if (mounted) {
+        setState(() {
+          _mentorOwnDrafts.removeWhere((d) => d['id']?.toString() == draftId);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Draft deleted')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete draft: $e')),
+        );
+      }
+    }
+  }
+
+  Widget _buildMyAssessmentsSection() {
+    final loading = _isLoadingMentorAssessments || _isLoadingMentorDrafts;
+    if (loading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(child: CircularProgressIndicator(color: Colors.amber, strokeWidth: 2)),
+      );
+    }
+    if (_mentorOwnDrafts.isEmpty && _mentorOwnAssessments.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          'No assessments yet — tap "Take One" to start.',
+          style: TextStyle(color: Colors.white54, fontFamily: 'Poppins', fontSize: 13),
+        ),
+      );
+    }
+
+    final draftCards = _mentorOwnDrafts.map((draft) {
+      final answers = draft['answers'] as Map<String, dynamic>? ?? {};
+      final questions = draft['questions'] as List<dynamic>? ?? [];
+      final answeredCount = answers.length;
+      final totalCount = questions.length;
+      final draftId = draft['id']?.toString();
+      return InkWell(
+        onTap: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AssessmentScreen(draftId: draftId),
+            ),
+          );
+          _loadMentorOwnDrafts();
+          _loadMentorOwnAssessments();
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.grey[900],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.blue.withValues(alpha: 0.4)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.edit_note, color: Colors.lightBlueAccent, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('In Progress', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 14)),
+                    Text(
+                      totalCount > 0 ? '$answeredCount of $totalCount answered' : '$answeredCount answered',
+                      style: const TextStyle(color: Colors.white54, fontFamily: 'Poppins', fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.lightBlueAccent.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.lightBlueAccent.withValues(alpha: 0.4)),
+                ),
+                child: const Text('Continue', style: TextStyle(color: Colors.lightBlueAccent, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 12)),
+              ),
+              const SizedBox(width: 4),
+              GestureDetector(
+                onTap: () => _confirmDeleteMentorDraft(draftId),
+                child: const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Icon(Icons.delete_outline, color: Colors.redAccent, size: 18),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }).toList();
+
+    final completedCards = _mentorOwnAssessments.map((assessment) {
+      final scores = assessment['scores'] as Map<String, dynamic>? ?? {};
+      final overallScore = scores['overall_score'];
+      final createdAt = assessment['created_at'] as String?;
+      String dateLabel = '';
+      if (createdAt != null) {
+        try {
+          final dt = DateTime.parse(createdAt).toLocal();
+          dateLabel = '${dt.month}/${dt.day}/${dt.year}';
+        } catch (_) {
+          dateLabel = createdAt;
+        }
+      }
+      final assessmentId = assessment['id']?.toString() ?? '';
+      return InkWell(
+        onTap: assessmentId.isEmpty ? null : () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ApprenticeReportScreen(
+              assessmentId: assessmentId,
+              title: 'My Assessment Report',
+            ),
+          ),
+        ),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.grey[900],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white12),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.assignment_turned_in, color: Colors.amber, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(assessment['template_name'] as String? ?? 'Assessment', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 14)),
+                    if (dateLabel.isNotEmpty)
+                      Text(dateLabel, style: const TextStyle(color: Colors.white54, fontFamily: 'Poppins', fontSize: 12)),
+                  ],
+                ),
+              ),
+              if (overallScore != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                  ),
+                  child: Text(
+                    '$overallScore%',
+                    style: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                )
+              else
+                const Text('Processing...', style: TextStyle(color: Colors.white38, fontFamily: 'Poppins', fontSize: 12)),
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right, color: Colors.white38, size: 18),
+            ],
+          ),
+        ),
+      );
+    }).toList();
+
+    return Column(children: [...draftCards, ...completedCards]);
+  }
+
   Widget _buildAssessmentsTab() {
     // For free mentors, only show assessments for the first apprentice
     final status = _subscriptionService.status;
@@ -1028,6 +1472,41 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── My Assessments section ──────────────────────────────────────
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'MY ASSESSMENTS',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.2,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: _startSelfAssessment,
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Take One', style: TextStyle(fontFamily: 'Poppins', fontSize: 13)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 260),
+            child: SingleChildScrollView(child: _buildMyAssessmentsSection()),
+          ),
+          const Divider(color: Colors.white12, height: 24),
+          // ── Apprentice Assessments section ─────────────────────────────
           const Text(
             'Assessment Results',
             style: TextStyle(

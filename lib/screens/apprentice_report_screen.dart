@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as dev;
 import 'dart:io';
@@ -7,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../services/api_service.dart';
 import '../models/mentor_note.dart';
 import '../theme.dart';
+import 'subscription_screen.dart';
 
 /// Screen for apprentices to view their own assessment report.
 /// Uses simplified report for free users, full AI report for premium users.
@@ -30,59 +32,83 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
   String? _error;
   Map<String, dynamic>? _report;
   List<MentorNote> _sharedNotes = [];
-  
-  // Premium state
+
+  // Premium state — determined by whether the full report API succeeds (200) or rejects (403)
   bool _isPremium = false;
   bool _checkingPremium = true;
+  bool _showPremiumUpsell = false;
   Map<String, dynamic>? _fullReport;
   bool _fullReportCached = false;
+
+  // Processing/generating state
+  bool _isProcessing = false;
+  Timer? _pollTimer;
 
   @override
   void initState() {
     super.initState();
+    _checkStatusThenLoad();
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkStatusThenLoad() async {
+    try {
+      final status = await _api.getAssessmentStatus(widget.assessmentId);
+      final isProcessing = status['status'] == 'processing' || !( status['has_scores'] as bool? ?? false);
+      if (!mounted) return;
+      if (isProcessing) {
+        setState(() { _isProcessing = true; _loading = false; _checkingPremium = false; });
+        _startPolling();
+        return;
+      }
+    } catch (_) {
+      // If status check fails, proceed with normal load
+    }
     _loadReport();
     _checkPremiumAndLoadFullReport();
   }
 
+  void _startPolling() {
+    _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
+      try {
+        final status = await _api.getAssessmentStatus(widget.assessmentId);
+        final done = status['status'] == 'done' || (status['has_scores'] as bool? ?? false);
+        if (done && mounted) {
+          _pollTimer?.cancel();
+          setState(() { _isProcessing = false; _loading = true; _checkingPremium = true; });
+          _loadReport();
+          _checkPremiumAndLoadFullReport();
+        }
+      } catch (_) {}
+    });
+  }
+
   Future<void> _checkPremiumAndLoadFullReport() async {
     try {
-      final isPremium = await _api.isPremiumUser();
+      final response = await _api.fetchOwnFullReport(assessmentId: widget.assessmentId);
       if (!mounted) return;
       setState(() {
-        _isPremium = isPremium;
+        _isPremium = true;
+        _showPremiumUpsell = false;
         _checkingPremium = false;
+        _fullReport = response['report'] as Map<String, dynamic>?;
+        _fullReportCached = response['cached'] as bool? ?? false;
       });
-      
-      // If premium, auto-load the full report
-      if (isPremium) {
-        await _loadFullReport();
-      }
+      dev.log('[ApprenticeReport] Full report loaded');
     } catch (e) {
-      dev.log('[ApprenticeReport] Error checking premium: $e');
+      dev.log('[ApprenticeReport] Full report unavailable: $e');
       if (!mounted) return;
+      final is403 = e.toString().contains('403') || e.toString().toLowerCase().contains('premium');
       setState(() {
         _isPremium = false;
         _checkingPremium = false;
+        _showPremiumUpsell = is403;
       });
-    }
-  }
-
-  Future<void> _loadFullReport() async {
-    try {
-      final response = await _api.fetchMyFullReport(assessmentId: widget.assessmentId);
-      if (!mounted) return;
-      
-      final report = response['report'] as Map<String, dynamic>?;
-      final cached = response['cached'] as bool? ?? false;
-      
-      setState(() {
-        _fullReport = report;
-        _fullReportCached = cached;
-      });
-      dev.log('[ApprenticeReport] Full report loaded, cached: $cached');
-    } catch (e) {
-      dev.log('[ApprenticeReport] Error loading full report: $e');
-      // Fall back to simplified report silently
     }
   }
 
@@ -271,18 +297,46 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
             icon: const Icon(Icons.refresh, color: Colors.amber),
             onPressed: () {
               _loadReport();
-              if (_isPremium) _loadFullReport();
+              _checkPremiumAndLoadFullReport();
             },
           ),
         ],
       ),
-      body: _loading || _checkingPremium
-          ? const Center(child: CircularProgressIndicator(color: Colors.amber))
-          : _error != null
-              ? _errorView()
-              : _isPremium && _fullReport != null
-                  ? _premiumContentView()
-                  : _contentView(),
+      body: _isProcessing
+          ? _generatingView()
+          : _loading || _checkingPremium
+              ? const Center(child: CircularProgressIndicator(color: Colors.amber))
+              : _error != null
+                  ? _errorView()
+                  : _isPremium && _fullReport != null
+                      ? _premiumContentView()
+                      : _contentView(),
+    );
+  }
+
+  Widget _generatingView() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(color: Colors.amber, strokeWidth: 3),
+            const SizedBox(height: 24),
+            const Text(
+              'Generating your report...',
+              style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 18),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Our AI is analyzing your assessment. This usually takes 15–30 seconds.',
+              style: TextStyle(color: Colors.white54, fontFamily: 'Poppins', fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -363,9 +417,92 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
           // Completion Date
           if (completedAt != null) ...[
             _buildCompletedAtSection(completedAt),
+            const SizedBox(height: 16),
           ],
-          
+
+          // Premium upsell — shown when backend confirmed 403 (not premium)
+          if (_showPremiumUpsell)
+            _buildPremiumUpsellCard(),
+
           const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumUpsellCard() {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.amber.shade900.withValues(alpha: 0.25), Colors.black],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.amber.shade700, width: 1.2),
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome, color: Colors.amber.shade400, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Full AI Report',
+                style: TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade700,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text('Premium', style: TextStyle(color: Colors.black, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 11)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Unlock a deeper analysis of your assessment results:',
+            style: TextStyle(color: Colors.white70, fontFamily: 'Poppins', fontSize: 13),
+          ),
+          const SizedBox(height: 10),
+          _buildUpsellFeatureRow(Icons.analytics_outlined, 'Detailed AI Analysis of every answer'),
+          _buildUpsellFeatureRow(Icons.psychology_outlined, 'Deep Spiritual Insights'),
+          _buildUpsellFeatureRow(Icons.menu_book_outlined, 'Personalized Resource Recommendations'),
+          _buildUpsellFeatureRow(Icons.trending_up, 'Growth Trends across assessments'),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SubscriptionScreen())),
+              icon: const Icon(Icons.lock_open, size: 18),
+              label: const Text('Upgrade to Premium', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber.shade700,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUpsellFeatureRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.amber.shade300, size: 16),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontSize: 12))),
         ],
       ),
     );
