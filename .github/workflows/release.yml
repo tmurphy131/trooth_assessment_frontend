@@ -42,8 +42,11 @@ jobs:
 
   ios:
     if: github.event_name == 'push' || inputs.platform != 'android'
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
+      # Flutter 3.47's Swift Package Manager support and App Store uploads
+      # both need a current Xcode; macos-15 defaults to 16.4.
+      - run: sudo xcode-select -s /Applications/Xcode_26.6.app && xcodebuild -version
       # Don't persist GITHUB_TOKEN in git config: match adds its own
       # Authorization header, and two headers make GitHub return HTTP 400.
       - uses: actions/checkout@v4
