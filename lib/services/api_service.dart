@@ -19,7 +19,7 @@ class PremiumRequiredException implements Exception {
   String toString() => message;
 }
 
-const String _devBaseUrl = 'https://trooth-discipleship-api-dev.onlyblv.com/';
+const String _devBaseUrl = 'https://trooth-discipleship-api.onlyblv.com/';
 
 class ApiService {
   /* ── Singleton ────────────────────────────────────────────────────── */
