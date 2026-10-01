@@ -1,0 +1,5 @@
+git_url("https://github.com/tmurphy131/trooth-certs.git")
+storage_mode("git")
+type("appstore")
+app_identifier(["com.trooth.flutterTroothAssessment"])
+team_id("69DZGC7C98")

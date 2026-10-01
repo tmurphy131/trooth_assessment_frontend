@@ -124,10 +124,6 @@ void main() {
     }
   });
 
-  // Point the frontend to the deployed backend for development/testing.
-  // Update this URL if you deploy to a different host.
-  ApiService().baseUrlOverride = 'https://trooth-discipleship-api.onlyblv.com/';
-
   // Quick connectivity check at startup — logs the backend response.
   try {
     final pingMessage = await ApiService().ping();
