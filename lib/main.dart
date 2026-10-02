@@ -7,22 +7,15 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'firebase_options.dart';
 import 'package:app_links/app_links.dart';
-import 'screens/agreement_sign_public_screen.dart';
-import 'screens/assessment_screen.dart';
 import 'theme.dart';
-import 'screens/auth_gate.dart';
-import 'services/api_service.dart';
 import 'services/session_controller.dart';
-import 'features/assessments/screens/mentor_submission_detail_screen.dart';
-import 'features/assessments/screens/mentor_report_v2_screen.dart';
-import 'features/assessments/data/assessments_repository.dart';
-import 'features/assessments/models/mentor_report_v2.dart';
 import 'screens/weekly_tip_detail_screen.dart';
 import 'screens/apprentice_weekly_tip_detail_screen.dart';
 import 'data/weekly_tips_data.dart';
 import 'data/apprentice_weekly_tips_data.dart';
 import 'screens/trivia_challenge_detail_screen.dart';
 import 'utils/deep_links.dart';
+import 'router.dart';
 import 'services/tutorial_service.dart';
 import 'screens/apprentice_invites_screen.dart';
 import 'screens/mentor_agreements_screen.dart';
@@ -150,13 +143,11 @@ void main() {
       ));
 }
 
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
 void _handleIncomingUri(Uri link) {
   final routeName = routeNameForLink(link);
   if (routeName == null) return;
   TutorialService.dismissActive();
-  navigatorKey.currentState?.pushNamed(routeName);
+  appRouter.push(routeName);
 }
 
 /// Handle notification tap - navigate to appropriate screen based on notification data
@@ -171,9 +162,9 @@ void _handleNotificationTap(Map<String, dynamic> data) {
       // Navigate to assessment detail
       final assessmentId = data['assessment_id'] as String?;
       if (assessmentId != null) {
-        navigatorKey.currentState?.pushNamed(
+        appRouter.push(
           '/mentor/submissions/$assessmentId',
-          arguments: {
+          extra: {
             'apprenticeName': data['apprentice_name'] ?? 'Apprentice',
             'apprenticeId': data['apprentice_id'] ?? '',
           },
@@ -243,84 +234,19 @@ class MyApp extends StatelessWidget {
       onTap: () {
         FocusManager.instance.primaryFocus?.unfocus();
       },
-      child: MaterialApp(
+      child: MaterialApp.router(
         title: 'T[root]H Discipleship',
         theme: buildAppTheme(),
         debugShowCheckedModeBanner: false,
-        navigatorKey: navigatorKey,
+        routerConfig: appRouter,
+        scaffoldMessengerKey: scaffoldMessengerKey,
         // Honor larger system text, but cap it so fixed layouts don't clip at
         // the extreme accessibility sizes (iOS goes past 3x).
         builder: (context, child) => MediaQuery.withClampedTextScaling(
           maxScaleFactor: 1.5,
           child: child!,
         ),
-        home: const AuthGate(), // Check auth state and route to appropriate screen
-      onGenerateRoute: (settings) {
-        final args = settings.arguments is Map ? settings.arguments as Map : const {};
-        final apprenticeName = args['apprenticeName'] is String ? args['apprenticeName'] as String : 'Apprentice';
-
-        switch (parseRouteName(settings.name)) {
-          // Deep link from draft reminder email
-          case DraftAssessmentRoute(:final draftId):
-            return MaterialPageRoute(
-              settings: settings,
-              builder: (_) => AssessmentScreen(draftId: draftId),
-            );
-          case AgreementSignRoute(:final tokenType, :final token):
-            return MaterialPageRoute(
-              settings: settings,
-              builder: (_) => AgreementSignPublicScreen(token: token, tokenType: tokenType),
-            );
-          case MentorSubmissionRoute(:final assessmentId):
-            return _guardedMentorRoute(settings, builder: (ctx) {
-              final apprenticeId = args['apprenticeId'] is String ? args['apprenticeId'] as String : '';
-              return MentorSubmissionDetailScreen(
-                assessmentId: assessmentId,
-                apprenticeId: apprenticeId,
-                apprenticeName: apprenticeName,
-              );
-            });
-          case MentorReportRoute(:final assessmentId):
-            final reportFuture = AssessmentsRepository(ApiService()).getMentorReportV2(assessmentId);
-            return _guardedMentorRoute(settings, builder: (ctx) {
-              return FutureBuilder<MentorReportV2>(
-                future: reportFuture,
-                builder: (context, snap) {
-                  if (snap.hasError) {
-                    return Scaffold(
-                      appBar: AppBar(),
-                      body: const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Text("Couldn't load this report. Please go back and try again.", textAlign: TextAlign.center),
-                        ),
-                      ),
-                    );
-                  }
-                  if (!snap.hasData) {
-                    return const Scaffold(body: Center(child: CircularProgressIndicator()));
-                  }
-                  return MentorReportV2Screen(report: snap.data!, apprenticeName: apprenticeName);
-                },
-              );
-            });
-          // Deep link from push notifications
-          case TriviaChallengeRoute(:final challengeId):
-            return MaterialPageRoute(
-              settings: settings,
-              builder: (_) => TriviaChallengeDetailScreen(challengeId: challengeId),
-            );
-          case null:
-            return null; // fall back to unknown
-        }
-      },
       ),
     );
   }
-}
-
-/// Mentor-only screens. Access is enforced server-side (403); the client
-/// doesn't gate these routes.
-Route<dynamic> _guardedMentorRoute(RouteSettings settings, {required WidgetBuilder builder}) {
-  return MaterialPageRoute(settings: settings, builder: builder);
 }

@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../utils/role_cache.dart';
 import '../services/api_service.dart';
-import 'mentor_dashboard_new.dart';
-import 'apprentice_dashboard_new.dart';
 import '../utils/errors.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -122,13 +121,7 @@ class _SignupScreenState extends State<SignupScreen> {
       await cacheRole(currentUser.uid, _role!);
 
       if (!mounted) return;
-      final Widget destination = _role == 'mentor'
-          ? const MentorDashboardNew()
-          : const ApprenticeDashboardNew();
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => destination),
-        (route) => false,
-      );
+      context.go('/'); // AuthGate routes to the dashboard for the new role
     } on FirebaseAuthException catch (e) {
       setState(() => _error = e.message);
     } catch (e) {

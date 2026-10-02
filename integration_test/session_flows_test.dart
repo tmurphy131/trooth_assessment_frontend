@@ -62,11 +62,8 @@ Future<void> signInThroughUi(WidgetTester tester, String email) async {
 }
 
 Future<void> backToLogin(WidgetTester tester) async {
-  await signOutEverywhere();
-  app.navigatorKey.currentState!.pushAndRemoveUntil(
-    MaterialPageRoute(builder: (_) => const SimpleLoginScreen()),
-    (_) => false,
-  );
+  await signOutEverywhere(); // the router redirects signed-out users to /login
+  await pumpUntil(tester, find.byType(SimpleLoginScreen));
 }
 
 void main() {
@@ -88,7 +85,10 @@ void main() {
       ErrorWidget.builder = testErrorWidgetBuilder;
     });
     app.main();
-    await pumpUntil(tester, find.byType(AuthGate));
+    // Signed out, the router goes straight to /login; signed in, AuthGate.
+    final authGate = find.byType(AuthGate);
+    final login = find.byType(SimpleLoginScreen);
+    await pumpUntil(tester, find.byWidgetPredicate((_) => authGate.evaluate().isNotEmpty || login.evaluate().isNotEmpty));
     FlutterError.onError = testErrorHandler;
 
     // Start from a clean, signed-out state.

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
-import 'mentor_dashboard_new.dart';
-import 'apprentice_dashboard_new.dart';
 import '../utils/errors.dart';
 
 /// Screen shown to OAuth users after authentication to select their role
@@ -83,15 +82,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
 
       if (!mounted) return;
       
-      // Navigate to appropriate dashboard
-      final destination = _selectedRole == 'mentor'
-          ? const MentorDashboardNew()
-          : const ApprenticeDashboardNew();
-          
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => destination),
-        (route) => false,
-      );
+      context.go('/'); // AuthGate routes to the dashboard for the new role
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

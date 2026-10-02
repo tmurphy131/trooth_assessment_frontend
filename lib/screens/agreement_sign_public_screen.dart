@@ -56,7 +56,7 @@ class _AgreementSignPublicScreenState extends State<AgreementSignPublicScreen> {
         setState(() { _agreement = r.jsonBody; });
         if (!mounted) return;
         // Navigate to success screen for a clear confirmation UX
-        Navigator.of(context).pushReplacement(
+        Navigator.of(context).push( // the sign route is a router page
           MaterialPageRoute(builder: (_) => const AgreementSignedSuccessScreen()),
         );
       } else {

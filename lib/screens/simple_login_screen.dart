@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -11,8 +12,6 @@ import 'package:crypto/crypto.dart';
 
 import '../firebase_options.dart';
 
-import 'mentor_dashboard_new.dart';
-import 'apprentice_dashboard_new.dart';
 import 'signup_screen.dart';
 import 'role_selection_screen.dart';
 import '../utils/role_cache.dart';
@@ -50,23 +49,9 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
       final data = doc.data();
       final role = data?['role'] as String?; // could be null for legacy users
       if (role != null) await cacheRole(cred.user!.uid, role);
-      if (role == 'mentor') {
-        if (!mounted) return;
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const MentorDashboardNew()),
-        );
-      } else if (role == 'apprentice') {
-        if (!mounted) return;
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const ApprenticeDashboardNew()),
-        );
-      } else {
-        // Legacy user missing profile; send to signup to complete
-        if (!mounted) return;
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const SignupScreen()),
-        );
-      }
+      // AuthGate (at /) routes by role, or to signup if the profile is missing.
+      if (!mounted) return;
+      context.go('/');
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -88,7 +73,8 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
       final userEmail = email ?? user.email ?? '';
       
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
+      // Pushed (not replaced): /login is a router page.
+      Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => RoleSelectionScreen(
             displayName: name,
@@ -106,20 +92,8 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
     
     if (!mounted) return;
     
-    if (role == 'mentor') {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MentorDashboardNew()),
-      );
-    } else if (role == 'apprentice') {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const ApprenticeDashboardNew()),
-      );
-    } else {
-      // Existing user missing profile; send to signup to complete
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const SignupScreen()),
-      );
-    }
+    // AuthGate (at /) routes by role, or to signup if the profile is missing.
+    context.go('/');
   }
 
   /// Forgot Password - sends password reset email via Firebase

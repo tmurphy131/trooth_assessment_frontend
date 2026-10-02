@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../screens/simple_login_screen.dart';
 import '../services/session_controller.dart';
 
 void logoutAndRedirect(BuildContext context) async {
@@ -23,13 +22,8 @@ void logoutAndRedirect(BuildContext context) async {
 
   if (confirm != true) return;
 
+  // The router sends signed-out users to /login.
   await signOutEverywhere();
-
-  if (!context.mounted) return;
-  Navigator.of(context).pushAndRemoveUntil(
-    MaterialPageRoute(builder: (_) => const SimpleLoginScreen()),
-    (route) => false,
-  );
 }
 
 /// Single sign-out path: unregister push, detach RevenueCat, then Firebase.

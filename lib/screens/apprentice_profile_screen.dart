@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/logout_util.dart';
+import '../router.dart' show scaffoldMessengerKey;
 import '../services/api_service.dart';
 import '../services/subscription_service.dart';
-import 'simple_login_screen.dart';
 import 'support_screen.dart';
 import 'subscription_screen.dart';
 import '../utils/errors.dart';
@@ -523,18 +523,10 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
     try {
       await _api.closeAccount(confirmationText: 'DELETE');
 
+      // The router sends signed-out users to /login; show the confirmation
+      // there via the app-wide messenger.
       await signOutEverywhere();
-
-      if (!mounted) return;
-
-      // Navigate to login screen and clear the navigation stack
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const SimpleLoginScreen()),
-        (route) => false,
-      );
-
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessengerKey.currentState?.showSnackBar(
         const SnackBar(
           content: Text('Your account has been successfully closed.'),
           behavior: SnackBarBehavior.floating,
