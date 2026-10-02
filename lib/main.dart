@@ -219,6 +219,8 @@ void _handleNotificationTap(Map<String, dynamic> data) {
   }
 }
 
+bool _splashReleased = false;
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -246,7 +248,8 @@ class MyApp extends StatelessWidget {
           // AuthGate (at /) removes the native splash once it knows where to
           // go. Any other first route (login when signed out, a public
           // agreement link) is ready immediately, so release the splash here.
-          if (appRouter.routerDelegate.currentConfiguration.uri.path != '/') {
+          if (!_splashReleased && appRouter.routerDelegate.currentConfiguration.uri.path != '/') {
+            _splashReleased = true;
             FlutterNativeSplash.remove();
           }
           return MediaQuery.withClampedTextScaling(
