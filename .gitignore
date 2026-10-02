@@ -102,3 +102,7 @@ Build Runner*.txt
 *\ 9.*
 *\ 10.*ios/Flutter/DartDefines.xcconfig
 ios/Flutter/DartDefines.xcconfig
+
+# Local backups and signing logs
+*.tgz
+ios/build_signing_log*.txt
