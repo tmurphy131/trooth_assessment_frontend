@@ -15,6 +15,11 @@ import Flutter
     self.flutterEngine = engine
 
     let flutterViewController = FlutterViewController(engine: engine, nibName: nil, bundle: nil)
+    // A view controller built around an existing engine doesn't show the launch
+    // screen on its own, so the logo vanished (black screen) until Flutter's
+    // first frame. Keep LaunchScreen.storyboard up until then; the first frame
+    // is held by FlutterNativeSplash.preserve() until AuthGate is ready.
+    flutterViewController.loadDefaultSplashScreenView()
     self.window = UIWindow(frame: UIScreen.main.bounds)
     self.window?.rootViewController = flutterViewController
     self.window?.makeKeyAndVisible()

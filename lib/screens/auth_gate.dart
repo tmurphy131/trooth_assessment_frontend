@@ -129,23 +129,26 @@ class _AuthGateState extends State<AuthGate> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       // Show a loading screen that matches the splash (black bg with logo)
+      // Mirrors the native splash (black, 150-wide centered logo) so the
+      // handover is invisible; the spinner sits below without moving the logo.
       return Scaffold(
         backgroundColor: Colors.black,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                'assets/logo.png',
-                width: 200,
-                height: 200,
+        body: Stack(
+          alignment: Alignment.center,
+          children: [
+            Image.asset('assets/splash/splash_logo.png', width: 150),
+            const Padding(
+              padding: EdgeInsets.only(top: 160),
+              child: SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.amber),
+                ),
               ),
-              const SizedBox(height: 32),
-              const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.amber),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
