@@ -454,7 +454,7 @@ Also replace `widget_test.dart` and add `flutter analyze && flutter test` as the
 | 2.2 server trusts client purchases | **Fixed and verified on dev (backend):** `/subscriptions/restore` and the gift-seat confirm ignore entitlement fields from the client and look the user up at RevenueCat (`GET /v1/subscribers/{user.id}`) with a secret API key (Secret Manager `REVENUECAT_SECRET_API_KEY`). A seat is only created when RevenueCat shows more gift-seat purchases than the mentor has seats. On dev, RevenueCat answers the lookup and forged claims are rejected. The app no longer fabricates gift-seat IDs. |
 | 2.3 free-tier limit client-only | **Fixed (backend):** enforced on the draft and submitted-assessments routes. `/mentor/my-apprentices` is now ordered oldest-first, so "first apprentice" means the same thing on client and server. The `limit` query param is capped at 200. |
 | 2.4 tokens and bodies in device logs | **Fixed:** the header prints are deleted, and every `print`/`debugPrint` is muted in release through the root zone. |
-| 2.5 raw errors in release | **Partly fixed:** the release ErrorWidget is friendly now. Inline `$e` messages in screens remain. |
+| 2.5 raw errors in release | **Fixed:** the release crash screen is friendly, and 129 user-facing messages go through `friendlyError()` (`lib/utils/errors.dart`). Release builds show a plain message; debug builds keep the detail. |
 | 2.6 Apple nonce | **Fixed** |
 | 3.1 / 5.1 blocking ping, no timeouts | **Fixed:** the ping is removed, and every request has a 20 s timeout and maps failures to `NetworkException`. |
 | 3.2 N+1 dashboard fetch | **Fixed** (`Future.wait`) |
@@ -468,11 +468,22 @@ Also replace `widget_test.dart` and add `flutter analyze && flutter test` as the
 | 5.5 AuthGate offline | **Fixed:** cached role per user, plus a retry screen. |
 | 5.7 BuildContext across async gaps | **Fixed:** all 42 sites. |
 | 5.8 dead notification taps / stuck report | **Fixed** |
-| 1.1, 1.3, 1.4, 1.5 deps and deprecations | **Fixed:** `flutter_markdown_plus`, `PopScope`, `dart fix`, unused deps removed. |
-| 6 tests and CI | **Fixed:** 28 tests across 3 new files; the release workflow is gated on `analyze` + `test`. |
+| 1.1, 1.3, 1.4, 1.5 deps and deprecations | **Fixed:** `flutter_markdown_plus`, `PopScope`, `dart fix`, unused deps removed. 12 Radio `groupValue` deprecations remain (non-breaking). |
+| 6 tests and CI | **Fixed:** 29 unit tests across 3 new files plus a device integration test; the release workflow is gated on `analyze` + `test`. |
 | 7.4 autofill | **Fixed** |
 | 8.1 / 8.2 / 8.4 links and export compliance | **Fixed:** see the iOS signing note below. |
-| 1.2, 4.1, 4.4, 7.1-7.3, 7.5, 8.3, 8.5, 8.6 | **Deferred:** larger efforts, unchanged. |
+| 1.2 Firebase and google_sign_in majors | **Fixed:** firebase_core 4.15, auth 6.7, firestore 6.10, messaging 16.7 (iOS SDK 12.19), google_sign_in 7.2 (Credential Manager on Android, web client as `serverClientId`), flutter_local_notifications 22.3. Device-tested on iOS against dev. **Note:** Firebase stops publishing CocoaPods after October 2026, so the iOS build needs to move to Swift Package Manager (currently disabled in `pubspec.yaml`). |
+| 2.7 Firestore role rules | **Open:** the rules aren't in the repo; check that `users/{uid}.role` is create-only. |
+| 2.8 hardcoded RevenueCat keys | **Fixed:** misleading TODO replaced with a note that these are public SDK keys. |
+| 3.6 response caching | **Open (low).** |
+| 3.8 Google Fonts runtime fetch | **Fixed:** `google_fonts` removed. Poppins is fully bundled (Medium and SemiBold added from google/fonts, OFL), so there are no runtime font downloads. |
+| 4.2 HTTP boilerplate | **Partly fixed:** one wrapper for timeouts and network errors. The full `_send()` (401 refresh, typed errors) is still open. |
+| 5.6 crash reporting | **Fixed:** Firebase Crashlytics records Flutter, platform and zone errors in release builds. iOS dSYM upload isn't configured, so native iOS crashes won't be symbolicated (Dart traces are). |
+| 8.6 Android build settings | **Partly fixed:** release builds now fail without `key.properties` instead of silently debug-signing. R8 shrinking is written but left off: a shrunk build launched fine, but sign-in under R8 wasn't verified, so enable it after a real-device check. |
+| 8.7 16 KB pages | **Verified:** every 64-bit `.so` is zip-aligned and has LOAD segments of 2^14 or larger. |
+| Splash screens (new) | **Fixed:** iOS lost the logo (black screen) before the first frame because `AppDelegate` builds `FlutterViewController(engine:)`, which doesn't show the launch screen; it now calls `loadDefaultSplashScreenView()`. Android 12+ squeezed the wide wordmark into its circular icon; it now uses a square icon with the logo inside the safe circle. Both platforms measure 150 units wide, and the Flutter loading screen matches. |
+| Tutorial overlay over deep links (new) | **Fixed:** the tutorial is dismissed before link and notification navigation, and isn't shown if its screen is no longer on top. |
+| 4.1, 4.4, 7.1-7.3, 7.5, 8.3, 8.5 | **Deferred:** larger efforts, unchanged. |
 
 **Release note:** Associated Domains is already enabled on the App ID. If the match provisioning profiles predate that, regenerate them before the next tag so they include the `applinks:links.onlyblv.com` entitlement.
 
