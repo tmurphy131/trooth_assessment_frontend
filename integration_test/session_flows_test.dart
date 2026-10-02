@@ -4,6 +4,10 @@
 //   flutter test integration_test/session_flows_test.dart -d <simulator> \
 //     --dart-define=TEST_MENTOR_EMAIL=... --dart-define=TEST_APPRENTICE_EMAIL=... \
 //     --dart-define=TEST_PASSWORD=...
+//
+// Afterwards run `flutter build ios --config-only` before building from Xcode:
+// `flutter test` points ios/Flutter/Generated.xcconfig at a temporary test
+// entry point (and these dart-defines), which breaks Xcode builds.
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
