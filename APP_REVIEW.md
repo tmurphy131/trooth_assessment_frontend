@@ -451,7 +451,7 @@ Also replace `widget_test.dart` and add `flutter analyze && flutter test` as the
 | Ref | Status |
 |---|---|
 | 2.1 set-tier open to all users | **Fixed (backend):** admin-only and refused when `ENV=production`. The app's `debugSetSubscriptionTier` is removed. |
-| 2.2 server trusts client purchases | **Fixed (backend):** `/subscriptions/restore` and the gift-seat confirm now check `GET /v1/subscribers/{user.id}` at RevenueCat and ignore entitlement fields from the client. A seat is only created when RevenueCat shows more gift-seat purchases than the mentor has seats. The key comes from Secret Manager (`REVENUECAT_API_KEY` ← `REVENUECAT_APPLE_KEY`); a dedicated secret key (`REVENUECAT_SECRET_API_KEY`) takes precedence if one is added. The app no longer fabricates gift-seat IDs. |
+| 2.2 server trusts client purchases | **Fixed, verified on dev; one follow-up (backend):** `/subscriptions/restore` and the gift-seat confirm ignore entitlement fields from the client and look the user up at RevenueCat (`GET /v1/subscribers/{user.id}`). A seat is only created when RevenueCat shows more gift-seat purchases than the mentor has seats. The app no longer fabricates gift-seat IDs. **Follow-up:** on dev, RevenueCat returned 401 to the public SDK key (`REVENUECAT_APPLE_KEY`), so verification currently fails closed: forged claims are rejected, but a legitimate restore grants nothing until a RevenueCat **secret** API key is stored in Secret Manager and mapped to `REVENUECAT_SECRET_API_KEY`. Webhooks still grant purchases. |
 | 2.3 free-tier limit client-only | **Fixed (backend):** enforced on the draft and submitted-assessments routes. `/mentor/my-apprentices` is now ordered oldest-first, so "first apprentice" means the same thing on client and server. The `limit` query param is capped at 200. |
 | 2.4 tokens and bodies in device logs | **Fixed:** the header prints are deleted, and every `print`/`debugPrint` is muted in release through the root zone. |
 | 2.5 raw errors in release | **Partly fixed:** the release ErrorWidget is friendly now. Inline `$e` messages in screens remain. |
@@ -475,3 +475,20 @@ Also replace `widget_test.dart` and add `flutter analyze && flutter test` as the
 | 1.2, 4.1, 4.4, 7.1-7.3, 7.5, 8.3, 8.5, 8.6 | **Deferred:** larger efforts, unchanged. |
 
 **Release note:** Associated Domains is already enabled on the App ID. If the match provisioning profiles predate that, regenerate them before the next tag so they include the `applinks:links.onlyblv.com` entitlement.
+
+### Verified on dev (2026-10-02)
+
+Three linked test accounts (a free mentor and two apprentices) on the dev backend, revision `trooth-backend-dev-00071-9rx`:
+
+- **API, as real users:** a free mentor gets 200 for apprentice 1 and 403 for apprentice 2 (assessments and draft). A mentor calling set-tier gets 403. A restore with a forged premium claim stays free. A seat confirm with a made-up ID gets 409.
+- **iOS simulator** (`integration_test/session_flows_test.dart`): sign-in through the UI. RevenueCat identity follows when switching from the mentor to the apprentice. An offline launch with an empty Firestore cache opens the dashboard from the cached role. With no cached role either, the retry screen appears, and "Try again" recovers.
+- **Android emulator:** `trooth://agreements/sign/...` opens the signing screen. `trooth://assessment/draft/<id>` opens the real draft.
+
+**Bugs found during device testing (fixed):**
+- Emails were not URL-encoded in `/invitations/apprentice-invites?email=`, so any user with a `+` in their address got a 403 and never saw invites.
+- The role was only cached at app start, not on sign-in or signup, so a user who signed in and then relaunched offline could get the retry screen.
+- Flutter's built-in deep linking handled links a second time alongside app_links and logged route errors. It's now disabled on both platforms.
+
+**Found, not fixed:** on a first sign-in, the dashboard's "Welcome!" tutorial overlay stays on top of a screen opened by a deep link.
+
+**Not verifiable here:** iOS shows a system "Open in app?" prompt for externally opened links, which I can't tap on the simulator, so iOS link routing is covered by unit tests only. The cancel-purchase sheet needs a person to tap it.
