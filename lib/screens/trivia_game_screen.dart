@@ -276,8 +276,10 @@ class _TriviaGameScreenState extends State<TriviaGameScreen>
     final options = _buildOptions(q);
     final isPulsing = _timeLeft <= 5;
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
         final leave = await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
@@ -293,7 +295,7 @@ class _TriviaGameScreenState extends State<TriviaGameScreen>
             ],
           ),
         );
-        return leave == true;
+        if (leave == true && context.mounted) Navigator.of(context).pop();
       },
       child: Scaffold(
         backgroundColor: Colors.black,
@@ -513,16 +515,16 @@ class _TriviaGameScreenState extends State<TriviaGameScreen>
 
     if (_answered) {
       if (key == correct) {
-        bg = Colors.green.withOpacity(0.2);
+        bg = Colors.green.withValues(alpha: 0.2);
         border = Colors.green;
         textColor = Colors.greenAccent;
       } else if (key == _selectedOption) {
-        bg = Colors.red.withOpacity(0.2);
+        bg = Colors.red.withValues(alpha: 0.2);
         border = Colors.redAccent;
         textColor = Colors.redAccent;
       }
     } else if (key == _selectedOption) {
-      bg = const Color(0xFFFFD700).withOpacity(0.15);
+      bg = const Color(0xFFFFD700).withValues(alpha: 0.15);
       border = const Color(0xFFFFD700);
     }
 
@@ -556,7 +558,7 @@ class _TriviaGameScreenState extends State<TriviaGameScreen>
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.15),
+        color: Colors.green.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.green),
       ),

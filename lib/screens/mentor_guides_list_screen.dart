@@ -7,8 +7,7 @@ import 'mentor_guide_detail_screen.dart';
 class MentorGuidesListScreen extends StatefulWidget {
   final String? initialCategoryId;
 
-  const MentorGuidesListScreen({Key? key, this.initialCategoryId})
-      : super(key: key);
+  const MentorGuidesListScreen({super.key, this.initialCategoryId});
 
   @override
   State<MentorGuidesListScreen> createState() => _MentorGuidesListScreenState();
@@ -112,7 +111,7 @@ class _MentorGuidesListScreenState extends State<MentorGuidesListScreen> {
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: kPrimaryGold.withOpacity(0.15),
+                      color: kPrimaryGold.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(

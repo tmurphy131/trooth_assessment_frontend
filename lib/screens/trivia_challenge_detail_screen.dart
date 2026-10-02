@@ -334,7 +334,7 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
           if (status == 'pending' && myRole == 'challenged') ...[
             _buildAcceptDeclineCard(challengerName),
           ] else if (status == 'pending') ...[
-            _waitingCard('Waiting for ${challengedName} to accept the challenge.'),
+            _waitingCard('Waiting for $challengedName to accept the challenge.'),
           ] else if (status == 'active') ...[
             if (isMyTurn || _isAnswering)
               _buildAnswerSection(questions, currentQIdx)
@@ -343,7 +343,7 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
           ] else if (status == 'complete') ...[
             _buildResultSection(c),
           ] else if (status == 'declined') ...[
-            _buildSimpleCard('Challenge Declined', '${challengedName} declined this challenge.', Colors.redAccent),
+            _buildSimpleCard('Challenge Declined', '$challengedName declined this challenge.', Colors.redAccent),
           ] else if (status == 'expired') ...[
             _buildSimpleCard('Challenge Expired', 'This challenge expired due to inactivity.', Colors.grey),
           ],
@@ -457,7 +457,7 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
       decoration: BoxDecoration(
         color: Colors.grey[900],
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.4)),
+        border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.4)),
       ),
       child: Column(
         children: [
@@ -596,7 +596,7 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: selected ? const Color(0xFFFFD700).withOpacity(0.15) : Colors.grey[900],
+              color: selected ? const Color(0xFFFFD700).withValues(alpha: 0.15) : Colors.grey[900],
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: selected ? const Color(0xFFFFD700) : Colors.grey[800]!,
@@ -671,9 +671,9 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: resultColor.withOpacity(0.1),
+        color: resultColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: resultColor.withOpacity(0.4)),
+        border: Border.all(color: resultColor.withValues(alpha: 0.4)),
       ),
       child: Column(
         children: [
@@ -717,9 +717,9 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Column(
         children: [
@@ -775,9 +775,9 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.4)),
+          border: Border.all(color: color.withValues(alpha: 0.4)),
         ),
         child: Row(
           children: [

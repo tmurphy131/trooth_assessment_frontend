@@ -164,7 +164,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: apprenticeId,
+                    initialValue: apprenticeId,
                     isExpanded: true,
                     decoration: InputDecoration(
                       labelText: 'Apprentice (optional)',
@@ -207,7 +207,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                       const Spacer(),
                       Switch(
                         value: isShared,
-                        activeColor: kPrimaryGold,
+                        activeThumbColor: kPrimaryGold,
                         onChanged: (v) => setDialogState(() {
                           isShared = v;
                         }),
@@ -272,13 +272,14 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                               isShared: isShared,
                             );
                           }
-                          if (!mounted) return;
+                          if (!ctx.mounted) return;
                           Navigator.of(ctx).pop();
                           await _applyFilter(_filterApprenticeId);
                         } catch (e) {
                           setDialogState(() {
                             saving = false;
                           });
+                          if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text('Failed to save: $e')));
                         }
@@ -304,6 +305,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
           resourceId: r['id'], isShared: !(r['is_shared'] == true));
       await _applyFilter(_filterApprenticeId);
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Failed to update: $e')));
     }
@@ -337,6 +339,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
       await _api.deleteMentorResource(r['id']);
       await _applyFilter(_filterApprenticeId);
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
     }
@@ -423,7 +426,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: kPrimaryGold.withOpacity(0.15),
+            color: kPrimaryGold.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: kPrimaryGold, size: 22),
@@ -486,7 +489,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
             gradient: LinearGradient(
               colors: [
                 kCharcoal,
-                kCharcoal.withOpacity(0.9),
+                kCharcoal.withValues(alpha: 0.9),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -502,7 +505,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: kPrimaryGold.withOpacity(0.2),
+                      color: kPrimaryGold.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -597,7 +600,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                   color: kSurface,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: kMutedText.withOpacity(0.15),
+                    color: kMutedText.withValues(alpha: 0.15),
                   ),
                 ),
                 child: Column(
@@ -703,7 +706,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: DropdownButtonFormField<String>(
-            value: _filterApprenticeId,
+            initialValue: _filterApprenticeId,
             isExpanded: true,
             decoration: InputDecoration(
               labelText: 'Filter by apprentice',
@@ -800,8 +803,8 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                 height: 44,
                 decoration: BoxDecoration(
                   color: shared
-                      ? Colors.green.withOpacity(0.15)
-                      : kPrimaryGold.withOpacity(0.15),
+                      ? Colors.green.withValues(alpha: 0.15)
+                      : kPrimaryGold.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(

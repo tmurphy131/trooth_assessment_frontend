@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import '../services/api_service.dart';
 import 'agreement_preview_screen.dart';
 import 'apprentice_invite_screen.dart';
@@ -262,7 +262,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
                       width: double.infinity,
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(color: Colors.red.withOpacity(.15), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.red)),
+                      decoration: BoxDecoration(color: Colors.red.withValues(alpha: .15), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.red)),
                       child: Text(_error!, style: const TextStyle(color: Colors.red, fontFamily: 'Poppins')),
                     ),
                   const Text('Create Agreement', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
@@ -357,7 +357,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
             const SizedBox(height: 12),
             SwitchListTile(
               value: _apprenticeIsMinor,
-              activeColor: Colors.amber,
+              activeThumbColor: Colors.amber,
               contentPadding: EdgeInsets.zero,
               title: const Text('Apprentice is a minor', style: TextStyle(color: Colors.white)),
               onChanged: (v) => setState(() { _apprenticeIsMinor = v; if (!v) { _parentRequired = false; } }),
@@ -365,7 +365,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
             if (_apprenticeIsMinor)
               SwitchListTile(
                 value: _parentRequired,
-                activeColor: Colors.amber,
+                activeThumbColor: Colors.amber,
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Parent signature required', style: TextStyle(color: Colors.white)),
                 onChanged: (v) => setState(() { _parentRequired = v; }),
@@ -417,7 +417,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: _statusColor(status).withOpacity(.2),
+                        color: _statusColor(status).withValues(alpha: .2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -493,7 +493,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
               const Text('Agreement Preview', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Container(
-                decoration: BoxDecoration(color: Colors.black.withOpacity(.25), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey[800]!)),
+                decoration: BoxDecoration(color: Colors.black.withValues(alpha: .25), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey[800]!)),
                 constraints: const BoxConstraints(maxHeight: 300),
                 child: Markdown(
                   data: ag['content_rendered'],
@@ -579,7 +579,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: _statusColor(status).withOpacity(.2),
+          backgroundColor: _statusColor(status).withValues(alpha: .2),
           child: Icon(Icons.description, color: _statusColor(status)),
         ),
         title: Text(

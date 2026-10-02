@@ -22,7 +22,6 @@ class _AssessmentPreviewScreenState extends State<AssessmentPreviewScreen> {
   bool _isLoading = true;
   int _timesTaken = 0;
   double? _lastScore;
-  String? _errorMessage;
 
   @override
   void initState() {
@@ -33,7 +32,6 @@ class _AssessmentPreviewScreenState extends State<AssessmentPreviewScreen> {
   Future<void> _loadAssessmentHistory() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
     });
 
     try {
@@ -60,10 +58,6 @@ class _AssessmentPreviewScreenState extends State<AssessmentPreviewScreen> {
     } catch (e) {
       setState(() {
         _isLoading = false;
-        // Don't show error for 404 (no history yet)
-        if (!e.toString().contains('404')) {
-          _errorMessage = 'Unable to load assessment history';
-        }
       });
     }
   }
@@ -119,7 +113,7 @@ class _AssessmentPreviewScreenState extends State<AssessmentPreviewScreen> {
                         width: 80,
                         height: 80,
                         decoration: BoxDecoration(
-                          color: isMaster ? Colors.amber.withOpacity(0.2) : Colors.grey[800],
+                          color: isMaster ? Colors.amber.withValues(alpha: 0.2) : Colors.grey[800],
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Icon(

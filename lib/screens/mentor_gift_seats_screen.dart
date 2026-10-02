@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/subscription_service.dart';
 import '../services/api_service.dart';
-import 'subscription_screen.dart';
 
 class MentorGiftSeatsScreen extends StatefulWidget {
   const MentorGiftSeatsScreen({super.key});
@@ -45,7 +44,7 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
       if (mounted) {
         setState(() {
           _seats = results[0] as List<MentorGiftSeat>;
-          _apprentices = results[1] as List<dynamic>;
+          _apprentices = results[1];
           _isLoading = false;
         });
       }
@@ -80,6 +79,7 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
       );
       
       if (seat != null) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Gift seat purchased for $displayName!'),
@@ -89,6 +89,7 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
       } else {
         final error = _subscriptionService.error;
         if (error != null) {
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(error),
@@ -99,6 +100,7 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
         // If error is null, user cancelled - no message needed
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to purchase gift seat: $e'),
@@ -108,53 +110,6 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
     }
     
     await _loadData();
-  }
-
-  /// Legacy method for creating gift seats (for mentors with bundled seats)
-  Future<void> _createGiftSeat() async {
-    final status = _subscriptionService.status;
-    
-    // Check if mentor is premium
-    if (!status.isPremium) {
-      _showUpgradePrompt();
-      return;
-    }
-
-    // Check if they have available seats
-    final available = (status.availableSeats ?? 0) - (status.usedSeats ?? 0);
-    if (available <= 0) {
-      _showNoSeatsDialog();
-      return;
-    }
-
-    // Show create seat dialog
-    final result = await _showCreateSeatDialog();
-    if (result != null && mounted) {
-      setState(() => _isLoading = true);
-      
-      final seat = await _subscriptionService.createGiftSeat(
-        apprenticeEmail: result['email']!,
-        apprenticeName: result['name'],
-      );
-      
-      if (seat != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gift seat created for ${result['email']}'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_subscriptionService.error ?? 'Failed to create gift seat'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      
-      await _loadData();
-    }
   }
 
   Future<void> _revokeSeat(MentorGiftSeat seat) async {
@@ -189,6 +144,7 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
       final success = await _subscriptionService.revokeGiftSeat(seat.id);
       
       if (success) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Gift seat revoked'),
@@ -196,6 +152,7 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
           ),
         );
       } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_subscriptionService.error ?? 'Failed to revoke seat'),
@@ -228,6 +185,7 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
         apprenticeName: result['name'],
       );
       
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Gift seat assigned to ${result['name'] ?? result['email']}'),
@@ -235,6 +193,7 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to assign seat: $e'),
@@ -273,73 +232,6 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
       context: context,
       builder: (context) => _GiftSeatDialog(
         apprentices: availableApprentices,
-      ),
-    );
-  }
-
-  void _showUpgradePrompt() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: Row(
-          children: const [
-            Icon(Icons.star, color: Colors.amber),
-            SizedBox(width: 8),
-            Text(
-              'Premium Required',
-              style: TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        content: const Text(
-          'You need a premium subscription to gift premium access to your apprentices.',
-          style: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Maybe Later', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.amber,
-              foregroundColor: Colors.black,
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
-              );
-            },
-            child: const Text('Upgrade Now', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showNoSeatsDialog() {
-    final status = _subscriptionService.status;
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text(
-          'No Seats Available',
-          style: TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
-        ),
-        content: Text(
-          'You\'ve used all ${status.availableSeats ?? 0} of your gift seats. Revoke an existing seat to gift premium to someone else.',
-          style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK', style: TextStyle(color: Colors.amber)),
-          ),
-        ],
       ),
     );
   }
@@ -448,7 +340,7 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.2),
+                    color: Colors.amber.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -467,7 +359,7 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
           if (_seats.isEmpty)
             _buildEmptyState()
           else
-            ..._seats.map((seat) => _buildSeatCard(seat)).toList(),
+            ..._seats.map((seat) => _buildSeatCard(seat)),
         ],
       ),
     );
@@ -517,7 +409,7 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -530,111 +422,6 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusCard(SubscriptionStatus status, int availableSeats, int usedSeats) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: status.isPremium
-            ? const LinearGradient(
-                colors: [Color(0xFFD4AF37), Color(0xFFB8860B)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
-        color: status.isPremium ? null : Colors.grey[850],
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            status.isPremium ? Icons.star : Icons.star_border,
-            size: 40,
-            color: status.isPremium ? Colors.white : Colors.grey,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  status.tierDisplayName,
-                  style: TextStyle(
-                    color: status.isPremium ? Colors.white : Colors.grey[400],
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins',
-                  ),
-                ),
-                if (status.isPremium)
-                  Text(
-                    '${availableSeats - usedSeats} gift seats available',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUpgradeCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.grey[850],
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.amber.withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          const Icon(Icons.card_giftcard, color: Colors.amber, size: 48),
-          const SizedBox(height: 16),
-          const Text(
-            'Gift Premium to Your Apprentices',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Poppins',
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Upgrade to Mentor Premium to gift premium access to your apprentices. They\'ll get full access to all assessments and AI insights.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.grey,
-              fontFamily: 'Poppins',
-            ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.amber,
-              foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
-              );
-            },
-            child: const Text(
-              'Upgrade to Premium',
-              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold),
-            ),
-          ),
         ],
       ),
     );
@@ -695,7 +482,7 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
         child: Row(
           children: [
             CircleAvatar(
-              backgroundColor: statusColor.withOpacity(0.2),
+              backgroundColor: statusColor.withValues(alpha: 0.2),
               child: Icon(statusIcon, color: statusColor),
             ),
             const SizedBox(width: 16),
@@ -748,7 +535,7 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.2),
+                      color: statusColor.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
@@ -896,12 +683,12 @@ class _GiftSeatDialogState extends State<_GiftSeatDialog> {
                   onTap: () => setState(() => _showManualEntry = true),
                   child: Row(
                     children: [
-                      Icon(Icons.person_add_alt_1, color: Colors.amber.withOpacity(0.8), size: 18),
+                      Icon(Icons.person_add_alt_1, color: Colors.amber.withValues(alpha: 0.8), size: 18),
                       const SizedBox(width: 8),
                       Text(
                         'Gift to someone not listed',
                         style: TextStyle(
-                          color: Colors.amber.withOpacity(0.8),
+                          color: Colors.amber.withValues(alpha: 0.8),
                           fontFamily: 'Poppins',
                           fontSize: 13,
                           decoration: TextDecoration.underline,

@@ -38,7 +38,7 @@ cd "/Users/tmoney/Developer/trooth_assessment_backend" && gcloud run deploy troo
   --platform managed \
   --service-account trooth-run-sa@trooth-prod.iam.gserviceaccount.com \
   --set-env-vars "^||^ENV=dev||RATE_LIMIT_ENABLED=true||MOCK_AI_SCORING=false||SHOW_DOCS=true||EMAIL_FROM_ADDRESS=admin@onlyblv.com||BACKEND_API_URL=https://trooth-discipleship-api-dev.onlyblv.com/||API_URL=https://trooth-discipleship-api.onlyblv.com/||IOS_APP_STORE_URL=https://apps.apple.com/app/t-root-h-discipleship/id6757311543||METRICS_REPORT_RECIPIENTS=admin@onlyblv.com,tay.murphy88@gmail.com" \
-  --set-secrets "DATABASE_URL=DB_URL_DEV:latest,FIREBASE_CERT_JSON=FIREBASE_CERT_JSON:latest,SENDGRID_API_KEY=SENDGRID_API_KEY:latest,REVENUECAT_WEBHOOK_SECRET=REVENUECAT_WEBHOOK_SECRET:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,CRON_SECRET=CRON_SECRET:latest" \
+  --set-secrets "DATABASE_URL=DB_URL_DEV:latest,FIREBASE_CERT_JSON=FIREBASE_CERT_JSON:latest,SENDGRID_API_KEY=SENDGRID_API_KEY:latest,REVENUECAT_WEBHOOK_SECRET=REVENUECAT_WEBHOOK_SECRET:latest,REVENUECAT_API_KEY=REVENUECAT_APPLE_KEY:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,CRON_SECRET=CRON_SECRET:latest" \
   --add-cloudsql-instances trooth-prod:us-east4:app-pg-dev \
   --allow-unauthenticated 2>&1 | tail -15
 ```

@@ -132,7 +132,7 @@ class _SupportScreenState extends State<SupportScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.15),
+                color: Colors.green.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -211,7 +211,7 @@ class _SupportScreenState extends State<SupportScreen> {
               decoration: BoxDecoration(
                 color: Colors.grey[850],
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
               ),
               child: Column(
                 children: [
@@ -344,7 +344,7 @@ class _SupportScreenState extends State<SupportScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: kPrimaryGold,
                 foregroundColor: Colors.black,
-                disabledBackgroundColor: kPrimaryGold.withOpacity(0.5),
+                disabledBackgroundColor: kPrimaryGold.withValues(alpha: 0.5),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/api_service.dart';
-import 'assessment_results_screen.dart';
-import 'apprentice_report_screen.dart';
 
 class AssessmentScreen extends StatefulWidget {
   final String? templateId;
@@ -412,7 +410,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.2),
+                color: Colors.amber.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -462,7 +460,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.amber.withOpacity(0.2),
+              color: Colors.amber.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -584,7 +582,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
         color: Colors.grey[900],
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),
@@ -875,7 +873,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
       }
 
       // Then submit the draft using the proper endpoint (target the right draft)
-      final submission = await _apiService.submitDraft(
+      await _apiService.submitDraft(
         draftId: _currentDraft?['id']?.toString(),
         templateId: (widget.templateId ?? _currentDraft?['template_id']?.toString()),
       );
@@ -898,115 +896,6 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
         _isSaving = false;
       });
     }
-  }
-
-  void _showSubmittedSnackAndPoll(Map<String, dynamic> submission) {
-    final assessmentId = submission['id']?.toString();
-    if (assessmentId == null || assessmentId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Submitted. Preparing results...')),
-      );
-      return;
-    }
-
-    // Initial info snackbar
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Assessment submitted. Scoring in progress...')),
-    );
-
-    // Poll every 10 seconds until done or error
-    Future<void>.delayed(const Duration(seconds: 2), () async {
-      bool done = false;
-      while (!done && mounted) {
-        try {
-          final status = await _apiService.getAssessmentStatus(assessmentId);
-          final s = (status['status'] ?? (status['has_scores'] == true ? 'done' : 'processing')).toString();
-          if (s == 'done') {
-            done = true;
-            // Show snackbar with View Results action
-            if (!mounted) break;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Your assessment results are ready.'),
-                action: SnackBarAction(
-                  label: 'VIEW RESULTS',
-                  onPressed: () {
-                    if (!mounted) return;
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ApprenticeReportScreen(assessmentId: assessmentId),
-                      ),
-                    );
-                  },
-                ),
-                duration: const Duration(seconds: 6),
-              ),
-            );
-            break;
-          }
-          if (s == 'error') {
-            done = true;
-            if (!mounted) break;
-            _showScoringErrorDialog(assessmentId);
-            break;
-          }
-        } catch (e) {
-          // transient backend/network issue; continue polling
-        }
-        await Future<void>.delayed(const Duration(seconds: 10));
-      }
-    });
-  }
-
-  void _showScoringErrorDialog(String assessmentId) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text(
-          'Scoring Delayed',
-          style: TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
-        ),
-        content: const Text(
-          'We hit a snag while scoring your assessment. You can retry shortly. Your draft can be saved to revisit later.',
-          style: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close', style: TextStyle(color: Colors.grey, fontFamily: 'Poppins')),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              // Save as draft again to ensure user doesn’t lose work (no-op if already saved)
-              try {
-                if (_currentDraft != null && _currentDraft!['id'] != null) {
-                  final payload = {
-                    'answers': _answers,
-                    'last_question_id': _questions.isNotEmpty ? _questions[_currentQuestionIndex]['id'] : null,
-                  };
-                  await _apiService.updateDraft(payload, draftId: _currentDraft!['id']);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Draft saved. You can retry submission later.')),
-                    );
-                  }
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Could not save draft: $e')),
-                  );
-                }
-              }
-            },
-            child: const Text('Save as Draft', style: TextStyle(color: Colors.amber, fontFamily: 'Poppins')),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<bool> _showConfirmationDialog() async {

@@ -7,8 +7,7 @@ import 'apprentice_guide_detail_screen.dart';
 class ApprenticeGuidesListScreen extends StatefulWidget {
   final String? initialCategoryId;
 
-  const ApprenticeGuidesListScreen({Key? key, this.initialCategoryId})
-      : super(key: key);
+  const ApprenticeGuidesListScreen({super.key, this.initialCategoryId});
 
   @override
   State<ApprenticeGuidesListScreen> createState() => _ApprenticeGuidesListScreenState();
@@ -124,7 +123,7 @@ class _ApprenticeGuidesListScreenState extends State<ApprenticeGuidesListScreen>
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: kPrimaryGold.withOpacity(0.15),
+                      color: kPrimaryGold.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -248,7 +247,7 @@ class _ApprenticeGuidesListScreenState extends State<ApprenticeGuidesListScreen>
                       Icon(
                         Icons.upcoming_outlined,
                         size: 64,
-                        color: kMutedText.withOpacity(0.5),
+                        color: kMutedText.withValues(alpha: 0.5),
                       ),
                       const SizedBox(height: 16),
                       Text(

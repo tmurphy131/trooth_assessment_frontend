@@ -30,9 +30,9 @@ class VersionBadge extends StatelessWidget {
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: (backgroundColor ?? Colors.amber).withOpacity(backgroundOpacity),
+        color: (backgroundColor ?? Colors.amber).withValues(alpha: backgroundOpacity),
         borderRadius: borderRadius ?? BorderRadius.circular(30),
-        border: Border.all(color: color.withOpacity(borderOpacity)),
+        border: Border.all(color: color.withValues(alpha: borderOpacity)),
       ),
       child: Text(
         versionLabel,

@@ -31,7 +31,7 @@ class InsightCard extends StatelessWidget {
           Row(children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: _levelColor(insight.level).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(color: _levelColor(insight.level).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
               child: Text(insight.level, style: TextStyle(color: _levelColor(insight.level))),
             ),
             const SizedBox(width: 8),

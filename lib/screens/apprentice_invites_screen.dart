@@ -209,7 +209,7 @@ class _ApprenticeInvitesScreenState extends State<ApprenticeInvitesScreen> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.2),
+                    color: Colors.amber.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: const Icon(
@@ -246,7 +246,7 @@ class _ApprenticeInvitesScreenState extends State<ApprenticeInvitesScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.2),
+                    color: Colors.green.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(

@@ -1,5 +1,6 @@
 /// Weekly Tips Data for Apprentices
 /// 52 tips - one for each week of the year
+library;
 
 class ApprenticeWeeklyTip {
   final int weekNumber;
@@ -235,9 +236,9 @@ Forgiveness doesn't mean what happened was okay. It means you're releasing the d
   ApprenticeWeeklyTip(
     weekNumber: 20,
     title: 'Fight Comparison',
-    content: '''Comparison is the thief of joy. Social media makes it worse. Everyone else\'s highlight reel vs. your behind-the-scenes isn\'t a fair fight.
+    content: '''Comparison is the thief of joy. Social media makes it worse. Everyone else's highlight reel vs. your behind-the-scenes isn't a fair fight.
 
-You\'re on your own journey. Focus on your growth, not others\' appearances.''',
+You're on your own journey. Focus on your growth, not others' appearances.''',
     scripture: 'Galatians 6:4 - "Each one should test their own actions. Then they can take pride in themselves alone, without comparing themselves to someone else."',
     actionStep: 'When you catch yourself comparing this week, pause and thank God for something specific about YOUR journey.',
   ),
@@ -273,14 +274,14 @@ The opposite of faith isn't doubt—it's certainty that doesn't need God. Bring 
     title: 'Choose Your Influences',
     content: '''You become like the people you spend the most time with. Choose influences that pull you toward who you want to become.
 
-This doesn\'t mean ditching friends who aren\'t Christians. But be intentional about who shapes you most.''',
+This doesn't mean ditching friends who aren't Christians. But be intentional about who shapes you most.''',
     scripture: '1 Corinthians 15:33 - "Bad company corrupts good character."',
     actionStep: 'Think about your five closest influences. Are they pulling you toward or away from Christ?',
   ),
   ApprenticeWeeklyTip(
     weekNumber: 25,
     title: 'Give Generously',
-    content: '''Generosity isn\'t about having a lot—it\'s about holding loosely what you have. Start giving now, whatever your income.
+    content: '''Generosity isn't about having a lot—it's about holding loosely what you have. Start giving now, whatever your income.
 
 Generosity breaks the grip of money and reflects the heart of a generous God.''',
     scripture: '2 Corinthians 9:7 - "God loves a cheerful giver."',
@@ -289,9 +290,9 @@ Generosity breaks the grip of money and reflects the heart of a generous God.'''
   ApprenticeWeeklyTip(
     weekNumber: 26,
     title: 'Check Your Heart',
-    content: '''It\'s possible to do all the right things for all the wrong reasons. Don\'t just check your behavior—check your heart.
+    content: '''It's possible to do all the right things for all the wrong reasons. Don't just check your behavior—check your heart.
 
-Why are you doing what you\'re doing? What\'s really motivating you?''',
+Why are you doing what you're doing? What's really motivating you?''',
     scripture: 'Proverbs 4:23 - "Above all else, guard your heart, for everything you do flows from it."',
     actionStep: 'Ask God to search your heart this week. What motives need adjusting?',
   ),
@@ -302,7 +303,7 @@ Why are you doing what you\'re doing? What\'s really motivating you?''',
     title: 'Be the Same Everywhere',
     content: '''Integrity means being the same person in every room. Who you are at church should match who you are at school, at home, online.
 
-Compartmentalized faith isn\'t real faith. Let Jesus be Lord of all your life, not just parts of it.''',
+Compartmentalized faith isn't real faith. Let Jesus be Lord of all your life, not just parts of it.''',
     scripture: 'Proverbs 10:9 - "Whoever walks in integrity walks securely."',
     actionStep: 'Is there any area of your life where you\'re a different person? What would integrity look like there?',
   ),
@@ -311,32 +312,32 @@ Compartmentalized faith isn\'t real faith. Let Jesus be Lord of all your life, n
     title: 'Handle Conflict Well',
     content: '''Conflict is inevitable. How you handle it determines whether it destroys or strengthens relationships.
 
-Go directly to the person. Don\'t gossip. Listen first. Seek to understand. Be quick to apologize.''',
+Go directly to the person. Don't gossip. Listen first. Seek to understand. Be quick to apologize.''',
     scripture: 'Matthew 18:15 - "If your brother or sister sins, go and point out their fault, just between the two of you."',
     actionStep: 'Is there a conflict you\'ve been avoiding? Take a step toward resolving it this week.',
   ),
   ApprenticeWeeklyTip(
     weekNumber: 29,
     title: 'Protect Your Purity',
-    content: '''Purity isn\'t just about sex—it\'s about what you let into your mind and heart. In a world that normalizes impurity, this is countercultural.
+    content: '''Purity isn't just about sex—it's about what you let into your mind and heart. In a world that normalizes impurity, this is countercultural.
 
-Set boundaries now. They\'re easier to keep than to rebuild after they\'re broken.''',
+Set boundaries now. They're easier to keep than to rebuild after they're broken.''',
     scripture: 'Psalm 119:9 - "How can a young person stay on the path of purity? By living according to your word."',
     actionStep: 'What boundaries do you need to set or strengthen to protect your purity?',
   ),
   ApprenticeWeeklyTip(
     weekNumber: 30,
     title: 'Tell Your Story',
-    content: '''Your story matters. What God has done in your life is a powerful testimony. Don\'t hide it.
+    content: '''Your story matters. What God has done in your life is a powerful testimony. Don't hide it.
 
-You don\'t have to have a dramatic story. Transformation is transformation. Share what God has done.''',
+You don't have to have a dramatic story. Transformation is transformation. Share what God has done.''',
     scripture: 'Psalm 107:2 - "Let the redeemed of the Lord tell their story."',
     actionStep: 'Practice telling your faith story in 3 minutes. Share it with your mentor.',
   ),
   ApprenticeWeeklyTip(
     weekNumber: 31,
     title: 'Worship Beyond Sunday',
-    content: '''Worship isn\'t just singing at church. It\'s a lifestyle. Your whole life can be an act of worship.
+    content: '''Worship isn't just singing at church. It's a lifestyle. Your whole life can be an act of worship.
 
 How you work, how you treat people, how you spend your time—all of it can honor God.''',
     scripture: 'Romans 12:1 - "Offer your bodies as a living sacrifice, holy and pleasing to God—this is your true and proper worship."',
@@ -345,9 +346,9 @@ How you work, how you treat people, how you spend your time—all of it can hono
   ApprenticeWeeklyTip(
     weekNumber: 32,
     title: 'Trust the Process',
-    content: '''Transformation doesn\'t happen overnight. It\'s a process—often slow, sometimes painful, always worth it.
+    content: '''Transformation doesn't happen overnight. It's a process—often slow, sometimes painful, always worth it.
 
-You won\'t be the same person in a year. Trust that God is at work even when you can\'t see progress.''',
+You won't be the same person in a year. Trust that God is at work even when you can't see progress.''',
     scripture: 'Philippians 1:6 - "He who began a good work in you will carry it on to completion."',
     actionStep: 'Look back at where you were a year ago. Thank God for the progress you might not notice day-to-day.',
   ),
@@ -356,7 +357,7 @@ You won\'t be the same person in a year. Trust that God is at work even when you
     title: 'Take Thoughts Captive',
     content: '''Your thoughts shape your feelings and actions. Not every thought deserves a seat at the table. Learn to evaluate and reject lies.
 
-When a thought doesn\'t align with God\'s truth, replace it with what\'s true.''',
+When a thought doesn't align with God's truth, replace it with what's true.''',
     scripture: '2 Corinthians 10:5 - "We take captive every thought to make it obedient to Christ."',
     actionStep: 'Identify one recurring negative thought. Find a verse that counters it. Use it as a weapon.',
   ),
@@ -365,14 +366,14 @@ When a thought doesn\'t align with God\'s truth, replace it with what\'s true.''
     title: 'Don\'t Go It Alone',
     content: '''Independence is overrated. You need people who know your struggles and have permission to call you out.
 
-Find accountability—whether that\'s your mentor, a friend, or a group. Let people in.''',
+Find accountability—whether that's your mentor, a friend, or a group. Let people in.''',
     scripture: 'Proverbs 27:17 - "As iron sharpens iron, so one person sharpens another."',
     actionStep: 'Who has permission to ask you hard questions? If no one, ask someone to be that for you.',
   ),
   ApprenticeWeeklyTip(
     weekNumber: 35,
     title: 'Use Your Gifts',
-    content: '''God has given you unique gifts for a purpose—not to hide, but to use for His kingdom and others\' good.
+    content: '''God has given you unique gifts for a purpose—not to hide, but to use for His kingdom and others' good.
 
 Discover your gifts and deploy them. The body of Christ needs what you bring.''',
     scripture: '1 Peter 4:10 - "Each of you should use whatever gift you have received to serve others."',
@@ -381,16 +382,16 @@ Discover your gifts and deploy them. The body of Christ needs what you bring.'''
   ApprenticeWeeklyTip(
     weekNumber: 36,
     title: 'Love the Hard People',
-    content: '''It\'s easy to love people who love you back. The test of love is loving those who are difficult.
+    content: '''It's easy to love people who love you back. The test of love is loving those who are difficult.
 
-That annoying person? Love them. That person who wronged you? Love them. This is Jesus\' way.''',
+That annoying person? Love them. That person who wronged you? Love them. This is Jesus' way.''',
     scripture: 'Matthew 5:44 - "Love your enemies and pray for those who persecute you."',
     actionStep: 'Identify one difficult person. Pray for them and find one way to show them kindness this week.',
   ),
   ApprenticeWeeklyTip(
     weekNumber: 37,
     title: 'Stay Humble',
-    content: '''Pride is sneaky. It creeps in when things are going well. It compares and looks down. It\'s the enemy of growth.
+    content: '''Pride is sneaky. It creeps in when things are going well. It compares and looks down. It's the enemy of growth.
 
 Stay humble. Remember where you came from. Recognize everything good is from God.''',
     scripture: 'James 4:6 - "God opposes the proud but shows favor to the humble."',
@@ -399,18 +400,18 @@ Stay humble. Remember where you came from. Recognize everything good is from God
   ApprenticeWeeklyTip(
     weekNumber: 38,
     title: 'Run Your Race',
-    content: '''Life isn\'t a sprint—it\'s a marathon. Pace yourself. Don\'t burn out trying to do everything now.
+    content: '''Life isn't a sprint—it's a marathon. Pace yourself. Don't burn out trying to do everything now.
 
-You\'re not competing with others. You\'re running your own race. Stay focused on your lane.''',
+You're not competing with others. You're running your own race. Stay focused on your lane.''',
     scripture: 'Hebrews 12:1 - "Let us run with perseverance the race marked out for us."',
     actionStep: 'Are you trying to sprint when you should be pacing? What do you need to let go of to run well?',
   ),
   ApprenticeWeeklyTip(
     weekNumber: 39,
     title: 'Keep Showing Up',
-    content: '''Some days you won\'t feel it. Faith will feel dry. Growth will feel slow. Show up anyway.
+    content: '''Some days you won't feel it. Faith will feel dry. Growth will feel slow. Show up anyway.
 
-Consistency in the mundane is where character is built. Don\'t let feelings dictate faithfulness.''',
+Consistency in the mundane is where character is built. Don't let feelings dictate faithfulness.''',
     scripture: 'Galatians 6:9 - "Let us not become weary in doing good, for at the proper time we will reap a harvest if we do not give up."',
     actionStep: 'Is there something you\'ve been inconsistent with? Recommit to showing up.',
   ),
@@ -421,14 +422,14 @@ Consistency in the mundane is where character is built. Don\'t let feelings dict
     title: 'Look for God\'s Hand',
     content: '''God is always at work—you just have to look. Train yourself to see His fingerprints in your life.
 
-When you start looking, you\'ll be amazed at how active He is, even in small things.''',
+When you start looking, you'll be amazed at how active He is, even in small things.''',
     scripture: 'Psalm 105:1 - "Give praise to the Lord, proclaim his name; make known among the nations what he has done."',
     actionStep: 'Start noticing. Write down three ways you saw God at work this week.',
   ),
   ApprenticeWeeklyTip(
     weekNumber: 41,
     title: 'Finish What You Start',
-    content: '''It\'s easy to start things. Finishing is harder. But there\'s something powerful about completing what you began.
+    content: '''It's easy to start things. Finishing is harder. But there's something powerful about completing what you began.
 
 Look at your commitments. What have you left unfinished? What needs to be completed?''',
     scripture: '2 Timothy 4:7 - "I have fought the good fight, I have finished the race, I have kept the faith."',
@@ -437,7 +438,7 @@ Look at your commitments. What have you left unfinished? What needs to be comple
   ApprenticeWeeklyTip(
     weekNumber: 42,
     title: 'Invest in Eternity',
-    content: '''Most of what we chase is temporary. Money, status, possessions—they don\'t last. What lasts forever?
+    content: '''Most of what we chase is temporary. Money, status, possessions—they don't last. What lasts forever?
 
 People last. Faith lasts. Character lasts. Invest your time and energy in things with eternal value.''',
     scripture: 'Matthew 6:20 - "Store up for yourselves treasures in heaven."',
@@ -455,7 +456,7 @@ Ask questions. Read. Listen to people with different perspectives. Stay a studen
   ApprenticeWeeklyTip(
     weekNumber: 44,
     title: 'Build Daily Rhythms',
-    content: '''Spiritual growth doesn\'t happen by accident. It happens through intentional rhythms—daily practices that shape your soul.
+    content: '''Spiritual growth doesn't happen by accident. It happens through intentional rhythms—daily practices that shape your soul.
 
 What does your daily rhythm look like? Is there space for God?''',
     scripture: 'Daniel 6:10 - "Three times a day he got down on his knees and prayed."',
@@ -466,23 +467,23 @@ What does your daily rhythm look like? Is there space for God?''',
     title: 'Say Thank You',
     content: '''Gratitude to others matters. Your mentor is investing time in you. Your parents sacrifice for you. Friends show up for you.
 
-Don\'t let kindness go unacknowledged. Say thank you—specifically and often.''',
+Don't let kindness go unacknowledged. Say thank you—specifically and often.''',
     scripture: 'Colossians 3:15 - "Be thankful."',
     actionStep: 'Write a thank you note to your mentor. Tell them specifically what their investment has meant.',
   ),
   ApprenticeWeeklyTip(
     weekNumber: 46,
     title: 'Let Go of Perfection',
-    content: '''Perfectionism isn\'t excellence—it\'s fear. Fear of failure, fear of judgment, fear of not being enough.
+    content: '''Perfectionism isn't excellence—it's fear. Fear of failure, fear of judgment, fear of not being enough.
 
-You don\'t have to be perfect. Jesus already did that for you. Embrace grace.''',
+You don't have to be perfect. Jesus already did that for you. Embrace grace.''',
     scripture: '2 Corinthians 12:9 - "My grace is sufficient for you, for my power is made perfect in weakness."',
     actionStep: 'Where is perfectionism holding you back? What would grace look like in that area?',
   ),
   ApprenticeWeeklyTip(
     weekNumber: 47,
     title: 'Prepare for Hard Times',
-    content: '''Hard times will come. Not if—when. The question is whether you\'ll be prepared or caught off guard.
+    content: '''Hard times will come. Not if—when. The question is whether you'll be prepared or caught off guard.
 
 Build reserves now—spiritual disciplines, community, truth in your heart—for when the storm comes.''',
     scripture: 'Matthew 7:25 - "The rain came down, the streams rose... yet it did not fall, because it had its foundation on the rock."',
@@ -491,27 +492,27 @@ Build reserves now—spiritual disciplines, community, truth in your heart—for
   ApprenticeWeeklyTip(
     weekNumber: 48,
     title: 'Share What You\'re Learning',
-    content: '''The best way to learn something is to teach it. Share what you\'re learning with someone else.
+    content: '''The best way to learn something is to teach it. Share what you're learning with someone else.
 
-You don\'t have to be an expert. Just pass along what God is teaching you.''',
+You don't have to be an expert. Just pass along what God is teaching you.''',
     scripture: '2 Timothy 2:2 - "The things you have heard me say... entrust to reliable people who will also be qualified to teach others."',
     actionStep: 'Share one thing you\'ve learned in mentorship with a friend this week.',
   ),
   ApprenticeWeeklyTip(
     weekNumber: 49,
     title: 'Dream Big Dreams',
-    content: '''God is bigger than your biggest dreams. Don\'t limit what He might do in and through your life.
+    content: '''God is bigger than your biggest dreams. Don't limit what He might do in and through your life.
 
-What would you attempt if you knew you couldn\'t fail? Dream with God about your future.''',
+What would you attempt if you knew you couldn't fail? Dream with God about your future.''',
     scripture: 'Ephesians 3:20 - "God is able to do immeasurably more than all we ask or imagine."',
     actionStep: 'Write down a God-sized dream for your life. Share it with your mentor.',
   ),
   ApprenticeWeeklyTip(
     weekNumber: 50,
     title: 'Celebrate Progress',
-    content: '''How far have you come this year? Don\'t just look at what\'s left to do—celebrate what God has already done.
+    content: '''How far have you come this year? Don't just look at what's left to do—celebrate what God has already done.
 
-Progress deserves recognition. Growth deserves celebration. Thank God for how far you\'ve come.''',
+Progress deserves recognition. Growth deserves celebration. Thank God for how far you've come.''',
     scripture: 'Psalm 126:3 - "The Lord has done great things for us, and we are filled with joy."',
     actionStep: 'Make a list of ways you\'ve grown this year. Celebrate them with your mentor.',
   ),

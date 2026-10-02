@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
@@ -13,7 +12,6 @@ import '../../../theme.dart';
 import '../data/assessments_repository.dart';
 import '../models/submission_models.dart';
 import '../models/mentor_report_v2.dart';
-import '../widgets/kpi_card.dart';
 // import '../widgets/bar_row.dart';
 // import '../widgets/level_badge.dart';
 import '../widgets/insight_card.dart';
@@ -421,7 +419,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
                 leading: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.2),
+                    color: Colors.blue.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(Icons.ios_share, color: Colors.blue.shade300),
@@ -437,7 +435,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
                 leading: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.purple.withOpacity(0.2),
+                    color: Colors.purple.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(Icons.visibility, color: Colors.purple.shade300),
@@ -453,7 +451,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
                 leading: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.2),
+                    color: Colors.amber.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(Icons.email_outlined, color: Colors.amber.shade300),
@@ -607,7 +605,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
             final trailing = correct ? const _Badge(text: 'Correct') : (chosen && !correct ? const _Badge(text: 'Chosen') : null);
             final style = TextStyle(color: chosen && !correct ? Colors.red : null, fontWeight: chosen ? FontWeight.w600 : FontWeight.w400);
             return ListTile(leading: leading, title: Text(o.text, style: style), trailing: trailing);
-          }).toList(),
+          }),
           if (q.options.any((o) => o.isCorrect) && (q.chosenOptionId == null || !q.options.any((o) => o.id == q.chosenOptionId)))
             const Padding(padding: EdgeInsets.only(top: 4), child: Text('Correct answer shown above.', style: TextStyle(color: Colors.grey))),
         ]),
@@ -660,155 +658,6 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
     // Always show the simplified reactive report as default
     // with a button to view premium report
     return _buildSimplifiedReportTab();
-  }
-
-  /// Build the premium full report view inline
-  Widget _buildPremiumReportTab() {
-    final report = _fullReport!;
-    
-    // Debug logging for report structure
-    dev.log('[MentorSubmissionDetail] Building premium report with keys: ${report.keys.toList()}');
-    
-    // Extract sections from the premium report
-    final strengthsDeepDive = report['strengths_deep_dive'] as List<dynamic>?;
-    final gapsDeepDive = report['gaps_deep_dive'] as List<dynamic>?;
-    final execSummary = report['executive_summary'] as Map<String, dynamic>?;
-    final conversationGuide = report['conversation_guide'] as Map<String, dynamic>?;
-    final biblicalKnowledge = report['biblical_knowledge_analysis'] as Map<String, dynamic>?;
-    final spiritualFormation = report['spiritual_formation_insights'] as List<dynamic>?;
-    final meta = report['_meta'] as Map<String, dynamic>?;
-    
-    dev.log('[MentorSubmissionDetail] execSummary: ${execSummary?.keys.toList()}');
-    dev.log('[MentorSubmissionDetail] strengthsDeepDive count: ${strengthsDeepDive?.length}, first: ${strengthsDeepDive?.isNotEmpty == true ? (strengthsDeepDive!.first as Map?)?.keys.toList() : null}');
-    dev.log('[MentorSubmissionDetail] gapsDeepDive count: ${gapsDeepDive?.length}');
-    dev.log('[MentorSubmissionDetail] conversationGuide: ${conversationGuide?.keys.toList()}');
-    dev.log('[MentorSubmissionDetail] biblicalKnowledge: ${biblicalKnowledge?.keys.toList()}');
-    dev.log('[MentorSubmissionDetail] spiritualFormation count: ${spiritualFormation?.length}');
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        await _loadFullReport();
-      },
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Premium badge header
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.amber.shade100, Colors.amber.shade50],
-              ),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.amber.shade300),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.auto_awesome, color: Colors.amber.shade700),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Premium Report',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.amber.shade900,
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          if (_fullReportCached)
-                            Row(
-                              children: [
-                                Icon(Icons.cached, size: 12, color: Colors.amber.shade700),
-                                const SizedBox(width: 4),
-                                Text('Instant load', style: TextStyle(fontSize: 11, color: Colors.amber.shade700)),
-                              ],
-                            ),
-                          if (meta != null) ...[
-                            if (_fullReportCached) Text(' • ', style: TextStyle(fontSize: 11, color: Colors.amber.shade700)),
-                            Text(
-                              'Generated by ${meta['model'] ?? 'AI'}',
-                              style: TextStyle(fontSize: 11, color: Colors.amber.shade700),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Executive Summary
-          if (execSummary != null) ...[
-            _buildSectionHeader('Executive Summary', Icons.summarize),
-            const SizedBox(height: 12),
-            _buildExecutiveSummary(execSummary),
-            const SizedBox(height: 20),
-          ],
-
-          // Strengths Deep Dive
-          if (strengthsDeepDive != null && strengthsDeepDive.isNotEmpty) ...[
-            _buildSectionHeader('Strengths Deep Dive', Icons.thumb_up),
-            const SizedBox(height: 12),
-            ...strengthsDeepDive.map((s) => _buildStrengthDeepDiveCard(s as Map<String, dynamic>)),
-            const SizedBox(height: 20),
-          ],
-
-          // Gaps Deep Dive (with growth pathways)
-          if (gapsDeepDive != null && gapsDeepDive.isNotEmpty) ...[
-            _buildSectionHeader('Growth Areas Deep Dive', Icons.trending_up),
-            const SizedBox(height: 12),
-            ...gapsDeepDive.map((g) => _buildGapDeepDiveCard(g as Map<String, dynamic>)),
-            const SizedBox(height: 20),
-          ],
-
-          // Conversation Guide
-          if (conversationGuide != null) ...[
-            _buildSectionHeader('Mentor Conversation Guide', Icons.chat),
-            const SizedBox(height: 12),
-            _buildConversationGuideSection(conversationGuide),
-            const SizedBox(height: 20),
-          ],
-
-          // Biblical Knowledge Deep Dive
-          if (biblicalKnowledge != null) ...[
-            _buildSectionHeader('Biblical Knowledge Analysis', Icons.menu_book),
-            const SizedBox(height: 12),
-            _buildBiblicalKnowledgeSection(biblicalKnowledge),
-            const SizedBox(height: 20),
-          ],
-
-          // Spiritual Formation Insights
-          if (spiritualFormation != null && spiritualFormation.isNotEmpty) ...[
-            _buildSectionHeader('Spiritual Formation Insights', Icons.self_improvement),
-            const SizedBox(height: 12),
-            ...spiritualFormation.map((s) => _buildSpiritualFormationCard(s as Map<String, dynamic>)),
-            const SizedBox(height: 20),
-          ],
-
-          // Fallback: show raw JSON if structure is unexpected
-          if (strengthsDeepDive == null && gapsDeepDive == null && conversationGuide == null) ...[
-            _buildSectionHeader('Report Data', Icons.data_object),
-            const SizedBox(height: 12),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: SelectableText(
-                  _prettyPrintJson(report),
-                  style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
   }
 
   /// Build the simplified report view - navigates to the full interactive simplified screen
@@ -896,7 +745,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.2),
+                color: Colors.black.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: isLoading 
@@ -949,7 +798,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
                       : 'Get deeper insights, growth pathways & personalized guides',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                     ),
                   ),
                 ],
@@ -957,7 +806,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
             ),
             Icon(
               Icons.arrow_forward_ios,
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
               size: 16,
             ),
           ],
@@ -1100,7 +949,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [bandColor.withOpacity(0.2), Colors.grey[900]!],
+            colors: [bandColor.withValues(alpha: 0.2), Colors.grey[900]!],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -1167,7 +1016,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
 
   Widget _buildUrgentFlag(String flag) {
     return Card(
-      color: Colors.red.shade900.withOpacity(0.3),
+      color: Colors.red.shade900.withValues(alpha: 0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: Colors.red.shade700),
@@ -1198,7 +1047,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
     final action = r.snapshot.topGaps.isNotEmpty ? r.snapshot.topGaps.first : 'Continue current growth path';
     
     return Card(
-      color: Colors.amber.shade900.withOpacity(0.3),
+      color: Colors.amber.shade900.withValues(alpha: 0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: Colors.amber.shade700),
@@ -1231,7 +1080,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
       children: [
         Expanded(
           child: Card(
-            color: Colors.green.shade900.withOpacity(0.3),
+            color: Colors.green.shade900.withValues(alpha: 0.3),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -1265,7 +1114,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
         const SizedBox(width: 12),
         Expanded(
           child: Card(
-            color: Colors.orange.shade900.withOpacity(0.3),
+            color: Colors.orange.shade900.withValues(alpha: 0.3),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -1312,7 +1161,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
       onTap: () => setState(() => _showBiblicalKnowledge = !_showBiblicalKnowledge),
       child: hasTopicBreakdown
         ? Column(
-            children: bk!.topicBreakdown.map((t) => ListTile(
+            children: bk.topicBreakdown.map((t) => ListTile(
               dense: true,
               title: Text(t.topic, style: const TextStyle(color: Colors.white)),
               subtitle: Text('${t.correct}/${t.total} (${((t.total==0?0: (t.correct/t.total*100)).toStringAsFixed(0))}%)', style: TextStyle(color: Colors.grey[400])),
@@ -1323,13 +1172,13 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (bk!.percent != null) ...[
+                if (bk.percent != null) ...[
                   Row(children: [
                     Text('${bk.percent!.toStringAsFixed(1)}%', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.amber)),
                     const SizedBox(width: 12),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(color: Colors.amber.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
+                      decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
                       child: Text(_getKnowledgeBand(bk.percent!), style: TextStyle(color: Colors.amber.shade300, fontSize: 12)),
                     ),
                   ]),
@@ -1351,7 +1200,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                    decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Icon(Icons.lightbulb_outline, size: 18, color: Colors.blue.shade300),
                       const SizedBox(width: 8),
@@ -1454,7 +1303,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
     if (starter == null) return const SizedBox.shrink();
     
     return Card(
-      color: Colors.blue.shade900.withOpacity(0.3),
+      color: Colors.blue.shade900.withValues(alpha: 0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: Colors.blue.shade700),
@@ -1481,1004 +1330,6 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
         ),
       ),
     );
-  }
-
-  // Premium report helper widgets
-  Widget _buildSectionHeader(String title, IconData icon) {
-    return Row(
-      children: [
-        Icon(icon, size: 24, color: Colors.amber.shade300),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildExecutiveSummary(Map<String, dynamic> summary) {
-    // Support both AI-generated fields and legacy fields
-    final healthScore = summary['health_score'];
-    final healthBand = summary['health_band'] as String?;
-    final oneLiner = summary['one_liner'] as String? ?? summary['overall_assessment'] as String?;
-    final trajectory = summary['trajectory'] as String?;
-    final trajectoryNote = summary['trajectory_note'] as String?;
-    // Legacy fallbacks
-    final keyStrengths = summary['key_strengths'] as List<dynamic>? ?? [];
-    final priorityGrowthAreas = summary['priority_growth_areas'] as List<dynamic>? ?? [];
-    final recommendedFocus = summary['recommended_focus'] as String?;
-
-    return Card(
-      color: Colors.grey[900],
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Health score and band (from premium report)
-            if (healthScore != null || healthBand != null) ...[  
-              Row(
-                children: [
-                  if (healthScore != null) ...[  
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'Health Score: $healthScore',
-                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade300),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  if (healthBand != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        healthBand,
-                        style: TextStyle(fontWeight: FontWeight.w500, color: Colors.blue.shade300),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-            ],
-            // One-liner summary
-            if (oneLiner != null) ...[
-              Text(oneLiner, style: const TextStyle(fontSize: 14, color: Colors.white70)),
-              const SizedBox(height: 12),
-            ],
-            // Trajectory info (from premium report)
-            if (trajectory != null || trajectoryNote != null) ...[
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: trajectory == 'upward' ? Colors.green.withOpacity(0.15) :
-                         trajectory == 'downward' ? Colors.red.withOpacity(0.15) : Colors.grey.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      trajectory == 'upward' ? Icons.trending_up :
-                      trajectory == 'downward' ? Icons.trending_down : Icons.trending_flat,
-                      color: trajectory == 'upward' ? Colors.green.shade300 :
-                             trajectory == 'downward' ? Colors.red.shade300 : Colors.grey.shade400,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        trajectoryNote ?? 'Trajectory: ${trajectory ?? "stable"}',
-                        style: const TextStyle(fontSize: 13, color: Colors.white70),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-            if (keyStrengths.isNotEmpty) ...[
-              const Text('Key Strengths:', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
-              const SizedBox(height: 4),
-              ...keyStrengths.map((s) => Padding(
-                padding: const EdgeInsets.only(left: 8, bottom: 2),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('• ', style: TextStyle(color: Colors.green.shade300)),
-                    Expanded(child: Text(s.toString(), style: const TextStyle(fontSize: 13, color: Colors.white70))),
-                  ],
-                ),
-              )),
-              const SizedBox(height: 12),
-            ],
-            if (priorityGrowthAreas.isNotEmpty) ...[
-              const Text('Priority Growth Areas:', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
-              const SizedBox(height: 4),
-              ...priorityGrowthAreas.map((g) => Padding(
-                padding: const EdgeInsets.only(left: 8, bottom: 2),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('• ', style: TextStyle(color: Colors.orange.shade300)),
-                    Expanded(child: Text(g.toString(), style: const TextStyle(fontSize: 13, color: Colors.white70))),
-                  ],
-                ),
-              )),
-              const SizedBox(height: 12),
-            ],
-            if (recommendedFocus != null) ...[
-              const Text('Recommended Focus:', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.amber.shade700),
-                ),
-                child: Text(recommendedFocus, style: TextStyle(fontSize: 13, color: Colors.amber.shade200)),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStrengthDeepDiveCard(Map<String, dynamic> strength) {
-    // Support AI-generated fields: area, summary, evidence, spiritual_maturity_indicator, how_to_leverage, celebration_talking_point
-    final name = strength['area'] ?? strength['name'] ?? strength['strength'] ?? 'Strength';
-    final description = strength['summary'] ?? strength['description'] as String?;
-    final evidence = strength['evidence'] as List<dynamic>? ?? [];
-    final howToLeverage = strength['how_to_leverage'] as String?;
-    final spiritualIndicator = strength['spiritual_maturity_indicator'] as String?;
-    final celebrationTalkingPoint = strength['celebration_talking_point'] as String?;
-
-    return Card(
-      color: Colors.grey[900],
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.star, color: Colors.amber.shade400, size: 20),
-                const SizedBox(width: 8),
-                Expanded(child: Text(name.toString(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white))),
-              ],
-            ),
-            if (description != null) ...[
-              const SizedBox(height: 8),
-              Text(description, style: const TextStyle(fontSize: 13, color: Colors.white70)),
-            ],
-            if (evidence.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              const Text('Evidence:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.white)),
-              ...evidence.take(3).map((e) => Padding(
-                padding: const EdgeInsets.only(left: 8, top: 2),
-                child: Text('• $e', style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
-              )),
-            ],
-            if (howToLeverage != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.lightbulb_outline, size: 16, color: Colors.green.shade300),
-                    const SizedBox(width: 6),
-                    Expanded(child: Text(howToLeverage, style: TextStyle(fontSize: 12, color: Colors.green.shade200))),
-                  ],
-                ),
-              ),
-            ],
-            if (spiritualIndicator != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.purple.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.auto_stories, size: 16, color: Colors.purple.shade300),
-                    const SizedBox(width: 6),
-                    Expanded(child: Text(spiritualIndicator, style: TextStyle(fontSize: 12, color: Colors.purple.shade200, fontStyle: FontStyle.italic))),
-                  ],
-                ),
-              ),
-            ],
-            if (celebrationTalkingPoint != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.celebration, size: 16, color: Colors.amber.shade300),
-                    const SizedBox(width: 6),
-                    Expanded(child: Text(celebrationTalkingPoint, style: TextStyle(fontSize: 12, color: Colors.amber.shade200))),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGapDeepDiveCard(Map<String, dynamic> gap) {
-    // Support AI-generated fields: area, summary, severity, root_cause_analysis, evidence, biblical_perspective, why_it_matters, growth_pathway
-    final name = gap['area'] ?? gap['name'] ?? gap['gap'] ?? 'Growth Area';
-    final description = gap['summary'] ?? gap['description'] as String?;
-    final severity = gap['severity'] as String?;
-    final rootCauseAnalysis = gap['root_cause_analysis'] as String?;
-    final biblicalPerspective = gap['biblical_perspective'] as String?;
-    final whyItMatters = gap['why_it_matters'] as String?;
-    final evidence = gap['evidence'] as List<dynamic>? ?? [];
-    final currentState = gap['current_state'] as String?;
-    final growthPathway = gap['growth_pathway'] as Map<String, dynamic>? ?? gap['pathway'] as Map<String, dynamic>?;
-    final resources = gap['resources'] as List<dynamic>? ?? [];
-
-    return Card(
-      color: Colors.grey[900],
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.trending_up, color: Colors.orange.shade300, size: 20),
-                const SizedBox(width: 8),
-                Expanded(child: Text(name.toString(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white))),
-                if (severity != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: severity == 'high' ? Colors.red.withOpacity(0.2) : 
-                             severity == 'moderate' ? Colors.orange.withOpacity(0.2) : Colors.yellow.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      severity,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: severity == 'high' ? Colors.red.shade300 :
-                               severity == 'moderate' ? Colors.orange.shade300 : Colors.yellow.shade300,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            if (description != null) ...[
-              const SizedBox(height: 8),
-              Text(description, style: const TextStyle(fontSize: 13, color: Colors.white70)),
-            ],
-            if (evidence.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              const Text('Evidence:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.white)),
-              ...evidence.take(3).map((e) => Padding(
-                padding: const EdgeInsets.only(left: 8, top: 2),
-                child: Text('• $e', style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
-              )),
-            ],
-            if (rootCauseAnalysis != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Root Cause Analysis:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.white)),
-                    const SizedBox(height: 4),
-                    Text(rootCauseAnalysis, style: const TextStyle(fontSize: 12, color: Colors.white70)),
-                  ],
-                ),
-              ),
-            ],
-            if (biblicalPerspective != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.purple.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.menu_book, size: 16, color: Colors.purple.shade300),
-                    const SizedBox(width: 6),
-                    Expanded(child: Text(biblicalPerspective, style: TextStyle(fontSize: 12, color: Colors.purple.shade200))),
-                  ],
-                ),
-              ),
-            ],
-            if (whyItMatters != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Why It Matters:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.white)),
-                    const SizedBox(height: 4),
-                    Text(whyItMatters, style: TextStyle(fontSize: 12, color: Colors.amber.shade200)),
-                  ],
-                ),
-              ),
-            ],
-            if (currentState != null) ...[
-              const SizedBox(height: 8),
-              Text('Current State: $currentState', style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.white70)),
-            ],
-            if (growthPathway != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.blue.shade700),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Growth Pathway:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.white)),
-                    const SizedBox(height: 4),
-                    // Support both AI format (phase_1_weeks_1_4) and legacy format (immediate, short_term, long_term)
-                    if (growthPathway['phase_1_weeks_1_4'] != null)
-                      _buildPhaseSection('Weeks 1-4', growthPathway['phase_1_weeks_1_4'] as Map<String, dynamic>),
-                    if (growthPathway['phase_2_weeks_5_8'] != null)
-                      _buildPhaseSection('Weeks 5-8', growthPathway['phase_2_weeks_5_8'] as Map<String, dynamic>),
-                    if (growthPathway['phase_3_weeks_9_12'] != null)
-                      _buildPhaseSection('Weeks 9-12', growthPathway['phase_3_weeks_9_12'] as Map<String, dynamic>),
-                    // Legacy format fallback
-                    if (growthPathway['immediate'] != null)
-                      Text('• Immediate: ${growthPathway['immediate']}', style: const TextStyle(fontSize: 12, color: Colors.white70)),
-                    if (growthPathway['short_term'] != null)
-                      Text('• Short-term: ${growthPathway['short_term']}', style: const TextStyle(fontSize: 12, color: Colors.white70)),
-                    if (growthPathway['long_term'] != null)
-                      Text('• Long-term: ${growthPathway['long_term']}', style: const TextStyle(fontSize: 12, color: Colors.white70)),
-                  ],
-                ),
-              ),
-            ],
-            if (resources.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              const Text('Suggested Resources:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.white)),
-              ...resources.take(3).map((r) => Padding(
-                padding: const EdgeInsets.only(left: 8, top: 2),
-                child: Text('• $r', style: const TextStyle(fontSize: 12, color: Colors.white70)),
-              )),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Build a phase section for growth pathway (e.g. "Weeks 1-4")
-  Widget _buildPhaseSection(String phaseName, Map<String, dynamic> phase) {
-    final goal = phase['goal'] as String?;
-    final activities = phase['activities'] as List<dynamic>? ?? [];
-    final successMetric = phase['success_metric'] as String?;
-    
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('📅 $phaseName', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.white)),
-          if (goal != null)
-            Padding(
-              padding: const EdgeInsets.only(left: 16, top: 2),
-              child: Text('Goal: $goal', style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.white70)),
-            ),
-          if (activities.isNotEmpty)
-            ...activities.map((a) => Padding(
-              padding: const EdgeInsets.only(left: 16, top: 2),
-              child: Text('• $a', style: const TextStyle(fontSize: 11, color: Colors.white70)),
-            )),
-          if (successMetric != null)
-            Padding(
-              padding: const EdgeInsets.only(left: 16, top: 2),
-              child: Text('✓ Success: $successMetric', style: TextStyle(fontSize: 11, color: Colors.green.shade300)),
-            ),
-        ],
-      ),
-    );
-  }
-
-  /// Build a session card for AI-generated conversation guide
-  Widget _buildAiSessionCard(int sessionNum, Map<String, dynamic> session) {
-    final theme = session['theme'] as String?;
-    final duration = session['duration_minutes'];
-    final openingQuestion = session['opening_question'] as String?;
-    final keyPoints = session['key_points_to_cover'] as List<dynamic>? ?? [];
-    final questions = session['questions_to_ask'] as List<dynamic>? ?? [];
-    final closeWith = session['close_with'] as String?;
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[850],
-        border: Border.all(color: Colors.blue.shade700),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 14,
-                backgroundColor: Colors.blue.withOpacity(0.3),
-                child: Text('$sessionNum', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue.shade300)),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  theme ?? 'Session $sessionNum',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
-                ),
-              ),
-              if (duration != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text('$duration min', style: const TextStyle(fontSize: 11, color: Colors.white70)),
-                ),
-            ],
-          ),
-          if (openingQuestion != null) ...[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.record_voice_over, size: 16, color: Colors.green.shade300),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      '"$openingQuestion"',
-                      style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.green.shade200),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          if (keyPoints.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            const Text('Key Points:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.white)),
-            const SizedBox(height: 4),
-            ...keyPoints.map((kp) {
-              final point = kp is Map ? kp['point'] ?? kp['talking_point'] : kp;
-              final talkingPoint = kp is Map ? kp['talking_point'] : null;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('• $point', style: const TextStyle(fontSize: 12, color: Colors.white70)),
-                    if (talkingPoint != null)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 12, top: 2),
-                        child: Text(
-                          '💬 "$talkingPoint"',
-                          style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.grey.shade400),
-                        ),
-                      ),
-                  ],
-                ),
-              );
-            }),
-          ],
-          if (questions.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            const Text('Questions to Ask:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.white)),
-            const SizedBox(height: 4),
-            ...questions.map((q) => Padding(
-              padding: const EdgeInsets.only(left: 8, bottom: 2),
-              child: Text('❓ $q', style: const TextStyle(fontSize: 12, color: Colors.white70)),
-            )),
-          ],
-          if (closeWith != null) ...[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.purple.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.favorite, size: 14, color: Colors.purple.shade300),
-                  const SizedBox(width: 6),
-                  Expanded(child: Text(closeWith, style: TextStyle(fontSize: 11, color: Colors.purple.shade200))),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildConversationGuideSection(Map<String, dynamic> guide) {
-    // Legacy format
-    final sessions = guide['sessions'] as List<dynamic>? ?? [];
-    final openingQuestions = guide['opening_questions'] as List<dynamic>? ?? [];
-    final topics = guide['suggested_topics'] as List<dynamic>? ?? [];
-    
-    // AI format: session_1_opening, session_2_growth_areas, session_3_check_in
-    final session1 = guide['session_1_opening'] as Map<String, dynamic>?;
-    final session2 = guide['session_2_growth_areas'] as Map<String, dynamic>?;
-    final session3 = guide['session_3_check_in'] as Map<String, dynamic>?;
-    final hasAiSessions = session1 != null || session2 != null || session3 != null;
-
-    return Card(
-      color: Colors.grey[900],
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // AI-format sessions
-            if (hasAiSessions) ...[
-              if (session1 != null) _buildAiSessionCard(1, session1),
-              if (session2 != null) _buildAiSessionCard(2, session2),
-              if (session3 != null) _buildAiSessionCard(3, session3),
-            ],
-            // Legacy format
-            if (openingQuestions.isNotEmpty) ...[
-              const Text('Opening Questions:', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
-              const SizedBox(height: 8),
-              ...openingQuestions.map((q) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text('• $q', style: const TextStyle(fontSize: 13, color: Colors.white70)),
-              )),
-              const SizedBox(height: 12),
-            ],
-            if (sessions.isNotEmpty) ...[
-              const Text('Session Structure:', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
-              const SizedBox(height: 8),
-              ...sessions.asMap().entries.map((entry) {
-                final session = entry.value as Map<String, dynamic>;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CircleAvatar(
-                        radius: 12,
-                        backgroundColor: Colors.blue.withOpacity(0.3),
-                        child: Text('${entry.key + 1}', style: TextStyle(fontSize: 11, color: Colors.blue.shade300)),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(session['focus'] ?? 'Session ${entry.key + 1}',
-                                style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.white)),
-                            if (session['goal'] != null)
-                              Text(session['goal'], style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-            ],
-            if (topics.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              const Text('Topics to Explore:', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: topics.map((t) => Chip(
-                  label: Text(t.toString(), style: const TextStyle(fontSize: 12, color: Colors.white)),
-                  backgroundColor: Colors.blue.withOpacity(0.2),
-                )).toList(),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBiblicalKnowledgeSection(Map<String, dynamic> knowledge) {
-    // Legacy format
-    final topicBreakdown = knowledge['topic_breakdown'] as List<dynamic>? ?? [];
-    final weakAreas = knowledge['weak_areas'] as List<dynamic>? ?? [];
-    final studyPlan = knowledge['study_plan'] as Map<String, dynamic>?;
-    
-    // AI format
-    final overallPercent = knowledge['overall_percent'];
-    final masteryLevel = knowledge['mastery_level'] as String?;
-    final byTopicBreakdown = knowledge['by_topic_breakdown'] as List<dynamic>? ?? [];
-    final theologicalHealthCheck = knowledge['theological_health_check'] as Map<String, dynamic>?;
-    final readingPlan = knowledge['recommended_bible_reading_plan'] as Map<String, dynamic>?;
-    
-    // Use AI format if available, else legacy
-    final topics = byTopicBreakdown.isNotEmpty ? byTopicBreakdown : topicBreakdown;
-
-    return Card(
-      color: Colors.grey[900],
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // AI format: overall score
-            if (overallPercent != null || masteryLevel != null) ...[
-              Row(
-                children: [
-                  if (overallPercent != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '$overallPercent%',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.blue.shade300),
-                      ),
-                    ),
-                  if (masteryLevel != null) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(masteryLevel, style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.white)),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 12),
-            ],
-            if (topics.isNotEmpty) ...[
-              const Text('Topic Performance:', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
-              const SizedBox(height: 8),
-              ...topics.take(5).map((topic) {
-                if (topic is Map) {
-                  final name = topic['topic'] ?? topic['name'] ?? 'Topic';
-                  // Support AI format (score_percent) and legacy (score, percent)
-                  final score = topic['score_percent'] ?? topic['score'] ?? topic['percent'] ?? 0;
-                  final level = topic['level'] as String?;
-                  final keyGaps = topic['key_gaps'] as List<dynamic>? ?? [];
-                  final affirmation = topic['affirmation'] as String?;
-                  final studyPrescription = topic['study_prescription'] as String?;
-                  
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade700),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(child: Text(name.toString(), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white))),
-                            Row(
-                              children: [
-                                Text('$score%', style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
-                                if (level != null) ...[
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: level == 'Strong' ? Colors.green.withOpacity(0.2) :
-                                             level == 'Weak' ? Colors.red.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      level,
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: level == 'Strong' ? Colors.green.shade300 :
-                                               level == 'Weak' ? Colors.red.shade300 : Colors.orange.shade300,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        LinearProgressIndicator(
-                          value: (score as num) / 100,
-                          backgroundColor: Colors.grey.shade800,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            score >= 70 ? Colors.green : (score >= 50 ? Colors.orange : Colors.red),
-                          ),
-                        ),
-                        if (affirmation != null) ...[
-                          const SizedBox(height: 6),
-                          Text('✓ $affirmation', style: TextStyle(fontSize: 11, color: Colors.green.shade300)),
-                        ],
-                        if (keyGaps.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          Text('Gaps: ${keyGaps.join(", ")}', style: TextStyle(fontSize: 11, color: Colors.red.shade300)),
-                        ],
-                        if (studyPrescription != null) ...[
-                          const SizedBox(height: 6),
-                          Text('📚 $studyPrescription', style: TextStyle(fontSize: 11, color: Colors.blue.shade300)),
-                        ],
-                      ],
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
-              }),
-            ],
-            // Theological health check (AI format)
-            if (theologicalHealthCheck != null) ...[
-              const SizedBox(height: 12),
-              const Text('Theological Health Check:', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
-              const SizedBox(height: 8),
-              if ((theologicalHealthCheck['core_doctrines_solid'] as List?)?.isNotEmpty ?? false) ...[
-                Text('✓ Solid: ${(theologicalHealthCheck['core_doctrines_solid'] as List).join(", ")}',
-                    style: TextStyle(fontSize: 12, color: Colors.green.shade300)),
-                const SizedBox(height: 4),
-              ],
-              if ((theologicalHealthCheck['areas_needing_clarification'] as List?)?.isNotEmpty ?? false) ...[
-                Text('⚠ Needs clarification: ${(theologicalHealthCheck['areas_needing_clarification'] as List).join(", ")}',
-                    style: TextStyle(fontSize: 12, color: Colors.orange.shade300)),
-              ],
-            ],
-            // Bible reading plan (AI format)
-            if (readingPlan != null) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.purple.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.menu_book, size: 18, color: Colors.purple.shade300),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text('Recommended: ${readingPlan['name'] ?? "Bible Reading Plan"}',
-                              style: TextStyle(fontWeight: FontWeight.w600, color: Colors.purple.shade200)),
-                        ),
-                      ],
-                    ),
-                    if (readingPlan['description'] != null) ...[
-                      const SizedBox(height: 4),
-                      Text(readingPlan['description'], style: const TextStyle(fontSize: 12, color: Colors.white70)),
-                    ],
-                    if (readingPlan['why_this_plan'] != null) ...[
-                      const SizedBox(height: 4),
-                      Text('Why: ${readingPlan['why_this_plan']}', style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.grey.shade400)),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-            if (weakAreas.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              const Text('Areas to Strengthen:', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
-              const SizedBox(height: 8),
-              ...weakAreas.take(3).map((area) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  children: [
-                    Icon(Icons.warning_amber, size: 16, color: Colors.orange.shade300),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text(area.toString(), style: const TextStyle(fontSize: 13, color: Colors.white70))),
-                  ],
-                ),
-              )),
-            ],
-            if (studyPlan != null) ...[
-              const SizedBox(height: 12),
-              const Text('Recommended Study Plan:', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.indigo.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: studyPlan.entries.map((e) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text('${e.key}: ${e.value}', style: TextStyle(fontSize: 12, color: Colors.indigo.shade200)),
-                  )).toList(),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSpiritualFormationCard(Map<String, dynamic> insight) {
-    // Support AI format and legacy format
-    final area = insight['category'] ?? insight['area'] ?? 'Spiritual Life';
-    final currentLevel = insight['current_level'] as String?;
-    final detailedObservation = insight['detailed_observation'] ?? insight['observation'] as String?;
-    final maturityPresent = insight['maturity_markers_present'] as List<dynamic>? ?? [];
-    final maturityMissing = insight['maturity_markers_missing'] as List<dynamic>? ?? [];
-    final customPlan = insight['custom_development_plan'] as Map<String, dynamic>?;
-    final mentorQuestions = insight['mentor_discussion_questions'] as List<dynamic>? ?? [];
-    final suggestions = insight['suggestions'] as List<dynamic>? ?? [];
-
-    return Card(
-      color: Colors.grey[900],
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.spa, color: Colors.purple.shade300, size: 20),
-                const SizedBox(width: 8),
-                Expanded(child: Text(area.toString(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white))),
-                if (currentLevel != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.purple.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(currentLevel, style: TextStyle(fontSize: 11, color: Colors.purple.shade300)),
-                  ),
-              ],
-            ),
-            if (detailedObservation != null) ...[
-              const SizedBox(height: 8),
-              Text(detailedObservation, style: const TextStyle(fontSize: 13, color: Colors.white70)),
-            ],
-            // Maturity markers
-            if (maturityPresent.isNotEmpty || maturityMissing.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (maturityPresent.isNotEmpty)
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('✓ Present', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.green.shade300)),
-                          ...maturityPresent.map((m) => Text('  • $m', style: const TextStyle(fontSize: 11, color: Colors.white70))),
-                        ],
-                      ),
-                    ),
-                  if (maturityMissing.isNotEmpty)
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('○ Missing', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.orange.shade300)),
-                          ...maturityMissing.map((m) => Text('  • $m', style: const TextStyle(fontSize: 11, color: Colors.white70))),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ],
-            // Custom development plan
-            if (customPlan != null) ...[
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Development Plan:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.white)),
-                    if (customPlan['immediate_30_days'] != null)
-                      Text('📅 30 days: ${customPlan['immediate_30_days']}', style: const TextStyle(fontSize: 11, color: Colors.white70)),
-                    if (customPlan['quarter_goal'] != null)
-                      Text('📅 Quarter: ${customPlan['quarter_goal']}', style: const TextStyle(fontSize: 11, color: Colors.white70)),
-                    if (customPlan['year_vision'] != null)
-                      Text('📅 Year: ${customPlan['year_vision']}', style: const TextStyle(fontSize: 11, color: Colors.white70)),
-                  ],
-                ),
-              ),
-            ],
-            // Mentor discussion questions
-            if (mentorQuestions.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              const Text('Questions to Ask:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.white)),
-              ...mentorQuestions.map((q) => Padding(
-                padding: const EdgeInsets.only(left: 8, top: 4),
-                child: Text('❓ $q', style: const TextStyle(fontSize: 12, color: Colors.white70)),
-              )),
-            ],
-            // Legacy suggestions
-            if (suggestions.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              const Text('Suggestions:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.white)),
-              ...suggestions.map((s) => Padding(
-                padding: const EdgeInsets.only(left: 8, top: 2),
-                child: Text('• $s', style: const TextStyle(fontSize: 12, color: Colors.white70)),
-              )),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _prettyPrintJson(Map<String, dynamic> json) {
-    try {
-      const encoder = JsonEncoder.withIndent('  ');
-      return encoder.convert(json);
-    } catch (e) {
-      return json.toString();
-    }
   }
 
   Widget _notesTab() {
@@ -2523,18 +1374,9 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
     );
   }
 
-  String _deriveOpenLevel(MentorReportV2 r) {
-    // If we had an explicit overall_open_level we would show it; otherwise majority
-    final levels = r.openEndedInsights.map((e) => e.level).toList();
-    if (levels.isEmpty) return '-';
-    levels.sort();
-    String best = levels.first; int bestCount = 1; int run = 1;
-    for (int i=1;i<levels.length;i++) { if (levels[i]==levels[i-1]) { run++; if (run>bestCount) { best=levels[i]; bestCount=run; } } else { run=1; } }
-    return best;
-  }
 }
 
-class _Badge extends StatelessWidget { final String text; const _Badge({required this.text}); @override Widget build(BuildContext context) { return Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: Text(text, style: const TextStyle(color: Colors.green))); }}
+class _Badge extends StatelessWidget { final String text; const _Badge({required this.text}); @override Widget build(BuildContext context) { return Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Text(text, style: const TextStyle(color: Colors.green))); }}
 
 /// PDF Preview screen with share functionality
 class _PdfPreviewScreen extends StatelessWidget {
@@ -2573,7 +1415,7 @@ class _PdfPreviewScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
+                  color: Colors.red.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Icon(Icons.picture_as_pdf, size: 80, color: Colors.red.shade400),
@@ -2866,7 +1708,7 @@ class _PremiumReportFullScreen extends StatelessWidget {
                     width: 60, height: 60,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.amber.withOpacity(0.2),
+                      color: Colors.amber.withValues(alpha: 0.2),
                       border: Border.all(color: Colors.amber, width: 3),
                     ),
                     alignment: Alignment.center,
@@ -2899,9 +1741,9 @@ class _PremiumReportFullScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: trajectoryColor.withOpacity(0.1),
+                  color: trajectoryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: trajectoryColor.withOpacity(0.3)),
+                  border: Border.all(color: trajectoryColor.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
@@ -2947,7 +1789,7 @@ class _PremiumReportFullScreen extends StatelessWidget {
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.amber.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                 child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Icon(Icons.lightbulb, color: Colors.amber, size: 18),
                   const SizedBox(width: 8),
@@ -2959,7 +1801,7 @@ class _PremiumReportFullScreen extends StatelessWidget {
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: Colors.purple.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                 child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Icon(Icons.menu_book, color: Colors.purple.shade300, size: 18),
                   const SizedBox(width: 8),
@@ -2982,8 +1824,9 @@ class _PremiumReportFullScreen extends StatelessWidget {
     final growthPathway = gap['growth_pathway'] as Map<String, dynamic>?;
 
     Color severityColor = Colors.orange;
-    if (severity == 'critical') severityColor = Colors.red;
-    else if (severity == 'minor') severityColor = Colors.yellow;
+    if (severity == 'critical') {
+      severityColor = Colors.red;
+    } else if (severity == 'minor') severityColor = Colors.yellow;
 
     return Card(
       color: Colors.grey[900],
@@ -3000,7 +1843,7 @@ class _PremiumReportFullScreen extends StatelessWidget {
               if (severity != null)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(color: severityColor.withOpacity(0.2), borderRadius: BorderRadius.circular(4)),
+                  decoration: BoxDecoration(color: severityColor.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
                   child: Text(severity.toUpperCase(), style: TextStyle(color: severityColor, fontSize: 10, fontWeight: FontWeight.bold)),
                 ),
             ]),
@@ -3015,7 +1858,7 @@ class _PremiumReportFullScreen extends StatelessWidget {
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: Colors.purple.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                 child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Icon(Icons.menu_book, color: Colors.purple.shade300, size: 18),
                   const SizedBox(width: 8),
@@ -3076,7 +1919,7 @@ class _PremiumReportFullScreen extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 16),
           child: Container(
             padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 Expanded(child: Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade300, fontSize: 15))),
@@ -3090,7 +1933,7 @@ class _PremiumReportFullScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(8)),
                   child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Icon(Icons.chat_bubble_outline, size: 16, color: Colors.blue.shade200),
                     const SizedBox(width: 8),
@@ -3137,7 +1980,7 @@ class _PremiumReportFullScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                   child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Icon(Icons.favorite, size: 16, color: Colors.green.shade300),
                     const SizedBox(width: 8),
@@ -3170,7 +2013,7 @@ class _PremiumReportFullScreen extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Container(
                       padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                      decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text('Session ${entry.key + 1}', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade300)),
                         if (session['goal'] != null) ...[const SizedBox(height: 4), Text(session['goal'].toString(), style: const TextStyle(color: Colors.white70))],
@@ -3185,7 +2028,7 @@ class _PremiumReportFullScreen extends StatelessWidget {
               if (topics.isNotEmpty) ...[
                 const Text('Topics to Explore:', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
                 const SizedBox(height: 8),
-                Wrap(spacing: 8, runSpacing: 4, children: topics.map((t) => Chip(label: Text(t.toString(), style: const TextStyle(fontSize: 12, color: Colors.white)), backgroundColor: Colors.blue.withOpacity(0.2))).toList()),
+                Wrap(spacing: 8, runSpacing: 4, children: topics.map((t) => Chip(label: Text(t.toString(), style: const TextStyle(fontSize: 12, color: Colors.white)), backgroundColor: Colors.blue.withValues(alpha: 0.2))).toList()),
               ],
               if (sessions.isEmpty && topics.isEmpty)
                 const Text('No conversation guide available', style: TextStyle(color: Colors.grey)),
@@ -3223,7 +2066,7 @@ class _PremiumReportFullScreen extends StatelessWidget {
               Row(children: [
                 if (overallPercent != null) Text('$overallPercent%', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.amber)),
                 if (overallPercent != null && masteryLevel != null) const SizedBox(width: 12),
-                if (masteryLevel != null) Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), decoration: BoxDecoration(color: Colors.amber.withOpacity(0.2), borderRadius: BorderRadius.circular(12)), child: Text(masteryLevel, style: const TextStyle(color: Colors.amber))),
+                if (masteryLevel != null) Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12)), child: Text(masteryLevel, style: const TextStyle(color: Colors.amber))),
               ]),
             if (byTopicBreakdown.isNotEmpty) ...[
               const SizedBox(height: 16),
@@ -3237,7 +2080,7 @@ class _PremiumReportFullScreen extends StatelessWidget {
                   child: Row(children: [
                     Expanded(flex: 2, child: Text(topicName, style: const TextStyle(color: Colors.white))),
                     if (scorePercent != null) Expanded(child: Text('$scorePercent%', style: TextStyle(color: Colors.grey[400]))),
-                    if (level != null) Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: _levelColor(level).withOpacity(0.2), borderRadius: BorderRadius.circular(4)), child: Text(level, style: TextStyle(color: _levelColor(level), fontSize: 11))),
+                    if (level != null) Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: _levelColor(level).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)), child: Text(level, style: TextStyle(color: _levelColor(level), fontSize: 11))),
                   ]),
                 );
               }),
@@ -3308,7 +2151,7 @@ class _PremiumReportFullScreen extends StatelessWidget {
               if (level != null)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: levelColor.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(color: levelColor.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12)),
                   child: Text(level, style: TextStyle(color: levelColor, fontSize: 12, fontWeight: FontWeight.w600)),
                 ),
             ]),
@@ -3329,7 +2172,7 @@ class _PremiumReportFullScreen extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 6),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(color: Colors.green.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
+                      decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
                       child: Row(children: [
                         Icon(Icons.check_circle, size: 14, color: Colors.green.shade300),
                         const SizedBox(width: 8),
@@ -3346,7 +2189,7 @@ class _PremiumReportFullScreen extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 6),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(color: Colors.orange.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
+                      decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
                       child: Row(children: [
                         Icon(Icons.radio_button_unchecked, size: 14, color: Colors.orange.shade300),
                         const SizedBox(width: 8),
@@ -3363,7 +2206,7 @@ class _PremiumReportFullScreen extends StatelessWidget {
               const SizedBox(height: 14),
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(color: Colors.purple.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(children: [
                     Icon(Icons.route, size: 16, color: Colors.purple.shade300),
@@ -3414,7 +2257,7 @@ class _PremiumReportFullScreen extends StatelessWidget {
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.amber.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                 child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Icon(Icons.lightbulb, color: Colors.amber, size: 18),
                   const SizedBox(width: 8),

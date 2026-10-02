@@ -84,13 +84,13 @@ class RubricDetails {
   final int? teachability;
   RubricDetails({this.understanding, this.practice, this.gospelCenteredness, this.humility, this.teachability});
   factory RubricDetails.fromJson(Map<String, dynamic> json) {
-    int? _i(dynamic v) => v == null ? null : (v as num).toInt();
+    int? i(dynamic v) => v == null ? null : (v as num).toInt();
     return RubricDetails(
-      understanding: _i(json['understanding']),
-      practice: _i(json['practice']),
-      gospelCenteredness: _i(json['gospel_centeredness'] ?? json['gospelCenteredness']),
-      humility: _i(json['humility']),
-      teachability: _i(json['teachability']),
+      understanding: i(json['understanding']),
+      practice: i(json['practice']),
+      gospelCenteredness: i(json['gospel_centeredness'] ?? json['gospelCenteredness']),
+      humility: i(json['humility']),
+      teachability: i(json['teachability']),
     );
   }
 }

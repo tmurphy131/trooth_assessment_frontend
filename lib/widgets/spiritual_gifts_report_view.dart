@@ -68,9 +68,9 @@ class SpiritualGiftsReportView extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.18),
+                  color: Colors.amber.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.amber.withOpacity(0.5)),
+                  border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -89,7 +89,7 @@ class SpiritualGiftsReportView extends StatelessWidget {
           hasTies
               ? 'Your top three gifts are shown. Because multiple gifts share the 3rd-place score (${thirdScore ?? '-'}), they are all included below.'
               : 'Your top three gifts by raw score (0–12 scale).',
-          style: TextStyle(color: Colors.white.withOpacity(0.70), fontSize: 12, fontFamily: 'Poppins'),
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.70), fontSize: 12, fontFamily: 'Poppins'),
         ),
         const SizedBox(height: 14),
         Wrap(
@@ -127,7 +127,7 @@ class SpiritualGiftsReportView extends StatelessWidget {
         SizedBox(height: dense ? 24 : 32),
         const Text('Full Ranked List', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 6),
-        Text('Sorted by raw score (0–12). Gifts sharing the 3rd-place score are marked.', style: TextStyle(color: Colors.white.withOpacity(0.65), fontSize: 12, fontFamily: 'Poppins')),
+        Text('Sorted by raw score (0–12). Gifts sharing the 3rd-place score are marked.', style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 12, fontFamily: 'Poppins')),
         const SizedBox(height: 10),
         _Legend(thirdPlaceScore: thirdScore),
         const SizedBox(height: 14),
@@ -156,7 +156,7 @@ class SpiritualGiftsReportView extends StatelessWidget {
                         color: isTop
                             ? Colors.amber
                             : isTiedThird
-                                ? Colors.amber.withOpacity(0.6)
+                                ? Colors.amber.withValues(alpha: 0.6)
                                 : Colors.transparent,
                         width: 4,
                       ),
@@ -179,7 +179,7 @@ class SpiritualGiftsReportView extends StatelessWidget {
                                   child: Text(g.displayName ?? _humanize(g.giftSlug), style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
                                 ),
                                 if (isTop) const _Chip(label: 'Top 3', color: Colors.amber, darkText: true),
-                                if (isTiedThird) _Chip(label: 'Tied 3rd', color: Colors.amber.withOpacity(0.15), outline: Colors.amber.withOpacity(0.6)),
+                                if (isTiedThird) _Chip(label: 'Tied 3rd', color: Colors.amber.withValues(alpha: 0.15), outline: Colors.amber.withValues(alpha: 0.6)),
                               ],
                             ),
                             const SizedBox(height: 4),
@@ -243,7 +243,7 @@ class _TieChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.grey[900],
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.amber.withOpacity(0.5)),
+        border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -271,9 +271,9 @@ class _TopGiftCard extends StatelessWidget {
       width: MediaQuery.of(context).size.width / 2 - 28,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.amber.withOpacity(0.10),
+        color: Colors.amber.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.amber.withOpacity(0.35)),
+        border: Border.all(color: Colors.amber.withValues(alpha: 0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -284,15 +284,15 @@ class _TopGiftCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 16,
-                backgroundColor: Colors.amber.withOpacity(0.25),
+                backgroundColor: Colors.amber.withValues(alpha: 0.25),
                 child: Text('#${gift.rank}', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.3),
+                  color: Colors.black.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.amber.withOpacity(0.6)),
+                  border: Border.all(color: Colors.amber.withValues(alpha: 0.6)),
                 ),
                 child: Text('${gift.rawScore.toStringAsFixed(gift.rawScore % 1 == 0 ? 0 : 1)}/12', style: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 12)),
               ),
@@ -302,14 +302,14 @@ class _TopGiftCard extends StatelessWidget {
           Text(gift.displayName ?? _humanize(gift.giftSlug), style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 15)),
           if (firstSentence != null) ...[
             const SizedBox(height: 6),
-            Text(firstSentence, style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 12, fontFamily: 'Poppins', height: 1.3), maxLines: 3, overflow: TextOverflow.ellipsis),
+            Text(firstSentence, style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 12, fontFamily: 'Poppins', height: 1.3), maxLines: 3, overflow: TextOverflow.ellipsis),
           ]
         ],
       ),
     );
   }
   static String _humanize(String slug) => slug.split('_').map((e)=> e.isEmpty? e : e[0].toUpperCase()+e.substring(1)).join(' ');
-  static String? _extractFirstSentence(String? text) { if (text==null) return null; final trimmed = text.trim(); if (trimmed.isEmpty) return null; final idx = trimmed.indexOf('.'); if (idx==-1 || idx>180) { return trimmed.length>180? trimmed.substring(0,177).trimRight()+'…': trimmed; } return trimmed.substring(0, idx+1);}  
+  static String? _extractFirstSentence(String? text) { if (text==null) return null; final trimmed = text.trim(); if (trimmed.isEmpty) return null; final idx = trimmed.indexOf('.'); if (idx==-1 || idx>180) { return trimmed.length>180? '${trimmed.substring(0,177).trimRight()}…': trimmed; } return trimmed.substring(0, idx+1);}  
 }
 
 class _GiftDetailSheet extends StatelessWidget {
@@ -369,10 +369,10 @@ class _Legend extends StatelessWidget {
       children: [
         const _Chip(label: 'Top 3', color: Colors.amber, darkText: true),
         const SizedBox(width: 8),
-        _Chip(label: 'Tied 3rd', color: Colors.amber.withOpacity(0.15), outline: Colors.amber.withOpacity(0.6)),
+        _Chip(label: 'Tied 3rd', color: Colors.amber.withValues(alpha: 0.15), outline: Colors.amber.withValues(alpha: 0.6)),
         const SizedBox(width: 8),
         if (thirdPlaceScore != null)
-          Text('3rd place score: $thirdPlaceScore', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 11, fontFamily: 'Poppins')),
+          Text('3rd place score: $thirdPlaceScore', style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11, fontFamily: 'Poppins')),
       ],
     );
   }

@@ -11,6 +11,7 @@
 import 'dart:async';
 import 'dart:developer' as dev;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'api_service.dart';
 
@@ -210,12 +211,12 @@ class SubscriptionService extends ChangeNotifier {
   final ApiService _api = ApiService();
   SubscriptionStatus _status = SubscriptionStatus.free();
   bool _isInitialized = false;
+  bool _isConfigured = false; // Purchases.configure must run once per process
   bool _isLoading = false;
   String? _error;
 
-  // RevenueCat configuration
-  // TEMPORARY: Hardcoded API key for TestFlight testing
-  // TODO: Replace with String.fromEnvironment before App Store release
+  // RevenueCat public SDK keys. These are meant to ship in the app binary
+  // (they can only fetch offerings and make purchases), so hardcoding is fine.
   static const String _revenueCatAppleApiKey = 'appl_lCFeOlOIrgjWmFfbnOpfChlwIzX';
   static const String _revenueCatGoogleApiKey = 'goog_lWDiKQFGjNEuhnkVOoowvfUOSPz';
 
@@ -244,31 +245,16 @@ class SubscriptionService extends ChangeNotifier {
           ? _revenueCatAppleApiKey
           : _revenueCatGoogleApiKey;
 
-      // Log API key status (masked for security)
-      final keyPrefix = apiKey.isNotEmpty ? apiKey.substring(0, 10) : 'EMPTY';
-      dev.log('SubscriptionService: API key status: $keyPrefix... (length=${apiKey.length})');
-      
-      // Skip RevenueCat if keys not configured (empty string from missing env var)
-      if (apiKey.isNotEmpty) {
+      if (!_isConfigured) {
         await Purchases.configure(
           PurchasesConfiguration(apiKey)..appUserID = userId,
         );
-        dev.log('SubscriptionService: RevenueCat configured for user $userId');
-        
-        // Verify offerings can be fetched
-        try {
-          final offerings = await Purchases.getOfferings();
-          final count = offerings.current?.availablePackages.length ?? 0;
-          dev.log('SubscriptionService: Offerings loaded, $count packages available');
-          for (final pkg in offerings.current?.availablePackages ?? []) {
-            dev.log('SubscriptionService: Package: ${pkg.storeProduct.identifier} - ${pkg.storeProduct.priceString}');
-          }
-        } catch (e) {
-          dev.log('SubscriptionService: Failed to fetch offerings during init: $e');
-        }
+        _isConfigured = true;
+        dev.log('SubscriptionService: RevenueCat configured');
       } else {
-        dev.log('SubscriptionService: RevenueCat API key is EMPTY! '
-            'Build must use --dart-define=REVENUECAT_APPLE_KEY=xxx');
+        // Switching users: re-configuring would keep the old identity.
+        await Purchases.logIn(userId);
+        dev.log('SubscriptionService: RevenueCat logged in new user');
       }
 
       // Fetch subscription status from backend
@@ -309,8 +295,8 @@ class SubscriptionService extends ChangeNotifier {
 
   /* ── Purchase Flow ────────────────────────────────────────────────── */
 
-  /// Get available subscription offerings from RevenueCat
-  /// Includes retry logic for sandbox/TestFlight testing
+  /// Get available subscription offerings from RevenueCat.
+  /// Retries because sandbox/TestFlight can be slow to return offerings.
   Future<Offerings?> getOfferings({int retryCount = 3}) async {
     for (int attempt = 1; attempt <= retryCount; attempt++) {
       try {
@@ -323,32 +309,6 @@ class SubscriptionService extends ChangeNotifier {
         if (!isConfigured) {
           dev.log('SubscriptionService: ERROR - SDK not configured!');
           return null;
-        }
-        
-        // Sync purchases first to ensure customer state is current
-        try {
-          await Purchases.syncPurchases();
-          dev.log('SubscriptionService: Purchases synced');
-        } catch (e) {
-          dev.log('SubscriptionService: syncPurchases failed (non-fatal): $e');
-        }
-        
-        // Invalidate customer info cache
-        try {
-          await Purchases.invalidateCustomerInfoCache();
-          dev.log('SubscriptionService: Customer info cache invalidated');
-        } catch (e) {
-          dev.log('SubscriptionService: invalidateCache failed (non-fatal): $e');
-        }
-        
-        // Log customer info for debugging
-        try {
-          final customerInfo = await Purchases.getCustomerInfo();
-          dev.log('SubscriptionService: Customer ID: ${customerInfo.originalAppUserId}');
-          dev.log('SubscriptionService: Active entitlements: ${customerInfo.entitlements.active.keys.toList()}');
-          dev.log('SubscriptionService: Active subscriptions: ${customerInfo.activeSubscriptions.toList()}');
-        } catch (e) {
-          dev.log('SubscriptionService: getCustomerInfo failed: $e');
         }
         
         final offerings = await Purchases.getOfferings();
@@ -413,11 +373,9 @@ class SubscriptionService extends ChangeNotifier {
       
       return false;
     } catch (e) {
-      if (e is PurchasesErrorCode) {
-        if (e == PurchasesErrorCode.purchaseCancelledError) {
-          dev.log('SubscriptionService: Purchase cancelled by user');
-          return false;
-        }
+      if (_isCancellation(e)) {
+        dev.log('SubscriptionService: Purchase cancelled by user');
+        return false;
       }
       _error = 'Purchase failed: $e';
       dev.log('SubscriptionService: $_error');
@@ -565,13 +523,13 @@ class SubscriptionService extends ChangeNotifier {
         }
       }
       
-      // If no entitlement found (webhook may create it), generate a unique ID
-      // based on user + timestamp to allow backend to track
+      // No entitlement to point at: don't invent an ID. The RevenueCat
+      // webhook creates the seat; refresh so it shows up when it lands.
       if (foundId == null || foundId.isEmpty) {
-        // Use product ID + current timestamp as a unique identifier
-        // The webhook will update this with the real subscription ID
-        foundId = '${giftSeatPackage.storeProduct.identifier}_${DateTime.now().millisecondsSinceEpoch}';
-        dev.log('SubscriptionService: No entitlement found, using generated id: $foundId');
+        dev.log('SubscriptionService: No gift_seat entitlement yet, waiting for webhook');
+        await Future.delayed(const Duration(seconds: 3));
+        await refreshStatus();
+        return null;
       }
       subscriptionId = foundId;
 
@@ -601,12 +559,10 @@ class SubscriptionService extends ChangeNotifier {
         return null;
       }
     } catch (e) {
-      if (e is PurchasesErrorCode) {
-        if (e == PurchasesErrorCode.purchaseCancelledError) {
-          dev.log('SubscriptionService: Gift seat purchase cancelled by user');
-          _error = null; // Not an error
-          return null;
-        }
+      if (_isCancellation(e)) {
+        dev.log('SubscriptionService: Gift seat purchase cancelled by user');
+        _error = null; // Not an error
+        return null;
       }
       _error = 'Failed to purchase gift seat: $e';
       dev.log('SubscriptionService: $_error');
@@ -621,7 +577,7 @@ class SubscriptionService extends ChangeNotifier {
   Future<List<MentorGiftSeat>> getGiftSeats() async {
     try {
       final data = await _api.getMentorGiftSeats();
-      return (data as List)
+      return (data)
           .map((e) => MentorGiftSeat.fromJson(e as Map<String, dynamic>))
           .toList();
     } catch (e) {
@@ -709,4 +665,21 @@ class SubscriptionService extends ChangeNotifier {
     _error = null;
     notifyListeners();
   }
+
+  /// Detach the RevenueCat identity from this device and reset local state.
+  Future<void> signOut() async {
+    if (_isConfigured) {
+      try {
+        await Purchases.logOut();
+      } catch (e) {
+        // Throws if the current user is already anonymous; nothing to undo.
+        dev.log('SubscriptionService: RevenueCat logOut skipped: $e');
+      }
+    }
+    clear();
+  }
+
+  static bool _isCancellation(Object e) =>
+      e is PlatformException &&
+      PurchasesErrorHelper.getErrorCode(e) == PurchasesErrorCode.purchaseCancelledError;
 }

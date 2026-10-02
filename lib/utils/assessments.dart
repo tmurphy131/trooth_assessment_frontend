@@ -1,5 +1,5 @@
 /// Utilities for working with assessment metadata across the app.
-library assessments_utils;
+library;
 
 bool isSpiritualGiftsAssessment(Map<String, dynamic> assessment) {
   // Try several potential fields that may identify the template/category

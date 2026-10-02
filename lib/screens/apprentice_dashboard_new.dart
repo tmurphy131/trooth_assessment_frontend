@@ -47,7 +47,7 @@ class _SpiritualGiftsQuickActionsSheet extends StatelessWidget {
             ),
             const Text('Spiritual Gifts', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 18)),
             const SizedBox(height: 6),
-            Text("Choose what you'd like to do with your Spiritual Gifts Assessment.", style: TextStyle(color: Colors.white.withOpacity(0.7), fontFamily: 'Poppins', fontSize: 12, height: 1.3)),
+            Text("Choose what you'd like to do with your Spiritual Gifts Assessment.", style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontFamily: 'Poppins', fontSize: 12, height: 1.3)),
             const SizedBox(height: 18),
             _action(
               context,
@@ -111,7 +111,7 @@ class _SpiritualGiftsQuickActionsSheet extends StatelessWidget {
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: (color ?? Colors.blue).withOpacity(0.15),
+          backgroundColor: (color ?? Colors.blue).withValues(alpha: 0.15),
           child: Icon(icon, color: color ?? Colors.blue),
         ),
         title: Text(label, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
@@ -123,6 +123,7 @@ class _SpiritualGiftsQuickActionsSheet extends StatelessWidget {
 class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with ApprenticeDashboardTutorial {
   final user = FirebaseAuth.instance.currentUser;
   final _apiService = ApiService();
+  late Future<Map<String, dynamic>> _giftsLatestFuture = _apiService.getSpiritualGiftsLatest();
   List<Map<String, dynamic>> _assessments = [];
   // Cache of templateId -> template name for displaying draft titles
   Map<String, String> _templateNameById = {};
@@ -331,7 +332,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.2),
+                color: Colors.amber.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(22),
               ),
               child: const Icon(Icons.person, color: Colors.amber, size: 22),
@@ -401,7 +402,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
             const SizedBox(width: 12),
             Expanded(
               child: FutureBuilder<Map<String, dynamic>>(
-                future: _apiService.getSpiritualGiftsLatest(),
+                future: _giftsLatestFuture,
                 builder: (context, snap) {
                   final hasResult = snap.hasData && (snap.data?.isNotEmpty ?? false);
                   return _buildActionCard(
@@ -414,9 +415,12 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
                       if (!hasResult) {
                         final proceed = await _showSpiritualGiftsDisclaimer();
                         if (proceed == true && mounted) {
-                          Navigator.of(context).push(
+                          if (!context.mounted) return;
+                          await Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const SpiritualGiftsAssessmentScreen()),
                           );
+                          // They may have just finished it; re-check for a result.
+                          if (mounted) setState(() => _giftsLatestFuture = _apiService.getSpiritualGiftsLatest());
                         }
                       } else {
                         if (!mounted) return;
@@ -493,7 +497,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: const Color(0xFFFFD700).withOpacity(0.15),
+                color: const Color(0xFFFFD700).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Stack(
@@ -569,7 +573,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
+                  color: color.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(22),
                 ),
                 child: Icon(icon, color: color, size: 22),
@@ -662,67 +666,6 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
       );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Card(
-        elevation: 2,
-        color: Colors.grey[900],
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.assignment_outlined,
-                size: 64,
-                color: Colors.grey[600],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'No draft assessments',
-                style: TextStyle(
-                  color: Colors.grey[400],
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Poppins',
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Begin a new assessment to start your spiritual growth journey',
-                style: TextStyle(
-                  color: Colors.grey[500],
-                  fontSize: 14,
-                  fontFamily: 'Poppins',
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _startNewAssessment,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber,
-                  foregroundColor: Colors.black,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text(
-                  'Take First Assessment',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildEmptyStateCompact() {
     return Center(
       child: Row(
@@ -781,7 +724,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.15),
+                  color: Colors.amber.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Icon(Icons.edit_note, color: Colors.amber, size: 18),
@@ -911,116 +854,6 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
     return false;
   }
 
-  Widget _buildAssessmentCard(Map<String, dynamic> assessment) {
-    final title = _resolveDraftTitle(assessment);
-    final isSubmitted = assessment['is_submitted'] == true;
-    final status = isSubmitted ? 'completed' : 'in_progress';
-    final score = assessment['score'] ?? 0;
-    final createdAt = assessment['created_at'] as String?;
-    final updatedAt = assessment['updated_at'] as String?;
-    final assessmentId = assessment['id'] as String?;
-    String? relativeLine;
-    try {
-      if (createdAt != null) {
-        final created = DateTime.parse(createdAt).toLocal();
-        DateTime? updated;
-        if (updatedAt != null) {
-          try { updated = DateTime.parse(updatedAt).toLocal(); } catch (_) {}
-        }
-        // Decide which timestamp to surface: if we have a later updated > created + 2 minutes, show updated
-        if (updated != null && updated.isAfter(created.add(const Duration(minutes: 2)))) {
-          relativeLine = 'Updated ${_relativeTime(updated)}';
-        } else {
-          relativeLine = 'Created ${_relativeTime(created)}';
-        }
-      }
-    } catch (_) {
-      relativeLine = null; // fallback handled below
-    }
-    
-    return Card(
-      elevation: 2,
-      color: Colors.grey[850],
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        leading: Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: _getStatusColor(status).withOpacity(0.2),
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Icon(
-            _getStatusIcon(status),
-            color: _getStatusColor(status),
-          ),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'Poppins',
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              isSubmitted 
-                ? (score > 0 ? 'Score: $score%' : 'Completed') 
-                : 'In Progress - Tap to continue',
-              style: TextStyle(
-                color: Colors.grey[400],
-                fontFamily: 'Poppins',
-              ),
-            ),
-            if (relativeLine != null)
-              Text(
-                relativeLine,
-                style: TextStyle(
-                  color: Colors.grey[500],
-                  fontSize: 12,
-                  fontFamily: 'Poppins',
-                ),
-              )
-            else if (createdAt != null)
-              Text(
-                _formatDateString(createdAt),
-                style: TextStyle(
-                  color: Colors.grey[500],
-                  fontSize: 12,
-                  fontFamily: 'Poppins',
-                ),
-              ),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (!isSubmitted) // Only show delete for in-progress drafts
-              IconButton(
-                icon: Icon(
-                  Icons.delete_outline,
-                  color: Colors.red[400],
-                  size: 20,
-                ),
-                onPressed: () => _confirmDeleteDraft(assessmentId, title),
-                tooltip: 'Delete Draft',
-              ),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.grey[600],
-              size: 16,
-            ),
-          ],
-        ),
-        onTap: () => _navigateToAssessment(assessment),
-      ),
-    );
-  }
-
   String _resolveDraftTitle(Map<String, dynamic> assessment) {
     // Prefer explicit template name fields if available
     final templateObj = assessment['template'];
@@ -1041,32 +874,6 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
       return fallback.trim();
     }
     return 'Assessment';
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return Colors.green;
-      case 'in_progress':
-        return Colors.orange;
-      case 'pending':
-        return Colors.blue;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  IconData _getStatusIcon(String status) {
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return Icons.check_circle;
-      case 'in_progress':
-        return Icons.hourglass_empty;
-      case 'pending':
-        return Icons.schedule;
-      default:
-        return Icons.assignment;
-    }
   }
 
   Future<void> _startNewAssessment() async {
@@ -1094,6 +901,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
       }
       
       // Navigate to preview screen instead of directly to assessment
+      if (!mounted) return;
       final result = await Navigator.push(
         context,
         MaterialPageRoute(
@@ -1230,9 +1038,9 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: Colors.amber.withOpacity(0.2),
+          color: Colors.amber.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.amber.withOpacity(0.5)),
+          border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
         ),
         child: const Text(
           'PREMIUM',
@@ -1249,7 +1057,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.2),
+          color: Colors.white.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(12),
         ),
         child: const Text(
@@ -1381,15 +1189,6 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
         ],
       ),
     );
-  }
-
-  String _formatDateString(String dateString) {
-    try {
-      final date = DateTime.parse(dateString);
-      return '${date.day}/${date.month}/${date.year}';
-    } catch (e) {
-      return dateString;
-    }
   }
 
   String _relativeTime(DateTime dt) {
@@ -1546,58 +1345,6 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
       // Refresh the assessments list when returning from AssessmentScreen
       _loadAssessments();
     });
-  }
-
-  void _confirmDeleteDraft(String? draftId, String title) {
-    if (draftId == null) return;
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text(
-          'Delete Draft',
-          style: TextStyle(
-            color: Colors.red,
-            fontFamily: 'Poppins',
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          'Are you sure you want to delete the draft "$title"? This action cannot be undone.',
-          style: const TextStyle(
-            color: Colors.white,
-            fontFamily: 'Poppins',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(
-                color: Colors.grey,
-                fontFamily: 'Poppins',
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteDraft(draftId);
-            },
-            child: const Text(
-              'Delete',
-              style: TextStyle(
-                color: Colors.red,
-                fontFamily: 'Poppins',
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _deleteDraft(String draftId) async {

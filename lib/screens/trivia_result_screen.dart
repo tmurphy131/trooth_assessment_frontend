@@ -239,7 +239,7 @@ class _TriviaResultScreenState extends State<TriviaResultScreen>
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.5)),
+        border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.5)),
       ),
       child: Row(
         children: [

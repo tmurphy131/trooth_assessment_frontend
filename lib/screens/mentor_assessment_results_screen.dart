@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:trooth_assessment/utils/assessments.dart';
 import 'package:trooth_assessment/screens/mentor_spiritual_gifts_screen.dart';
-import 'assessment_results_screen.dart';
 import '../services/api_service.dart';
 
 class MentorAssessmentResultsScreen extends StatefulWidget {

@@ -144,7 +144,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
   }
 
   Widget _masterCard() {
-    if (_master == null) return _emptyCard(
+    if (_master == null) {
+      return _emptyCard(
       title: 'Master T[root]H Discipleship',
       cta: 'Take Assessment',
       onPressed: () {
@@ -153,6 +154,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
         _toast('Tap "New Assessment" to begin.', error: false);
       },
     );
+    }
     // Try multiple keys for the score: overall_score_display, overall_score, latest_score, score
     final rawScore = _master!['overall_score_display'] ?? _master!['overall_score'] ?? _master!['latest_score'] ?? _master!['score'] ?? 0;
     final badge = rawScore.toString();
@@ -168,7 +170,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
   }
 
   Widget _giftsCard() {
-    if (_gifts == null) return _emptyCard(
+    if (_gifts == null) {
+      return _emptyCard(
       title: 'Spiritual Gifts Assessment',
       cta: 'Take Assessment',
       onPressed: () {
@@ -177,6 +180,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
         );
       },
     );
+    }
     final top = (_gifts!['top_gifts_truncated'] as List<dynamic>? ?? const []).cast<Map>();
     final chips = top.map((m) => {'category': m['gift']?.toString() ?? m['gift_name']?.toString() ?? '', 'score': m['score']}).toList();
     final completedAt = _gifts!['completed_at']?.toString();
@@ -200,7 +204,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
             if (badge != null)
               Container(
                 width: 40, height: 40,
-                decoration: BoxDecoration(color: Colors.amber.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
+                decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
                 alignment: Alignment.center,
                 child: Text(badge, style: const TextStyle(color: Colors.amber, fontSize: 15, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
               ),
@@ -458,7 +462,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
     final label = text.length > 12 ? '${text.substring(0, 12)}…' : text;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: Colors.amber.withOpacity(0.15), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.amber.withOpacity(0.45))),
+      decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.amber.withValues(alpha: 0.45))),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Flexible(
           child: Text(label, style: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 11), overflow: TextOverflow.ellipsis),

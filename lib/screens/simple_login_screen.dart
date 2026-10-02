@@ -3,7 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'dart:convert';
 import 'dart:io' show Platform;
+import 'dart:math';
+
+import 'package:crypto/crypto.dart';
 
 import 'mentor_dashboard_new.dart';
 import 'apprentice_dashboard_new.dart';
@@ -42,15 +46,18 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
       final data = doc.data();
       final role = data?['role'] as String?; // could be null for legacy users
       if (role == 'mentor') {
+        if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const MentorDashboardNew()),
         );
       } else if (role == 'apprentice') {
+        if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const ApprenticeDashboardNew()),
         );
       } else {
         // Legacy user missing profile; send to signup to complete
+        if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const SignupScreen()),
         );
@@ -209,7 +216,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
       // Extract user info from Google
       final displayName = userCredential.user?.displayName ?? 
                          googleUser.displayName ?? 
-                         '${googleUser.email.split('@').first}';
+                         googleUser.email.split('@').first;
       final email = userCredential.user?.email ?? googleUser.email;
       
       await _navigateBasedOnRole(
@@ -229,20 +236,31 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
     }
   }
 
+  static String _generateNonce([int length = 32]) {
+    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+  }
+
   /// Apple Sign-In
   Future<void> _signInWithApple() async {
     setState(() => _isLoading = true);
     try {
+      // Nonce binds Apple's identity token to this sign-in attempt so it
+      // can't be replayed (Firebase verifies the SHA-256 of rawNonce).
+      final rawNonce = _generateNonce();
       final appleCredential = await SignInWithApple.getAppleIDCredential(
         scopes: [
           AppleIDAuthorizationScopes.email,
           AppleIDAuthorizationScopes.fullName,
         ],
+        nonce: sha256.convert(utf8.encode(rawNonce)).toString(),
       );
 
       final oauthCredential = OAuthProvider('apple.com').credential(
         idToken: appleCredential.identityToken,
         accessToken: appleCredential.authorizationCode,
+        rawNonce: rawNonce,
       );
 
       final userCredential = await FirebaseAuth.instance.signInWithCredential(oauthCredential);
@@ -388,6 +406,8 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
                           fontSize: 14,
                         ),
                         keyboardType: TextInputType.emailAddress,
+                        autofillHints: const [AutofillHints.email],
+                        textInputAction: TextInputAction.next,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your email';
@@ -413,6 +433,8 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
                         fontSize: 14,
                       ),
                       obscureText: true,
+                      autofillHints: const [AutofillHints.password],
+                      textInputAction: TextInputAction.done,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your password';

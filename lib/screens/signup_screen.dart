@@ -89,14 +89,14 @@ class _SignupScreenState extends State<SignupScreen> {
       final first = _firstController.text.trim();
       final last = _lastController.text.trim();
       final fullName = [first, last].where((e) => e.isNotEmpty).join(' ');
-      if (fullName.isNotEmpty && currentUser != null) {
+      if (fullName.isNotEmpty) {
         await currentUser.updateDisplayName(fullName);
       }
 
       // Backend user creation (ignore conflict duplicates gracefully)
       try {
         await ApiService().createUser(
-          uid: currentUser!.uid,
+          uid: currentUser.uid,
           email: _emailController.text.trim(),
           role: _role!,
           displayName: fullName.isNotEmpty ? fullName : null,
@@ -108,7 +108,7 @@ class _SignupScreenState extends State<SignupScreen> {
         }
       }
 
-      await FirebaseFirestore.instance.collection('users').doc(currentUser!.uid).set({
+      await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).set({
         'name': fullName,
         'first_name': first,
         'last_name': last,
@@ -170,7 +170,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.blue.shade900.withOpacity(0.3),
+                        color: Colors.blue.shade900.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.blue.shade700),
                       ),
@@ -191,6 +191,8 @@ class _SignupScreenState extends State<SignupScreen> {
                   const SizedBox(height: 24),
                   TextFormField(
                     controller: _firstController,
+                    autofillHints: const [AutofillHints.givenName],
+                    textInputAction: TextInputAction.next,
                     decoration: _dec('First Name'),
                     validator: (v) => (v == null || v.trim().isEmpty) ? 'First name required' : null,
                     textCapitalization: TextCapitalization.words,
@@ -198,6 +200,8 @@ class _SignupScreenState extends State<SignupScreen> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _lastController,
+                    autofillHints: const [AutofillHints.familyName],
+                    textInputAction: TextInputAction.next,
                     decoration: _dec('Last Name'),
                     validator: (v) => (v == null || v.trim().isEmpty) ? 'Last name required' : null,
                     textCapitalization: TextCapitalization.words,
@@ -205,6 +209,8 @@ class _SignupScreenState extends State<SignupScreen> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _emailController,
+                    autofillHints: const [AutofillHints.email],
+                    textInputAction: TextInputAction.next,
                     decoration: _dec('Email'),
                     keyboardType: TextInputType.emailAddress,
                     enabled: !_isOAuthUser, // Disable if OAuth user
@@ -219,6 +225,8 @@ class _SignupScreenState extends State<SignupScreen> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _passwordController,
+                    autofillHints: const [AutofillHints.newPassword],
+                    textInputAction: TextInputAction.next,
                     decoration: _dec('Password').copyWith(
                           suffixIcon: IconButton(
                             icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility),
@@ -235,6 +243,8 @@ class _SignupScreenState extends State<SignupScreen> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _confirmPasswordController,
+                    autofillHints: const [AutofillHints.newPassword],
+                    textInputAction: TextInputAction.done,
                     decoration: _dec('Confirm Password').copyWith(
                           suffixIcon: IconButton(
                             icon: Icon(_showConfirmPassword ? Icons.visibility_off : Icons.visibility),

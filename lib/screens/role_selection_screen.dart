@@ -318,7 +318,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: isSelected 
-                    ? const Color(0xFFD4AF37).withOpacity(0.2)
+                    ? const Color(0xFFD4AF37).withValues(alpha: 0.2)
                     : Colors.grey[800],
                 borderRadius: BorderRadius.circular(8),
               ),

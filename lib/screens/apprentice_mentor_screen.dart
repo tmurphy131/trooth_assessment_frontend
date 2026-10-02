@@ -127,7 +127,7 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
                   setState(() => submitting = true);
                   try {
                     await _api.apprenticeSignAgreement(agreementId: ag['id'], typedName: name);
-                    if (!mounted) return;
+                    if (!ctx.mounted) return;
                     Navigator.of(ctx).pop();
                     _snack('Signed successfully');
                     await _fetch();
@@ -202,7 +202,7 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
                   setState(() { submitting = true; });
                   try {
                     await _api.revokeMentor(mentorId: mentorId, reason: reasonCtrl.text.trim());
-                    if (!mounted) return;
+                    if (!ctx.mounted) return;
                     Navigator.of(ctx).pop();
                     _snack('Mentorship ended');
                     await _fetch();
@@ -285,7 +285,7 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
                             onOpen: () => _openAgreement(ag),
                             onSign: () async {
                               await _signAgreement(ag);
-                              if (!mounted) return;
+                              if (!context.mounted) return;
                               Navigator.of(context).maybePop();
                               _snack('Agreement signed successfully');
                             },
@@ -345,7 +345,7 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: Colors.amber.withOpacity(.15),
+          color: Colors.amber.withValues(alpha: .15),
           borderRadius: BorderRadius.circular(size / 2),
         ),
         child: Icon(Icons.person, color: Colors.amber, size: size * 0.5),
@@ -361,7 +361,7 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
           loadingBuilder: (context, child, loadingProgress) {
             if (loadingProgress == null) return child;
             return Container(
-              color: Colors.amber.withOpacity(.15),
+              color: Colors.amber.withValues(alpha: .15),
               child: Center(
                 child: SizedBox(
                   width: size * 0.4,
@@ -373,7 +373,7 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
           },
           errorBuilder: (context, error, stackTrace) {
             return Container(
-              color: Colors.amber.withOpacity(.15),
+              color: Colors.amber.withValues(alpha: .15),
               child: Icon(Icons.person, color: Colors.amber, size: size * 0.5),
             );
           },
@@ -388,7 +388,7 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.redAccent.withOpacity(.12),
+          color: Colors.redAccent.withValues(alpha: .12),
           border: Border.all(color: Colors.redAccent),
           borderRadius: BorderRadius.circular(8),
         ),
@@ -459,7 +459,7 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(.15),
+                        color: Colors.green.withValues(alpha: .15),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: Colors.green),
                       ),
@@ -688,6 +688,7 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
                   await _api.requestMeetingReschedule(agreementId, reason: reasonCtrl.text.trim().isEmpty ? null : reasonCtrl.text.trim(), proposals: proposals.isEmpty ? null : proposals);
                   if (!mounted) return;
                   setState(() => submitting = false);
+                  if (!ctx.mounted) return;
                   Navigator.of(ctx).pop();
                   _snack('Reschedule request sent to your mentor');
                 } catch (e) {
@@ -978,7 +979,7 @@ class _AgreementItem extends StatelessWidget {
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: _statusColor(status).withOpacity(.2), borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(color: _statusColor(status).withValues(alpha: .2), borderRadius: BorderRadius.circular(12)),
                   child: Text(_statusLabel(status), style: TextStyle(color: _statusColor(status), fontFamily: 'Poppins')),
                 )
               ],
@@ -988,7 +989,7 @@ class _AgreementItem extends StatelessWidget {
                 margin: const EdgeInsets.only(top: 10),
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.purple.withOpacity(.12),
+                  color: Colors.purple.withValues(alpha: .12),
                   border: Border.all(color: Colors.purple),
                   borderRadius: BorderRadius.circular(8),
                 ),

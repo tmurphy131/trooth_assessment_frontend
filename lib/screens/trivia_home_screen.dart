@@ -151,7 +151,7 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF0A1A0A),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.greenAccent.withOpacity(0.4)),
+        border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.4)),
       ),
       child: Row(
         children: [
@@ -180,9 +180,9 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.greenAccent.withOpacity(0.1),
+              color: Colors.greenAccent.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.greenAccent.withOpacity(0.3)),
+              border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.3)),
             ),
             child: Text(
               '$streak streak',
@@ -210,7 +210,7 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.4)),
+        border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -262,9 +262,9 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.4),
+          color: Colors.black.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.2)),
+          border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
@@ -317,7 +317,7 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
               width: 52,
               height: 52,
               decoration: BoxDecoration(
-                color: accentColor.withOpacity(0.15),
+                color: accentColor.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Stack(

@@ -153,7 +153,7 @@ class _AssessmentResultsScreenState extends State<AssessmentResultsScreen> {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: _getScoreColor(score * 10).withOpacity(0.2),
+                color: _getScoreColor(score * 10).withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(40),
               ),
               child: Center(
@@ -230,7 +230,7 @@ class _AssessmentResultsScreenState extends State<AssessmentResultsScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: _getScoreColor(score * 10).withOpacity(0.2),
+              color: _getScoreColor(score * 10).withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(

@@ -19,9 +19,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
   final _subscriptionService = SubscriptionService();
   
   List<Map<String, dynamic>> _templates = [];
-  List<Map<String, dynamic>> _questions = [];
   bool _isLoading = true;
-  bool _isLoadingQuestions = false;
   String? _error;
   bool _isPremium = false;
 
@@ -79,10 +77,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
         return;
       }
       
-      await Future.wait([
-        _loadTemplates(),
-        _loadQuestions(),
-      ]);
+      await _loadTemplates();
       print('✅ Template Management: Initialization complete');
     } catch (e) {
       print('❌ Template Management: Failed to initialize: $e');
@@ -114,25 +109,6 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
         _error = 'Failed to load templates: $e';
         _isLoading = false;
       });
-    }
-  }
-
-  Future<void> _loadQuestions() async {
-    try {
-      setState(() {
-        _isLoadingQuestions = true;
-      });
-
-      final questions = await _apiService.getQuestions();
-      setState(() {
-        _questions = questions.cast<Map<String, dynamic>>();
-        _isLoadingQuestions = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoadingQuestions = false;
-      });
-      print('Failed to load questions: $e');
     }
   }
 
@@ -259,7 +235,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.1),
+                  color: Colors.amber.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -570,7 +546,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: isPublished ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
+                    color: isPublished ? Colors.green.withValues(alpha: 0.2) : Colors.orange.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
@@ -814,6 +790,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
 
     List<Map<String, dynamic>> templateQuestions = List<Map<String, dynamic>>.from(fullTemplate['questions'] ?? []);
 
+    if (!mounted) return;
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -1372,11 +1349,14 @@ class _QuestionCreationDialogState extends State<_QuestionCreationDialog> {
                   _categories.add(newCategory);
                   _selectedCategoryId = newCategory['id'];
                 });
+                if (!context.mounted) return;
                 Navigator.pop(context);
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Category "$name" created successfully')),
                 );
               } catch (e) {
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Failed to create category: $e')),
                 );
@@ -1471,7 +1451,7 @@ class _QuestionCreationDialogState extends State<_QuestionCreationDialog> {
               _isLoadingCategories
                   ? const CircularProgressIndicator(color: Colors.amber)
                   : DropdownButtonFormField<String>(
-                      value: _selectedCategoryId,
+                      initialValue: _selectedCategoryId,
                       dropdownColor: Colors.grey[800],
                       style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'),
                       decoration: InputDecoration(
@@ -1746,8 +1726,10 @@ class _QuestionCreationDialogState extends State<_QuestionCreationDialog> {
       );
       
       widget.onQuestionCreated(question);
+      if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to create question: $e')),
       );

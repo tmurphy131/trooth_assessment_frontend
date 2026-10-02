@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../utils/logout_util.dart';
 import '../services/api_service.dart';
 import '../services/subscription_service.dart';
 import 'simple_login_screen.dart';
@@ -23,7 +24,6 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
   String _role = '';
   
   // Subscription info
-  String _subscriptionTier = '';
   String? _giftedByMentorName;
 
   @override
@@ -44,7 +44,6 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
         
         // Load subscription info
         await _subscriptionService.refreshStatus();
-        _subscriptionTier = _subscriptionService.tier.name;
         
         // Check if gifted by mentor
         if (_subscriptionService.tier == SubscriptionTier.mentorGifted) {
@@ -88,7 +87,7 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
                     Center(
                       child: CircleAvatar(
                         radius: 50,
-                        backgroundColor: Colors.amber.withOpacity(.15),
+                        backgroundColor: Colors.amber.withValues(alpha: .15),
                         child: const Icon(Icons.person, color: Colors.amber, size: 50),
                       ),
                     ),
@@ -236,7 +235,7 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
         decoration: BoxDecoration(
           color: Colors.grey[850],
           borderRadius: BorderRadius.circular(8),
-          border: isPremium ? Border.all(color: Colors.amber.withOpacity(0.5), width: 1) : null,
+          border: isPremium ? Border.all(color: Colors.amber.withValues(alpha: 0.5), width: 1) : null,
         ),
         child: Row(
           children: [
@@ -271,7 +270,7 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: Colors.amber.withOpacity(0.2),
+                            color: Colors.amber.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Text(
@@ -336,7 +335,7 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
         decoration: BoxDecoration(
           color: Colors.grey[850],
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.amber.withOpacity(0.3)),
+          border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
@@ -344,7 +343,7 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.15),
+                color: Colors.amber.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: Colors.amber, size: 24),
@@ -397,7 +396,7 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
 
     if (!mounted) return;
 
-    final items = deletionSummary?['items_to_delete'] as Map<String, dynamic>? ?? {};
+    final items = deletionSummary['items_to_delete'] as Map<String, dynamic>? ?? {};
 
     await showDialog(
       context: context,
@@ -523,8 +522,7 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
     try {
       await _api.closeAccount(confirmationText: 'DELETE');
 
-      // Sign out from Firebase
-      await FirebaseAuth.instance.signOut();
+      await signOutEverywhere();
 
       if (!mounted) return;
 

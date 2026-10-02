@@ -165,7 +165,7 @@ class _AddEditNoteDialogState extends State<AddEditNoteDialog> {
                         onChanged: (value) {
                           setState(() => _isPrivate = !value);
                         },
-                        activeColor: troothGold,
+                        activeThumbColor: troothGold,
                         activeTrackColor: troothGold.withValues(alpha: 0.3),
                       ),
                     ],

@@ -1,6 +1,7 @@
 /// Canonical Spiritual Gift definitions (24 gifts) used to backfill UI
 /// These will be replaced by backend-provided authoritative content when available.
 /// Keys are normalized slugs produced by `_slugify` logic (lowercase, hyphenated, '&' -> 'and').
+library;
 
 const Map<String, Map<String, String>> kCanonicalSpiritualGiftDefinitions = {
   'leadership': {

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:developer' as dev;
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -73,8 +72,23 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
     _checkPremiumAndLoadFullReport();
   }
 
+  // ~5 minutes at 10s intervals. Scoring that takes longer has likely failed.
+  static const _maxPollAttempts = 30;
+
   void _startPolling() {
+    var attempts = 0;
     _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
+      attempts++;
+      if (attempts > _maxPollAttempts) {
+        _pollTimer?.cancel();
+        if (!mounted) return;
+        // Fall through to a normal load so the screen shows its own error
+        // state (and retry) instead of spinning forever.
+        setState(() { _isProcessing = false; _loading = true; _checkingPremium = true; });
+        _loadReport();
+        _checkPremiumAndLoadFullReport();
+        return;
+      }
       try {
         final status = await _api.getAssessmentStatus(widget.assessmentId);
         final done = status['status'] == 'done' || (status['has_scores'] as bool? ?? false);
@@ -169,7 +183,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.2),
+                    color: Colors.blue.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(Icons.ios_share, color: Colors.blue.shade300),
@@ -185,7 +199,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.2),
+                    color: Colors.amber.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(Icons.email_outlined, color: Colors.amber.shade300),
@@ -516,7 +530,6 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
     final strengthsDeepDive = report['strengths_deep_dive'] as List<dynamic>?;
     final gapsDeepDive = report['gaps_deep_dive'] as List<dynamic>?;
     final execSummary = report['executive_summary'] as Map<String, dynamic>?;
-    final conversationGuide = report['conversation_guide'] as Map<String, dynamic>?;
     final biblicalKnowledge = report['biblical_knowledge_analysis'] as Map<String, dynamic>?;
     final spiritualFormation = report['spiritual_formation_insights'] as List<dynamic>?;
     final meta = report['_meta'] as Map<String, dynamic>?;
@@ -685,7 +698,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
                     height: 60,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _getScoreColor(healthScore).withOpacity(0.2),
+                      color: _getScoreColor(healthScore).withValues(alpha: 0.2),
                       border: Border.all(color: _getScoreColor(healthScore), width: 3),
                     ),
                     alignment: Alignment.center,
@@ -739,9 +752,9 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: trajectoryColor.withOpacity(0.1),
+                  color: trajectoryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: trajectoryColor.withOpacity(0.3)),
+                  border: Border.all(color: trajectoryColor.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
@@ -803,7 +816,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
+                  color: Colors.green.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Row(
@@ -821,7 +834,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.purple.withOpacity(0.1),
+                  color: Colors.purple.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Row(
@@ -869,8 +882,8 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: severity == 'high' ? Colors.red.withOpacity(0.2) :
-                             severity == 'moderate' ? Colors.orange.withOpacity(0.2) : Colors.yellow.withOpacity(0.2),
+                      color: severity == 'high' ? Colors.red.withValues(alpha: 0.2) :
+                             severity == 'moderate' ? Colors.orange.withValues(alpha: 0.2) : Colors.yellow.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
@@ -901,7 +914,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.purple.withOpacity(0.1),
+                  color: Colors.purple.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Row(
@@ -919,7 +932,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.1),
+                  color: Colors.amber.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Column(
@@ -941,7 +954,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
+                  color: Colors.blue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(color: Colors.blue.shade700),
                 ),
@@ -1044,7 +1057,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.2),
+                        color: Colors.blue.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -1057,7 +1070,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.3),
+                        color: Colors.grey.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(masteryLevel, style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.white70)),
@@ -1101,8 +1114,8 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: level == 'Strong' ? Colors.green.withOpacity(0.2) :
-                                             level == 'Weak' ? Colors.red.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
+                                      color: level == 'Strong' ? Colors.green.withValues(alpha: 0.2) :
+                                             level == 'Weak' ? Colors.red.withValues(alpha: 0.2) : Colors.orange.withValues(alpha: 0.2),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
@@ -1148,7 +1161,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.purple.withOpacity(0.1),
+                  color: Colors.purple.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(
@@ -1198,7 +1211,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.indigo.withOpacity(0.1),
+                  color: Colors.indigo.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(
@@ -1224,7 +1237,6 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
     final maturityPresent = insight['maturity_markers_present'] as List<dynamic>? ?? [];
     final maturityMissing = insight['maturity_markers_missing'] as List<dynamic>? ?? [];
     final customPlan = insight['custom_development_plan'] as Map<String, dynamic>?;
-    final mentorQuestions = insight['mentor_discussion_questions'] as List<dynamic>? ?? [];
     final suggestions = insight['suggestions'] as List<dynamic>? ?? [];
 
     return Card(
@@ -1244,7 +1256,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.purple.withOpacity(0.2),
+                      color: Colors.purple.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(currentLevel, style: TextStyle(fontSize: 11, color: Colors.purple.shade300)),
@@ -1290,7 +1302,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
+                  color: Colors.blue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Column(
@@ -1394,7 +1406,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
 
   Widget _buildRedFlagCard(String flag) {
     return Card(
-      color: Colors.red[900]!.withOpacity(0.3),
+      color: Colors.red[900]!.withValues(alpha: 0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: Colors.red[400]!, width: 1),
@@ -1428,10 +1440,10 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
     final steps = (action['steps'] as List<dynamic>? ?? []).cast<String>();
     
     return Card(
-      color: Colors.amber.withOpacity(0.15),
+      color: Colors.amber.withValues(alpha: 0.15),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.amber.withOpacity(0.5), width: 1),
+        side: BorderSide(color: Colors.amber.withValues(alpha: 0.5), width: 1),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1502,7 +1514,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.3),
+                  color: Colors.black.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -1664,7 +1676,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
@@ -1675,7 +1687,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: _getLevelColor(level).withOpacity(0.2),
+                              color: _getLevelColor(level).withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(

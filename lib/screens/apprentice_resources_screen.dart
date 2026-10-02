@@ -93,7 +93,7 @@ class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: kPrimaryGold.withOpacity(0.15),
+            color: kPrimaryGold.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: kPrimaryGold, size: 22),
@@ -156,7 +156,7 @@ class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
             gradient: LinearGradient(
               colors: [
                 kCharcoal,
-                kCharcoal.withOpacity(0.9),
+                kCharcoal.withValues(alpha: 0.9),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -172,7 +172,7 @@ class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: kPrimaryGold.withOpacity(0.2),
+                      color: kPrimaryGold.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -267,7 +267,7 @@ class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
                   color: kSurface,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: kMutedText.withOpacity(0.15),
+                    color: kMutedText.withValues(alpha: 0.15),
                   ),
                 ),
                 child: Column(
@@ -277,7 +277,7 @@ class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: kPrimaryGold.withOpacity(0.15),
+                        color: kPrimaryGold.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -354,7 +354,7 @@ class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: (link['color'] as Color).withOpacity(0.15),
+                  color: (link['color'] as Color).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(

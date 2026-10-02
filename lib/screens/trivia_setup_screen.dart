@@ -192,7 +192,7 @@ class _TriviaSetupScreenState extends State<TriviaSetupScreen> {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFFFD700).withOpacity(0.12) : Colors.grey[900],
+          color: selected ? const Color(0xFFFFD700).withValues(alpha: 0.12) : Colors.grey[900],
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected ? const Color(0xFFFFD700) : Colors.grey[800]!,

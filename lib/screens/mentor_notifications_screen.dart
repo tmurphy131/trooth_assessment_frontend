@@ -44,9 +44,11 @@ class _MentorNotificationsScreenState extends State<MentorNotificationsScreen> {
       } else {
         await _load();
       }
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Dismissed')));
       if (widget.onActivity != null) widget.onActivity!();
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Dismiss failed: $e')));
     }
   }
@@ -62,7 +64,7 @@ class _MentorNotificationsScreenState extends State<MentorNotificationsScreen> {
             onSelected: (v) async {
               if (!v || _mode == 'active') return; setState(() { _mode = 'active'; }); await _load();
             },
-            selectedColor: Colors.amber.withOpacity(.25),
+            selectedColor: Colors.amber.withValues(alpha: .25),
             backgroundColor: Colors.grey[800],
             labelStyle: TextStyle(color: _mode == 'active' ? Colors.amber : Colors.white),
           ),
@@ -73,7 +75,7 @@ class _MentorNotificationsScreenState extends State<MentorNotificationsScreen> {
             onSelected: (v) async {
               if (!v || _mode == 'history') return; setState(() { _mode = 'history'; }); await _load();
             },
-            selectedColor: Colors.blueGrey.withOpacity(.35),
+            selectedColor: Colors.blueGrey.withValues(alpha: .35),
             backgroundColor: Colors.grey[800],
             labelStyle: TextStyle(color: _mode == 'history' ? Colors.lightBlueAccent : Colors.white),
           ),
@@ -171,7 +173,7 @@ class _MentorNotificationsScreenState extends State<MentorNotificationsScreen> {
                         label: const Text('Accept', style: TextStyle(fontFamily: 'Poppins')),
                         selected: decision == 'accepted',
                         onSelected: (v) => setState(() => decision = 'accepted'),
-                        selectedColor: Colors.green.withOpacity(.2),
+                        selectedColor: Colors.green.withValues(alpha: .2),
                         labelStyle: TextStyle(color: decision == 'accepted' ? Colors.green : Colors.white),
                         backgroundColor: Colors.grey[800],
                       ),
@@ -179,7 +181,7 @@ class _MentorNotificationsScreenState extends State<MentorNotificationsScreen> {
                         label: const Text('Decline', style: TextStyle(fontFamily: 'Poppins')),
                         selected: decision == 'declined',
                         onSelected: (v) => setState(() => decision = 'declined'),
-                        selectedColor: Colors.red.withOpacity(.2),
+                        selectedColor: Colors.red.withValues(alpha: .2),
                         labelStyle: TextStyle(color: decision == 'declined' ? Colors.redAccent : Colors.white),
                         backgroundColor: Colors.grey[800],
                       ),
@@ -187,7 +189,7 @@ class _MentorNotificationsScreenState extends State<MentorNotificationsScreen> {
                         label: const Text('Propose', style: TextStyle(fontFamily: 'Poppins')),
                         selected: decision == 'proposed',
                         onSelected: (v) => setState(() => decision = 'proposed'),
-                        selectedColor: Colors.orange.withOpacity(.2),
+                        selectedColor: Colors.orange.withValues(alpha: .2),
                         labelStyle: TextStyle(color: decision == 'proposed' ? Colors.orange : Colors.white),
                         backgroundColor: Colors.grey[800],
                       ),
@@ -199,7 +201,7 @@ class _MentorNotificationsScreenState extends State<MentorNotificationsScreen> {
                       const Text('Select a proposed time', style: TextStyle(color: Colors.white70, fontFamily: 'Poppins')),
                       const SizedBox(height: 6),
                       DropdownButtonFormField<String>(
-                        value: selectedFromList,
+                        initialValue: selectedFromList,
                         items: proposals.map((p) => DropdownMenuItem<String>(value: p, child: Text(p, style: const TextStyle(color: Colors.white)))).toList(),
                         onChanged: (v) => setState(() => selectedFromList = v),
                         dropdownColor: Colors.grey[900],
@@ -258,8 +260,9 @@ class _MentorNotificationsScreenState extends State<MentorNotificationsScreen> {
                       selectedTime: selectedTime,
                       note: noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim(),
                     );
-                    if (!mounted) return;
+                    if (!ctx.mounted) return;
                     Navigator.of(ctx).pop();
+                    if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Response sent')));
                     await _load();
                     // Notify parent to refresh badge count after handling the request.
@@ -267,6 +270,7 @@ class _MentorNotificationsScreenState extends State<MentorNotificationsScreen> {
                     // TODO: trigger a higher-level agreements refresh (e.g., via an inherited widget or provider) so meeting info updates immediately.
                   } catch (e) {
                     setState(() { submitting = false; });
+                    if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
                   }
                 },
@@ -298,7 +302,7 @@ class _MentorNotificationsScreenState extends State<MentorNotificationsScreen> {
                         children: [
                           Container(
                             padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(color: Colors.red.withOpacity(.15), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.redAccent)),
+                            decoration: BoxDecoration(color: Colors.red.withValues(alpha: .15), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.redAccent)),
                             child: Text(_error!, style: const TextStyle(color: Colors.redAccent, fontFamily: 'Poppins')),
                           ),
                           const SizedBox(height: 8),
@@ -354,7 +358,7 @@ class _MentorNotificationsScreenState extends State<MentorNotificationsScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           CircleAvatar(
-                                            backgroundColor: (isRead ? Colors.grey : Colors.amber).withOpacity(.2),
+                                            backgroundColor: (isRead ? Colors.grey : Colors.amber).withValues(alpha: .2),
                                             child: Icon(isReschedule ? Icons.event : Icons.notifications, color: isRead ? Colors.grey : Colors.amber),
                                           ),
                                           const SizedBox(width: 12),

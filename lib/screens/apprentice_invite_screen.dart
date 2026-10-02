@@ -307,7 +307,7 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.2),
+                    color: Colors.orange.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
@@ -725,6 +725,7 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
                     await _apiService.reinstateApprenticeship(apprenticeId, reason: controller.text.trim().isEmpty ? null : controller.text.trim());
                     if (!mounted) return; 
                     setLocalState(() { submitting = false; });
+                    if (!ctx.mounted) return;
                     Navigator.of(ctx).pop();
                     // Update lists
                     setState(() { _inactiveApprentices.removeWhere((a) => a['id'] == apprenticeId); });
@@ -734,6 +735,7 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
                     }
                   } catch (e) {
                     setLocalState(() => submitting = false);
+                    if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
                   }
                 },

@@ -262,17 +262,17 @@ class _ActionsSection extends StatelessWidget {
                 onPressed: (emailing || cooldownSeconds > 0) ? null : onEmail,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: (emailing || cooldownSeconds > 0)
-                      ? Colors.amber.withOpacity(0.45)
+                      ? Colors.amber.withValues(alpha: 0.45)
                       : Colors.amber,
-                  foregroundColor: Colors.black.withOpacity((emailing || cooldownSeconds > 0) ? 0.6 : 1.0),
+                  foregroundColor: Colors.black.withValues(alpha: (emailing || cooldownSeconds > 0) ? 0.6 : 1.0),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  disabledBackgroundColor: Colors.amber.withOpacity(0.35),
-                  disabledForegroundColor: Colors.black.withOpacity(0.45),
+                  disabledBackgroundColor: Colors.amber.withValues(alpha: 0.35),
+                  disabledForegroundColor: Colors.black.withValues(alpha: 0.45),
                 ),
                 icon: emailing
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.black))
-                    : Icon(Icons.email_outlined, color: (emailing || cooldownSeconds > 0) ? Colors.black.withOpacity(0.55) : Colors.black),
+                    : Icon(Icons.email_outlined, color: (emailing || cooldownSeconds > 0) ? Colors.black.withValues(alpha: 0.55) : Colors.black),
                 label: Semantics(
                   label: emailing ? 'Sending email report' : 'Email my spiritual gifts report',
                   excludeSemantics: true,

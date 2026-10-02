@@ -135,7 +135,7 @@ class _TriviaLeaderboardScreenState extends State<TriviaLeaderboardScreen>
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: const Color(0xFFFFD700).withOpacity(0.08),
+      color: const Color(0xFFFFD700).withValues(alpha: 0.08),
       child: Row(
         children: const [
           Icon(Icons.emoji_events, color: Color(0xFFFFD700), size: 15),
@@ -210,10 +210,10 @@ class _TriviaLeaderboardScreenState extends State<TriviaLeaderboardScreen>
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: rank <= 3 ? const Color(0xFFFFD700).withOpacity(0.07) : Colors.grey[900],
+        color: rank <= 3 ? const Color(0xFFFFD700).withValues(alpha: 0.07) : Colors.grey[900],
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: rank <= 3 ? const Color(0xFFFFD700).withOpacity(0.3) : Colors.grey[800]!,
+          color: rank <= 3 ? const Color(0xFFFFD700).withValues(alpha: 0.3) : Colors.grey[800]!,
         ),
       ),
       child: Row(

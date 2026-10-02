@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 class AgreementPreviewScreen extends StatelessWidget {
   final String markdown;
@@ -39,7 +39,7 @@ class AgreementPreviewScreen extends StatelessWidget {
             margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: chipColor.withOpacity(.2),
+              color: chipColor.withValues(alpha: .2),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: chipColor),
             ),

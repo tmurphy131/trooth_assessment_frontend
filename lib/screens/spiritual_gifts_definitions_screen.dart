@@ -117,7 +117,7 @@ class _SpiritualGiftsDefinitionsScreenState extends State<SpiritualGiftsDefiniti
     final list = _all;
     if (_query.isEmpty) return list;
     return list.where((m) {
-      final hay = (m['name']! + ' ' + m['desc']! + ' ' + (m['slug'] ?? '')).toLowerCase();
+      final hay = ('${m['name']!} ${m['desc']!} ${m['slug'] ?? ''}').toLowerCase();
       return hay.contains(_query);
     }).toList();
   }
@@ -160,7 +160,7 @@ class _SpiritualGiftsDefinitionsScreenState extends State<SpiritualGiftsDefiniti
   Widget _buildSearchBar() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-      decoration: BoxDecoration(color: Colors.grey[900], boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 6)]),
+      decoration: BoxDecoration(color: Colors.grey[900], boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 6)]),
       child: TextField(
         controller: _search,
         style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'),
@@ -272,7 +272,7 @@ class _ExpandableDefinitionState extends State<_ExpandableDefinition> {
     final name = widget.data['name'] ?? 'Gift';
     final desc = widget.data['desc'] ?? '';
     final refs = widget.data['refs'] ?? '';
-    final preview = desc.length > 140 && !_expanded ? desc.substring(0, 137).trimRight() + '…' : desc;
+    final preview = desc.length > 140 && !_expanded ? '${desc.substring(0, 137).trimRight()}…' : desc;
     return Container(
       color: Colors.black,
       child: InkWell(
@@ -289,9 +289,9 @@ class _ExpandableDefinitionState extends State<_ExpandableDefinition> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withOpacity(0.15),
+                      color: Colors.amber.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.amber.withOpacity(0.4)),
+                      border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
                     ),
                     child: Text(name, style: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
                   ),

@@ -1,5 +1,6 @@
 /// Mentor Guides Data
 /// Categorized guides for mentor education and development
+library;
 
 class MentorGuide {
   final String id;

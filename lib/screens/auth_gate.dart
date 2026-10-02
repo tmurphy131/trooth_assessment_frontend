@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'simple_login_screen.dart';
 import 'mentor_dashboard_new.dart';
@@ -72,9 +73,53 @@ class _AuthGateState extends State<AuthGate> {
       final role = data?['role'] as String?;
       
       debugPrint('🔐 AuthGate: User role = $role');
+      if (role != null) await _cacheRole(user.uid, role);
       
       if (!mounted) return;
-      
+      _routeForRole(role);
+    } catch (e) {
+      debugPrint('❌ AuthGate: Error checking auth state: $e');
+      // Still signed in, just offline or the server is down. Use the last
+      // known role rather than bouncing the user to the login screen.
+      final user = FirebaseAuth.instance.currentUser;
+      final cachedRole = user == null ? null : await _cachedRole(user.uid);
+      if (!mounted) return;
+      if (cachedRole != null) {
+        _routeForRole(cachedRole);
+        return;
+      }
+      FlutterNativeSplash.remove();
+      setState(() {
+        _destination = user == null ? const SimpleLoginScreen() : _ConnectionErrorView(onRetry: _retry);
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _retry() {
+    setState(() => _isLoading = true);
+    _checkAuthState();
+  }
+
+  static String _roleKey(String uid) => 'cached_role_$uid';
+
+  Future<void> _cacheRole(String uid, String role) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_roleKey(uid), role);
+    } catch (_) {}
+  }
+
+  Future<String?> _cachedRole(String uid) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(_roleKey(uid));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _routeForRole(String? role) {
       if (role == 'mentor') {
         FlutterNativeSplash.remove();
         setState(() {
@@ -96,17 +141,6 @@ class _AuthGateState extends State<AuthGate> {
           _isLoading = false;
         });
       }
-    } catch (e) {
-      debugPrint('❌ AuthGate: Error checking auth state: $e');
-      // On error, fall back to login screen
-      FlutterNativeSplash.remove();
-      if (mounted) {
-        setState(() {
-          _destination = const SimpleLoginScreen();
-          _isLoading = false;
-        });
-      }
-    }
   }
 
   @override
@@ -135,5 +169,42 @@ class _AuthGateState extends State<AuthGate> {
     }
     
     return _destination!;
+  }
+}
+
+class _ConnectionErrorView extends StatelessWidget {
+  const _ConnectionErrorView({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.wifi_off, color: Colors.white70, size: 48),
+              const SizedBox(height: 16),
+              const Text(
+                "Can't connect right now",
+                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Check your internet connection and try again.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white70, fontSize: 15),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(onPressed: onRetry, child: const Text('Try again')),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

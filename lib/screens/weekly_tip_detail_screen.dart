@@ -6,7 +6,7 @@ import 'package:trooth_assessment/theme.dart';
 class WeeklyTipDetailScreen extends StatelessWidget {
   final WeeklyTip tip;
 
-  const WeeklyTipDetailScreen({Key? key, required this.tip}) : super(key: key);
+  const WeeklyTipDetailScreen({super.key, required this.tip});
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +26,7 @@ class WeeklyTipDetailScreen extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: kPrimaryGold.withOpacity(0.2),
+                  color: kPrimaryGold.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -72,15 +72,15 @@ class WeeklyTipDetailScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        kPrimaryGold.withOpacity(0.15),
-                        kPrimaryGold.withOpacity(0.05),
+                        kPrimaryGold.withValues(alpha: 0.15),
+                        kPrimaryGold.withValues(alpha: 0.05),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: kPrimaryGold.withOpacity(0.3),
+                      color: kPrimaryGold.withValues(alpha: 0.3),
                       width: 1,
                     ),
                   ),

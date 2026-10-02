@@ -121,7 +121,7 @@ class _AgreementSignPublicScreenState extends State<AgreementSignPublicScreen> {
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: _statusColor(status).withOpacity(.2), borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(color: _statusColor(status).withValues(alpha: .2), borderRadius: BorderRadius.circular(12)),
                   child: Text(status, style: TextStyle(color: _statusColor(status), fontFamily: 'Poppins')),
                 ),
               ],
@@ -198,7 +198,7 @@ class _AgreementSignPublicScreenState extends State<AgreementSignPublicScreen> {
 class ApiServiceHttpShimResponse {
   final int statusCode; final String body; Map<String, dynamic>? _json; ApiServiceHttpShimResponse(this.statusCode, this.body);
   Map<String, dynamic>? get jsonBody { _json ??= body.isEmpty ? null : jsonDecode(body); return _json; }
-  String get bodySnippet => body.length > 120 ? body.substring(0, 120) + '...' : body;
+  String get bodySnippet => body.length > 120 ? '${body.substring(0, 120)}...' : body;
 }
 
 class ApiServiceHttpShim {

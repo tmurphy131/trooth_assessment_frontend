@@ -29,7 +29,7 @@ class MentorDashboardNew extends StatefulWidget {
   State<MentorDashboardNew> createState() => _MentorDashboardNewState();
 }
 
-class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProviderStateMixin, MentorDashboardTutorial {
+class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProviderStateMixin, MentorDashboardTutorial, WidgetsBindingObserver {
   late TabController _tabController;
   final user = FirebaseAuth.instance.currentUser;
   final _apiService = ApiService();
@@ -54,8 +54,6 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   
   // Subscription state
   final _subscriptionService = SubscriptionService();
-  int _giftSeatsCount = 0;
-  int _usedGiftSeatsCount = 0;
 
   @override
   void initState() {
@@ -70,6 +68,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
         }
       }
     });
+    WidgetsBinding.instance.addObserver(this);
     _initializeAndLoadData();
     // Initialize tutorial after data loads
     initMentorTutorial();
@@ -96,6 +95,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
       ]);
       _startNotificationPolling();
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'Failed to initialize: $e';
         _isLoadingApprentices = false;
@@ -113,17 +113,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
       if (mounted) {
         setState(() {});
       }
-      
-      // Load gift seats count if premium mentor
-      if (_subscriptionService.isPremium) {
-        final seats = await _apiService.getMentorGiftSeats();
-        if (mounted) {
-          setState(() {
-            _giftSeatsCount = seats.length;
-            _usedGiftSeatsCount = seats.where((s) => s['status'] == 'active').length;
-          });
-        }
-      }
+
     } catch (e) {
       // Silent fail - subscription features are optional
       dev.log('MentorDashboard: Failed to load subscription data: $e');
@@ -160,8 +150,21 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
     });
   }
 
+  // Polling in the background wastes battery and backend calls.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshNotificationCount();
+      _refreshTriviaPendingCount();
+      _startNotificationPolling();
+    } else if (state == AppLifecycleState.paused) {
+      _notifTimer?.cancel();
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _notifTimer?.cancel();
     _tabController.dispose();
     super.dispose();
@@ -192,10 +195,12 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   Future<void> _loadMentorOwnAssessments() async {
     try {
       final results = await _apiService.getMentorOwnAssessments();
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _mentorOwnAssessments = results.cast<Map<String, dynamic>>();
         _isLoadingMentorAssessments = false;
       });
+      }
     } catch (_) {
       if (mounted) setState(() => _isLoadingMentorAssessments = false);
     }
@@ -204,10 +209,12 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
   Future<void> _loadMentorOwnDrafts() async {
     try {
       final results = await _apiService.getAllDrafts();
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _mentorOwnDrafts = results.cast<Map<String, dynamic>>();
         _isLoadingMentorDrafts = false;
       });
+      }
     } catch (_) {
       if (mounted) setState(() => _isLoadingMentorDrafts = false);
     }
@@ -239,9 +246,11 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
       _loadMentorOwnDrafts();
       if (result == true) _loadMentorOwnAssessments();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not load assessment: $e')),
       );
+      }
     }
   }
 
@@ -360,16 +369,19 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
         print('🔒 FREEMIUM CHECK: PREMIUM/GRANDFATHERED → all ${targets.length} apprentice(s) allowed');
       }
       
-      for (final apprentice in targets) {
+      final results = await Future.wait(targets.map((apprentice) async {
         final apprenticeId = apprentice['id'] as String;
         final assessments = await _apiService.getApprenticeSubmittedAssessments(apprenticeId, limit: 100);
-        grouped[apprenticeId] = assessments.cast<Map<String, dynamic>>();
-      }
+        return MapEntry(apprenticeId, assessments.cast<Map<String, dynamic>>());
+      }));
+      grouped.addEntries(results);
+      if (!mounted) return;
       setState(() {
         _completedAssessmentsByApprentice = grouped;
         _isLoadingAssessments = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'Failed to load completed assessments: $e';
         _isLoadingAssessments = false;
@@ -644,8 +656,9 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
       for (final a in allAssessments) {
         final raw = (a as Map)['scores']?['overall_score'];
         double v;
-        if (raw is num) v = raw.toDouble();
-        else if (raw is String) v = double.tryParse(raw) ?? 0.0;
+        if (raw is num) {
+          v = raw.toDouble();
+        } else if (raw is String) v = double.tryParse(raw) ?? 0.0;
         else v = 0.0;
         if (v.isFinite) scores.add(v);
       }
@@ -707,7 +720,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
+                color: color.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Icon(icon, color: color, size: 24),
@@ -824,7 +837,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: Colors.amber.withOpacity(0.2),
+            color: Colors.amber.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(24),
           ),
           child: const Icon(
@@ -969,7 +982,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.2),
+                    color: Colors.grey.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: const Icon(Icons.person, color: Colors.grey),
@@ -996,7 +1009,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   gradient: LinearGradient(
-                    colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                    colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                   ),
@@ -1008,7 +1021,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       margin: const EdgeInsets.only(right: 12),
                       decoration: BoxDecoration(
-                        color: Colors.amber.withOpacity(0.9),
+                        color: Colors.amber.withValues(alpha: 0.9),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Row(
@@ -1124,7 +1137,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
           a['apprentice_email'] == apprenticeEmail ||
           a['apprentice_email'] == apprenticeId // in case id used as email placeholder earlier
         )) {
-        if (primary == null) primary = a.cast<String,dynamic>();
+        primary ??= a.cast<String,dynamic>();
         if (a['status'] != 'revoked') { primary = a.cast<String,dynamic>(); break; }
       }
     }
@@ -1154,6 +1167,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
     final startDate = fields['start_date'];
     final nextMeeting = _computeNextMeetingDate(day?.toString(), time?.toString(), frequency?.toString(), startDate?.toString());
 
+    if (!mounted) return;
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1557,7 +1571,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                                   ),
                                 ),
                               ),
-                              ...assessments.map((assessment) => _buildCompletedAssessmentCard(assessment)).toList(),
+                              ...assessments.map((assessment) => _buildCompletedAssessmentCard(assessment)),
                             ],
                           );
                         }).toList(),
@@ -1685,7 +1699,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: _getScoreColor(overallPct).withOpacity(0.2), // Percent 0..100
+            color: _getScoreColor(overallPct).withValues(alpha: 0.2), // Percent 0..100
             borderRadius: BorderRadius.circular(24),
           ),
           child: Icon(
@@ -1868,59 +1882,6 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
     }
   }
 
-  Future<void> _showApprenticeDraft(String apprenticeId) async {
-    try {
-      final draft = await _apiService.getApprenticeDraft(apprenticeId);
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: Colors.grey[900],
-            title: const Text(
-              'Current Draft',
-              style: TextStyle(
-                color: Colors.amber,
-                fontFamily: 'Poppins',
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Status: ${draft['is_submitted'] == true ? 'Submitted' : 'In Progress'}',
-                  style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Score: ${draft['score'] ?? 'Not yet scored'}',
-                  style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Last Updated: ${_formatDateString(draft['updated_at'] ?? '')}',
-                  style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  'Close',
-                  style: TextStyle(color: Colors.amber, fontFamily: 'Poppins'),
-                ),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      _showMessage('No current draft found for this apprentice', isError: true);
-    }
-  }
-
   Future<void> _showTerminateDialog(String apprenticeId, String displayName) async {
     final controller = TextEditingController();
     final formKey = GlobalKey<FormState>();
@@ -1976,7 +1937,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
                 onPressed: submitting ? null : () async {
                   if (!formKey.currentState!.validate()) return;
-                  print('[UI] Terminate pressed for apprentice=$apprenticeId reasonLen='+controller.text.trim().length.toString());
+                  print('[UI] Terminate pressed for apprentice=$apprenticeId reasonLen=${controller.text.trim().length}');
                   setState(() => submitting = true);
                   try {
                     await _apiService.terminateApprenticeship(apprenticeId, controller.text.trim());
@@ -1986,11 +1947,13 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                       setState(() {
                         _apprentices.removeWhere((a) => a['id'] == apprenticeId);
                       });
+                      if (!ctx.mounted) return;
                       Navigator.of(ctx).pop();
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mentorship terminated')));
                     }
                   } catch (e) {
                     setState(() => submitting = false);
+                    if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
                   }
                 },

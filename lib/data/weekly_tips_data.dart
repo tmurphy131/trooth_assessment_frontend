@@ -1,5 +1,6 @@
 /// Weekly Tips Data for Mentors
 /// 52 tips - one for each week of the year
+library;
 
 class WeeklyTip {
   final int weekNumber;

@@ -217,7 +217,7 @@ class _HistoryItem extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 22,
-              backgroundColor: Colors.amber.withOpacity(0.18),
+              backgroundColor: Colors.amber.withValues(alpha: 0.18),
               child: Text(
                 'v${result.templateVersion}',
                 style: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
@@ -296,9 +296,9 @@ class _HistoryDetailSheet extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.15),
+                    color: Colors.amber.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: Colors.amber.withOpacity(0.4)),
+                    border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
                   ),
                   child: Text('v${result.templateVersion}',
                       style: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
@@ -375,9 +375,9 @@ class _GiftChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.amber.withOpacity(0.15),
+        color: Colors.amber.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(40),
-        border: Border.all(color: Colors.amber.withOpacity(0.5)),
+        border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

@@ -1,6 +1,5 @@
-import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../utils/logout_util.dart';
 import '../services/api_service.dart';
 import '../services/subscription_service.dart';
 import 'simple_login_screen.dart';
@@ -79,7 +78,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
     if (url.isEmpty) {
       return CircleAvatar(
         radius: 30,
-        backgroundColor: Colors.amber.withOpacity(.15),
+        backgroundColor: Colors.amber.withValues(alpha: .15),
         child: const Icon(Icons.person, color: Colors.amber),
       );
     }
@@ -89,7 +88,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
     if (!isValidUrl) {
       return CircleAvatar(
         radius: 30,
-        backgroundColor: Colors.red.withOpacity(.15),
+        backgroundColor: Colors.red.withValues(alpha: .15),
         child: const Icon(Icons.error_outline, color: Colors.red),
       );
     }
@@ -103,7 +102,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
           loadingBuilder: (context, child, loadingProgress) {
             if (loadingProgress == null) return child;
             return Container(
-              color: Colors.amber.withOpacity(.15),
+              color: Colors.amber.withValues(alpha: .15),
               child: const Center(
                 child: SizedBox(
                   width: 20,
@@ -115,7 +114,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
           },
           errorBuilder: (context, error, stackTrace) {
             return Container(
-              color: Colors.red.withOpacity(.15),
+              color: Colors.red.withValues(alpha: .15),
               child: const Center(
                 child: Icon(Icons.broken_image, color: Colors.red),
               ),
@@ -334,7 +333,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
 
     if (!mounted) return;
 
-    final items = deletionSummary?['items_to_delete'] as Map<String, dynamic>? ?? {};
+    final items = deletionSummary['items_to_delete'] as Map<String, dynamic>? ?? {};
 
     await showDialog(
       context: context,
@@ -460,8 +459,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
     try {
       await _api.closeAccount(confirmationText: 'DELETE');
 
-      // Sign out from Firebase
-      await FirebaseAuth.instance.signOut();
+      await signOutEverywhere();
 
       if (!mounted) return;
 
@@ -512,7 +510,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
           color: Colors.grey[850],
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isPremium ? Colors.amber.withOpacity(0.5) : Colors.amber.withOpacity(0.3),
+            color: isPremium ? Colors.amber.withValues(alpha: 0.5) : Colors.amber.withValues(alpha: 0.3),
             width: isPremium ? 2 : 1,
           ),
         ),
@@ -522,7 +520,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: isPremium ? Colors.amber.withOpacity(0.2) : Colors.grey[800],
+                color: isPremium ? Colors.amber.withValues(alpha: 0.2) : Colors.grey[800],
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -552,7 +550,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: Colors.amber.withOpacity(0.2),
+                            color: Colors.amber.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Text(
@@ -600,7 +598,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
         decoration: BoxDecoration(
           color: Colors.grey[850],
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.amber.withOpacity(0.3)),
+          border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
@@ -608,7 +606,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.15),
+                color: Colors.amber.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(Icons.support_agent, color: Colors.amber, size: 24),

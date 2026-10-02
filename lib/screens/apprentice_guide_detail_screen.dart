@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../data/apprentice_guides_data.dart';
 import 'package:trooth_assessment/theme.dart';
@@ -7,8 +7,7 @@ import 'package:trooth_assessment/theme.dart';
 class ApprenticeGuideDetailScreen extends StatelessWidget {
   final ApprenticeGuide guide;
 
-  const ApprenticeGuideDetailScreen({Key? key, required this.guide})
-      : super(key: key);
+  const ApprenticeGuideDetailScreen({super.key, required this.guide});
 
   IconData _getIconForName(String iconName) {
     switch (iconName) {
@@ -98,7 +97,7 @@ class ApprenticeGuideDetailScreen extends StatelessWidget {
                 gradient: LinearGradient(
                   colors: [
                     kCharcoal,
-                    kCharcoal.withOpacity(0.9),
+                    kCharcoal.withValues(alpha: 0.9),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -117,7 +116,7 @@ class ApprenticeGuideDetailScreen extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: kPrimaryGold.withOpacity(0.2),
+                          color: kPrimaryGold.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -261,7 +260,7 @@ class ApprenticeGuideDetailScreen extends StatelessWidget {
                   horizontalRuleDecoration: BoxDecoration(
                     border: Border(
                       top: BorderSide(
-                        color: kMutedText.withOpacity(0.3),
+                        color: kMutedText.withValues(alpha: 0.3),
                         width: 1,
                       ),
                     ),
@@ -325,7 +324,7 @@ class ApprenticeGuideDetailScreen extends StatelessWidget {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: kMutedText.withOpacity(0.2),
+                        color: kMutedText.withValues(alpha: 0.2),
                       ),
                     ),
                     child: Row(
@@ -334,7 +333,7 @@ class ApprenticeGuideDetailScreen extends StatelessWidget {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: kPrimaryGold.withOpacity(0.15),
+                            color: kPrimaryGold.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(

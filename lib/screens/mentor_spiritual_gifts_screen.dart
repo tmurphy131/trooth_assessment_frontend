@@ -188,7 +188,7 @@ class _MentorSpiritualGiftsScreenState extends State<MentorSpiritualGiftsScreen>
     
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-      decoration: BoxDecoration(color: Colors.grey[900], boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 6)]),
+      decoration: BoxDecoration(color: Colors.grey[900], boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 6)]),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -242,9 +242,9 @@ class _MentorSpiritualGiftsScreenState extends State<MentorSpiritualGiftsScreen>
                 margin: const EdgeInsets.only(top: 8),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.15),
+                  color: Colors.amber.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.amber.withOpacity(0.4)),
+                  border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
                 ),
                 child: Row(
                   children: [
@@ -392,7 +392,7 @@ class _MentorLatestResultViewState extends State<_MentorLatestResultView> {
                     readOnly: true,
                     child: Text(
                       'This Spiritual Gifts Assessment helps identify the ways God has uniquely equipped the apprentice to serve the church and others. Results highlight strongest gifts and provide definitions to help in understanding and application.',
-                      style: TextStyle(color: Colors.white.withOpacity(0.70), fontSize: 12, height: 1.4, fontFamily: 'Poppins'),
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.70), fontSize: 12, height: 1.4, fontFamily: 'Poppins'),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -459,9 +459,9 @@ class _MentorLatestResultViewState extends State<_MentorLatestResultView> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.18),
+                  color: Colors.amber.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.amber.withOpacity(0.5)),
+                  border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -480,7 +480,7 @@ class _MentorLatestResultViewState extends State<_MentorLatestResultView> {
           hasTies
               ? 'Apprentice has multiple gifts sharing the 3rd-place score. All are shown.'
               : 'Top three apprentice gifts.',
-          style: TextStyle(color: Colors.white.withOpacity(0.70), fontSize: 12, fontFamily: 'Poppins'),
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.70), fontSize: 12, fontFamily: 'Poppins'),
         ),
         const SizedBox(height: 12),
         Wrap(spacing: 12, runSpacing: 12, children: truncated.map((g) => _GiftBadge(gift: g)).toList()),
@@ -497,7 +497,7 @@ class _MentorLatestResultViewState extends State<_MentorLatestResultView> {
           hasTies
               ? 'Gifts scoring at least ${thirdScore.toStringAsFixed(1)} are considered tied for 3rd.'
               : 'Ordered by score (descending). Top three highlighted.',
-          style: TextStyle(color: Colors.white.withOpacity(0.65), fontSize: 12, fontFamily: 'Poppins'),
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 12, fontFamily: 'Poppins'),
         ),
         const SizedBox(height: 12),
         ListView.separated(
@@ -690,9 +690,9 @@ class _GiftBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.amber.withOpacity(0.15),
+        color: Colors.amber.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.amber.withOpacity(0.4)),
+        border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -733,9 +733,9 @@ class _MentorHistoryItem extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.15),
+                color: Colors.amber.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: Colors.amber.withOpacity(0.4)),
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
               ),
               child: Text('v${result.templateVersion}', style: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
             ),
@@ -754,9 +754,9 @@ class _MentorHistoryItem extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: Colors.amber.withOpacity(0.14),
+                            color: Colors.amber.withValues(alpha: 0.14),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.amber.withOpacity(0.5)),
+                            border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
                           ),
                           child: const Text('Tie 3rd', style: TextStyle(color: Colors.amber, fontSize: 10, fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
                         ),
@@ -818,9 +818,9 @@ class _MentorHistoryDetail extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withOpacity(0.18),
+                      color: Colors.amber.withValues(alpha: 0.18),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.amber.withOpacity(0.5)),
+                      border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -945,7 +945,7 @@ class _MentorLoadingSkeleton extends StatelessWidget {
       child: Container(
         height: 66,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(color: Colors.grey[900], boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 6)]),
+        decoration: BoxDecoration(color: Colors.grey[900], boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 6)]),
         child: Row(
           children: [
             Container(height: 40, width: 180, decoration: BoxDecoration(color: base, borderRadius: BorderRadius.circular(8))),

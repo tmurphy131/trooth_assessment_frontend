@@ -5,8 +5,10 @@
 // • dev.log() output around **every** HTTP transaction
 // ─────────────────────────────────────────────────────────────
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as dev;                  //  ← logging
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/mentor_note.dart';
@@ -17,6 +19,44 @@ class PremiumRequiredException implements Exception {
   PremiumRequiredException(this.message);
   @override
   String toString() => message;
+}
+
+/// Thrown when the backend can't be reached or doesn't answer in time.
+class NetworkException implements Exception {
+  final String message;
+  NetworkException(this.message);
+  @override
+  String toString() => message;
+}
+
+/// Thin wrapper over an [http.Client] that applies a timeout to every
+/// request and turns transport failures into [NetworkException].
+class _TimedHttp {
+  _TimedHttp(this.client);
+
+  http.Client client;
+  static const _timeout = Duration(seconds: 20);
+
+  Future<http.Response> _run(Future<http.Response> Function() send) async {
+    try {
+      return await send().timeout(_timeout);
+    } on TimeoutException {
+      throw NetworkException('The server took too long to respond. Please try again.');
+    } on http.ClientException {
+      throw NetworkException('Could not reach the server. Check your connection and try again.');
+    }
+  }
+
+  Future<http.Response> get(Uri url, {Map<String, String>? headers}) =>
+      _run(() => client.get(url, headers: headers));
+  Future<http.Response> post(Uri url, {Map<String, String>? headers, Object? body}) =>
+      _run(() => client.post(url, headers: headers, body: body));
+  Future<http.Response> put(Uri url, {Map<String, String>? headers, Object? body}) =>
+      _run(() => client.put(url, headers: headers, body: body));
+  Future<http.Response> patch(Uri url, {Map<String, String>? headers, Object? body}) =>
+      _run(() => client.patch(url, headers: headers, body: body));
+  Future<http.Response> delete(Uri url, {Map<String, String>? headers, Object? body}) =>
+      _run(() => client.delete(url, headers: headers, body: body));
 }
 
 /// Backend URL, chosen at build time:
@@ -37,6 +77,12 @@ class ApiService {
   /// Override for e2e / staging builds before the first call:
   /// `ApiService().baseUrlOverride = 'https://api.prod.trooth.app';`
   String? baseUrlOverride;
+
+  final _TimedHttp _http = _TimedHttp(http.Client());
+
+  /// Swap the underlying client in tests (e.g. `MockClient`).
+  @visibleForTesting
+  set httpClient(http.Client client) => _http.client = client;
   String get _base => baseUrlOverride ?? _defaultBaseUrl;
   String get baseUrl => _base;
 
@@ -111,7 +157,7 @@ class ApiService {
   Future<String> ping() async {
     const tag = 'API-ping';
     _logReq(tag, 'GET', '/');
-    final r = await http.get(Uri.parse('$_base/'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base/'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body)['message'] as String;
     throw Exception('Ping failed (${r.statusCode})');
@@ -121,7 +167,7 @@ class ApiService {
     const tag = 'API-healthCheck';
     try {
       _logReq(tag, 'GET', '/health');
-      final r = await http.get(Uri.parse('$_base/health'), headers: _headers());
+      final r = await _http.get(Uri.parse('$_base/health'), headers: _headers());
       _logRes(tag, r);
       if (r.statusCode == 200) return jsonDecode(r.body);
       throw Exception('Health check failed (${r.statusCode})');
@@ -160,7 +206,7 @@ class ApiService {
     // Calling '/users' triggers an automatic 307 redirect to '/users/'. We call the canonical path directly.
     const path = '/users/';
     _logReq(tag, 'POST', path, payload);
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base$path'),
       headers: _headers(),
       body: jsonEncode(payload),
@@ -186,7 +232,7 @@ class ApiService {
     final p = {'mentor_id': mentorId, 'apprentice_id': apprenticeId};
 
     _logReq(tag, 'POST', '/users/assign-apprentice', p);
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base/users/assign-apprentice'),
       headers: _headers(),
       body: jsonEncode(p),
@@ -201,7 +247,7 @@ class ApiService {
     const tag = 'API-getUserProfile';
   await _ensureFreshToken();
     _logReq(tag, 'GET', '/users/$uid');
-    final primary = await http.get(
+    final primary = await _http.get(
       Uri.parse('$_base/users/$uid'),
       headers: _headers(),
     );
@@ -210,7 +256,7 @@ class ApiService {
     if (primary.statusCode == 404) {
       // Fallback to /users/me (some deployments may restrict direct ID lookups)
       _logReq(tag, 'GET', '/users/me');
-      final me = await http.get(
+      final me = await _http.get(
         Uri.parse('$_base/users/me'),
         headers: _headers(),
       );
@@ -230,7 +276,7 @@ class ApiService {
     const tag = 'API-createAsmt';
   await _ensureFreshToken();
     _logReq(tag, 'POST', '/assessments', payload);
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base/assessments'),
       headers: _headers(),
       body: jsonEncode(payload),
@@ -249,7 +295,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/apprentice/mentor/status';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     throw Exception('getMentorStatus failed (${r.statusCode}) ${r.body}');
@@ -260,7 +306,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/apprentice/agreements/pending';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
     throw Exception('listPendingAgreements failed (${r.statusCode}) ${r.body}');
@@ -273,7 +319,7 @@ class ApiService {
     final payload = <String, dynamic>{'mentor_id': mentorId};
     if (reason != null && reason.trim().isNotEmpty) payload['reason'] = reason.trim();
     _logReq(tag, 'POST', path, payload);
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base$path'),
       headers: _headers(),
       body: jsonEncode(payload),
@@ -289,7 +335,7 @@ class ApiService {
     const tag = 'API-saveDraft';
     await _ensureFreshToken();
     _logReq(tag, 'POST', '/assessment-drafts', payload);
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base/assessment-drafts'),
       headers: _headers(),
       body: jsonEncode(payload),
@@ -303,7 +349,7 @@ class ApiService {
     const tag = 'API-getCurrentDraft';
     await _ensureFreshToken();
     _logReq(tag, 'GET', '/assessment-drafts');
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base/assessment-drafts'),
       headers: _headers(),
     );
@@ -316,7 +362,7 @@ class ApiService {
     await _ensureFreshToken(); // Ensure fresh token
     const tag = 'API-getAllDrafts';
     _logReq(tag, 'GET', '/assessment-drafts/list');
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base/assessment-drafts/list'),
       headers: _headers(),
     );
@@ -329,7 +375,7 @@ class ApiService {
     const tag = 'API-getDraftById';
   await _ensureFreshToken();
     _logReq(tag, 'GET', '/assessment-drafts/$draftId');
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base/assessment-drafts/$draftId'),
       headers: _headers(),
     );
@@ -342,7 +388,7 @@ class ApiService {
     await _ensureFreshToken(); // Ensure fresh token
     const tag = 'API-deleteDraft';
     _logReq(tag, 'DELETE', '/assessment-drafts/$draftId');
-    final r = await http.delete(
+    final r = await _http.delete(
       Uri.parse('$_base/assessment-drafts/$draftId'),
       headers: _headers(),
     );
@@ -355,7 +401,7 @@ class ApiService {
     const tag = 'API-getQuestions';
   await _ensureFreshToken();
     _logReq(tag, 'GET', '/question/questions');
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base/question/questions'),
       headers: _headers(),
     );
@@ -372,7 +418,7 @@ class ApiService {
     const tag = 'API-listApprentices';
   await _ensureFreshToken();
     _logReq(tag, 'GET', '/mentor/my-apprentices');
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base/mentor/my-apprentices'),
       headers: _headers(),
     );
@@ -385,7 +431,7 @@ class ApiService {
     const tag = 'API-listInactiveApprentices';
     await _ensureFreshToken();
     _logReq(tag, 'GET', '/mentor/inactive-apprentices');
-    final r = await http.get(Uri.parse('$_base/mentor/inactive-apprentices'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base/mentor/inactive-apprentices'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
     throw Exception('listInactiveApprentices failed (${r.statusCode})');
@@ -395,7 +441,7 @@ class ApiService {
     const tag = 'API-getApprenticeDraft';
   await _ensureFreshToken();
     _logReq(tag, 'GET', '/mentor/apprentice/$apprenticeId/draft');
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base/mentor/apprentice/$apprenticeId/draft'),
       headers: _headers(),
     );
@@ -424,7 +470,7 @@ class ApiService {
     final uri = Uri.parse('$_base/mentor/apprentice/$apprenticeId/submitted-assessments')
         .replace(queryParameters: queryParams);
     _logReq(tag, 'GET', uri.path);
-    final r = await http.get(uri, headers: _headers());
+    final r = await _http.get(uri, headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
     throw Exception('getApprenticeSubmittedAssessments failed (${r.statusCode})');
@@ -439,7 +485,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/mentor/assessment/$assessmentId';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     if (r.statusCode == 403) throw Exception('Forbidden');
@@ -452,7 +498,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/mentor/assessment/$assessmentId';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) {
       final data = jsonDecode(r.body) as Map<String, dynamic>;
@@ -466,7 +512,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/assessments/$assessmentId/mentor-report-v2';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return r.body;
     if (r.statusCode == 404) throw Exception('No report');
@@ -478,7 +524,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/assessments/$assessmentId/mentor-report-v2.pdf';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     return r;
   }
@@ -490,7 +536,7 @@ class ApiService {
     // Use same endpoint - backend will check authorization
     final path = '/assessments/$assessmentId/mentor-report-v2.pdf';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     return r;
   }
@@ -503,7 +549,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/mentor/submitted-drafts/$draftId/full-report';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) {
       return jsonDecode(r.body) as Map<String, dynamic>;
@@ -524,7 +570,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/apprentice/my-assessments/$assessmentId/full-report';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) {
       return jsonDecode(r.body) as Map<String, dynamic>;
@@ -545,7 +591,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/assessments/$assessmentId/my-full-report';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     if (r.statusCode == 403) throw PremiumRequiredException('Premium subscription required for full reports');
@@ -582,7 +628,7 @@ class ApiService {
     final path = '/assessments/$assessmentId/email-report';
     final body = { 'to_email': toEmail, 'include_pdf': includePdf };
     _logReq(tag, 'POST', path, body);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(body));
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(body));
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     throw Exception('emailMentorReportByAssessment failed (${r.statusCode}) ${r.body}');
@@ -597,7 +643,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/mentor-profile/me';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     throw Exception('getMyMentorProfile failed (${r.statusCode}) ${r.body}');
@@ -621,7 +667,7 @@ class ApiService {
       if (bio != null) 'bio': bio,
     };
     _logReq(tag, 'PUT', path, payload);
-    final r = await http.put(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    final r = await _http.put(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     throw Exception('updateMyMentorProfile failed (${r.statusCode}) ${r.body}');
@@ -633,7 +679,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/mentor-profile/for-apprentice';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
     throw Exception('getAllMentorProfilesForApprentice failed (${r.statusCode}) ${r.body}');
@@ -645,7 +691,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/mentor-profile/for-apprentice/$mentorId';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     throw Exception('getMentorProfileForApprentice failed (${r.statusCode}) ${r.body}');
@@ -655,7 +701,7 @@ class ApiService {
     const tag = 'API-getAssessmentDetail';
   await _ensureFreshToken();
     _logReq(tag, 'GET', '/mentor/assessment/$assessmentId');
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base/mentor/assessment/$assessmentId'),
       headers: _headers(),
     );
@@ -669,7 +715,7 @@ class ApiService {
     const tag = 'API-getCompletedAssessments';
   await _ensureFreshToken();
     _logReq(tag, 'GET', '/assessment-drafts/completed');
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base/assessment-drafts/completed'),
       headers: _headers(),
     );
@@ -683,7 +729,7 @@ class ApiService {
     const tag = 'API-getAssessmentResults';
   await _ensureFreshToken();
     _logReq(tag, 'GET', '/assessments/$assessmentId');
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base/assessments/$assessmentId'),
       headers: _headers(),
     );
@@ -702,7 +748,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/apprentice/resources';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
     throw Exception('listMySharedResources failed (${r.statusCode}) ${r.body}');
@@ -716,8 +762,8 @@ class ApiService {
     if (apprenticeId != null && apprenticeId.isNotEmpty) {
       uri = uri.replace(queryParameters: {'apprentice_id': apprenticeId});
     }
-    _logReq(tag, 'GET', uri.path + (uri.query.isNotEmpty ? '?'+uri.query : ''));
-    final r = await http.get(uri, headers: _headers());
+    _logReq(tag, 'GET', uri.path + (uri.query.isNotEmpty ? '?${uri.query}' : ''));
+    final r = await _http.get(uri, headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
     throw Exception('listMentorResources failed (${r.statusCode}) ${r.body}');
@@ -742,7 +788,7 @@ class ApiService {
       'is_shared': isShared,
     };
     _logReq(tag, 'POST', path, payload);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
     _logRes(tag, r);
     if (r.statusCode == 200 || r.statusCode == 201) return jsonDecode(r.body) as Map<String, dynamic>;
     throw Exception('createMentorResource failed (${r.statusCode}) ${r.body}');
@@ -768,7 +814,7 @@ class ApiService {
       if (isShared != null) 'is_shared': isShared,
     };
     _logReq(tag, 'PATCH', path, payload);
-    final r = await http.patch(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    final r = await _http.patch(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     throw Exception('updateMentorResource failed (${r.statusCode}) ${r.body}');
@@ -780,7 +826,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/mentor/resources/$resourceId';
     _logReq(tag, 'DELETE', path);
-    final r = await http.delete(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.delete(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return (jsonDecode(r.body) as Map<String, dynamic>)['deleted'] == true;
     throw Exception('deleteMentorResource failed (${r.statusCode}) ${r.body}');
@@ -801,7 +847,7 @@ class ApiService {
     final uri = Uri.parse('$_base/mentor/submitted-drafts')
         .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
     _logReq(tag, 'GET', uri.path);
-    final r = await http.get(uri, headers: _headers());
+    final r = await _http.get(uri, headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
     throw Exception('getSubmittedDrafts failed (${r.statusCode})');
@@ -811,7 +857,7 @@ class ApiService {
     const tag = 'API-getSubmittedDraft';
   await _ensureFreshToken();
     _logReq(tag, 'GET', '/mentor/submitted-drafts/$draftId');
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base/mentor/submitted-drafts/$draftId'),
       headers: _headers(),
     );
@@ -824,7 +870,7 @@ class ApiService {
     const tag = 'API-getApprenticeProfile';
   await _ensureFreshToken();
     _logReq(tag, 'GET', '/mentor/my-apprentices/$apprenticeId');
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base/mentor/my-apprentices/$apprenticeId'),
       headers: _headers(),
     );
@@ -841,7 +887,7 @@ class ApiService {
     const tag = 'API-startDraft';
   await _ensureFreshToken();
     _logReq(tag, 'POST', '/assessment-drafts/start?template_id=$templateId', {});
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base/assessment-drafts/start?template_id=$templateId'),
       headers: _headers(),
     );
@@ -854,7 +900,7 @@ class ApiService {
     const tag = 'API-getDraft';
   await _ensureFreshToken();
     _logReq(tag, 'GET', '/assessment-drafts');
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base/assessment-drafts'),
       headers: _headers(),
     );
@@ -871,7 +917,7 @@ class ApiService {
     final endpoint = draftId != null ? '/assessment-drafts/$draftId' : '/assessment-drafts';
     
     _logReq(tag, 'PATCH', endpoint, payload);
-    final r = await http.patch(
+    final r = await _http.patch(
       Uri.parse('$_base$endpoint'),
       headers: _headers(),
       body: jsonEncode(payload),
@@ -893,7 +939,7 @@ class ApiService {
       path = '$path?$query';
     }
     _logReq(tag, 'POST', path);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body);
     throw Exception('submitDraft failed (${r.statusCode})');
@@ -904,7 +950,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/assessments/self';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
     throw Exception('getMentorOwnAssessments failed (${r.statusCode}) ${r.body}');
@@ -915,7 +961,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/assessments/$assessmentId/status';
     _logReq(tag, 'GET', path);
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base$path'),
       headers: _headers(),
     );
@@ -928,7 +974,7 @@ class ApiService {
     const tag = 'API-resumeDraft';
   await _ensureFreshToken();
     _logReq(tag, 'GET', '/assessment-drafts/resume');
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base/assessment-drafts/resume'),
       headers: _headers(),
     );
@@ -941,7 +987,7 @@ class ApiService {
     const tag = 'API-getSubmittedAssessments';
   await _ensureFreshToken();
     _logReq(tag, 'GET', '/assessment-drafts/submitted-assessments/$apprenticeId');
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base/assessment-drafts/submitted-assessments/$apprenticeId'),
       headers: _headers(),
     );
@@ -958,7 +1004,7 @@ class ApiService {
     const tag = 'API-getPublishedTemplates';
   await _ensureFreshToken();
     _logReq(tag, 'GET', '/templates/published');
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base/templates/published'),
       headers: _headers(),
     );
@@ -984,10 +1030,9 @@ class ApiService {
       final body = jsonEncode(payload);
       
       print('🔍 URI: $uri');
-      print('🔍 Headers: $headers');
       print('🔍 Body: $body');
       
-      final r = await http.post(uri, headers: headers, body: body);
+      final r = await _http.post(uri, headers: headers, body: body);
       
       print('🔍 Response received');
       _logRes(tag, r);
@@ -1020,10 +1065,9 @@ class ApiService {
       final body = jsonEncode(payload);
       
       print('🔍 URI: $uri');
-      print('🔍 Headers: $headers');
       print('🔍 Body: $body');
       
-      final r = await http.put(uri, headers: headers, body: body);
+      final r = await _http.put(uri, headers: headers, body: body);
       
       print('🔍 Response received');
       _logRes(tag, r);
@@ -1050,9 +1094,8 @@ class ApiService {
       final headers = _headers();
       
       print('🔍 URI: $uri');
-      print('🔍 Headers: $headers');
       
-      final r = await http.delete(uri, headers: headers);
+      final r = await _http.delete(uri, headers: headers);
       
       print('🔍 Response received');
       _logRes(tag, r);
@@ -1070,7 +1113,7 @@ class ApiService {
     try {
   await _ensureFreshToken();
       _logReq(tag, 'GET', '/admin/templates');
-      final r = await http.get(
+      final r = await _http.get(
         Uri.parse('$_base/admin/templates'),
         headers: _headers(),
       );
@@ -1092,7 +1135,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/progress/master/latest';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     if (r.statusCode == 404) return <String, dynamic>{}; // treat as empty state
@@ -1104,7 +1147,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/progress/spiritual-gifts/latest';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     if (r.statusCode == 404) return <String, dynamic>{};
@@ -1120,7 +1163,7 @@ class ApiService {
     };
     final uri = Uri.parse('$_base/progress/reports').replace(queryParameters: qp);
     _logReq(tag, 'GET', uri.toString());
-    final r = await http.get(uri, headers: _headers());
+    final r = await _http.get(uri, headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     throw Exception('progressReports failed (${r.statusCode})');
@@ -1131,7 +1174,7 @@ class ApiService {
     const tag = 'API-getMySimplifiedReport';
     await _ensureFreshToken();
     _logReq(tag, 'GET', '/progress/reports/$assessmentId/simplified');
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base/progress/reports/$assessmentId/simplified'),
       headers: _headers(),
     );
@@ -1145,7 +1188,7 @@ class ApiService {
     const tag = 'API-deleteAssessmentReport';
     await _ensureFreshToken();
     _logReq(tag, 'DELETE', '/progress/reports/$assessmentId');
-    final r = await http.delete(
+    final r = await _http.delete(
       Uri.parse('$_base/progress/reports/$assessmentId'),
       headers: _headers(),
     );
@@ -1158,7 +1201,7 @@ class ApiService {
     const tag = 'API-getTemplate';
   await _ensureFreshToken();
     _logReq(tag, 'GET', '/admin/templates/$templateId');
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base/admin/templates/$templateId'),
       headers: _headers(),
     );
@@ -1172,7 +1215,7 @@ class ApiService {
   await _ensureFreshToken();
     final payload = {'question_id': questionId, 'order': order};
     _logReq(tag, 'POST', '/admin/templates/$templateId/questions', payload);
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base/admin/templates/$templateId/questions'),
       headers: _headers(),
       body: jsonEncode(payload),
@@ -1187,7 +1230,7 @@ class ApiService {
     const tag = 'API-removeQuestionFromTemplate';
   await _ensureFreshToken();
     _logReq(tag, 'DELETE', '/admin/templates/$templateId/questions/$questionId');
-    final r = await http.delete(
+    final r = await _http.delete(
       Uri.parse('$_base/admin/templates/$templateId/questions/$questionId'),
       headers: _headers(),
     );
@@ -1201,7 +1244,7 @@ class ApiService {
     const tag = 'API-cloneTemplate';
   await _ensureFreshToken();
     _logReq(tag, 'POST', '/admin/templates/$templateId/clone');
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base/admin/templates/$templateId/clone'),
       headers: _headers(),
     );
@@ -1214,7 +1257,7 @@ class ApiService {
     const tag = 'API-publishTemplate';
   await _ensureFreshToken();
     _logReq(tag, 'POST', '/admin/templates/$templateId/publish');
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base/admin/templates/$templateId/publish'),
       headers: _headers(),
     );
@@ -1227,7 +1270,7 @@ class ApiService {
     const tag = 'API-unpublishTemplate';
   await _ensureFreshToken();
     _logReq(tag, 'POST', '/admin/templates/$templateId/unpublish');
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base/admin/templates/$templateId/unpublish'),
       headers: _headers(),
     );
@@ -1245,7 +1288,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/assessments/master-trooth/latest';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     if (r.statusCode == 404) return {};
@@ -1260,8 +1303,8 @@ class ApiService {
     if (limit != null) qp['limit'] = limit.toString();
     const base = '/assessments/master-trooth/history';
     final uri = Uri.parse('$_base$base').replace(queryParameters: qp.isEmpty ? null : qp);
-    _logReq(tag, 'GET', uri.path + (uri.query.isNotEmpty ? '?'+uri.query : ''));
-    final r = await http.get(uri, headers: _headers());
+    _logReq(tag, 'GET', uri.path + (uri.query.isNotEmpty ? '?${uri.query}' : ''));
+    final r = await _http.get(uri, headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     if (r.statusCode == 404) return {'items': [], 'next_cursor': null};
@@ -1279,7 +1322,7 @@ class ApiService {
       'include_html': includeHtml,
     };
     _logReq(tag, 'POST', path, payload);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
     _logRes(tag, r);
     if (r.statusCode == 200) return true;
     if (r.statusCode == 429) throw Exception('RATE_LIMIT: ${r.body}');
@@ -1296,7 +1339,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/templates/$templateId/latest';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     if (r.statusCode == 404) return {};
@@ -1311,8 +1354,8 @@ class ApiService {
     if (limit != null) qp['limit'] = limit.toString();
     final base = '/templates/$templateId/history';
     final uri = Uri.parse('$_base$base').replace(queryParameters: qp.isEmpty ? null : qp);
-    _logReq(tag, 'GET', uri.path + (uri.query.isNotEmpty ? '?'+uri.query : ''));
-    final r = await http.get(uri, headers: _headers());
+    _logReq(tag, 'GET', uri.path + (uri.query.isNotEmpty ? '?${uri.query}' : ''));
+    final r = await _http.get(uri, headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     if (r.statusCode == 404) return {'items': [], 'next_cursor': null};
@@ -1330,7 +1373,7 @@ class ApiService {
       'include_html': includeHtml,
     };
     _logReq(tag, 'POST', path, payload);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
     _logRes(tag, r);
     if (r.statusCode == 200) return true;
     if (r.statusCode == 429) throw Exception('RATE_LIMIT: ${r.body}');
@@ -1347,7 +1390,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/assessments/master-trooth/$apprenticeId/latest';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     if (r.statusCode == 404) return {};
@@ -1362,8 +1405,8 @@ class ApiService {
     if (limit != null) qp['limit'] = limit.toString();
     final base = '/assessments/master-trooth/$apprenticeId/history';
     final uri = Uri.parse('$_base$base').replace(queryParameters: qp.isEmpty ? null : qp);
-    _logReq(tag, 'GET', uri.path + (uri.query.isNotEmpty ? '?'+uri.query : ''));
-    final r = await http.get(uri, headers: _headers());
+    _logReq(tag, 'GET', uri.path + (uri.query.isNotEmpty ? '?${uri.query}' : ''));
+    final r = await _http.get(uri, headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     if (r.statusCode == 404) return {'items': [], 'next_cursor': null};
@@ -1375,7 +1418,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/templates/$templateId/$apprenticeId/latest';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     if (r.statusCode == 404) return {};
@@ -1390,8 +1433,8 @@ class ApiService {
     if (limit != null) qp['limit'] = limit.toString();
     final base = '/templates/$templateId/$apprenticeId/history';
     final uri = Uri.parse('$_base$base').replace(queryParameters: qp.isEmpty ? null : qp);
-    _logReq(tag, 'GET', uri.path + (uri.query.isNotEmpty ? '?'+uri.query : ''));
-    final r = await http.get(uri, headers: _headers());
+    _logReq(tag, 'GET', uri.path + (uri.query.isNotEmpty ? '?${uri.query}' : ''));
+    final r = await _http.get(uri, headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     if (r.statusCode == 404) return {'items': [], 'next_cursor': null};
@@ -1408,7 +1451,7 @@ class ApiService {
       'include_html': includeHtml,
     };
     _logReq(tag, 'POST', path, payload);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
     _logRes(tag, r);
     if (r.statusCode == 200) return true;
     if (r.statusCode == 429) throw Exception('RATE_LIMIT: ${r.body}');
@@ -1433,7 +1476,7 @@ class ApiService {
       final headers = _headers();
       final body = jsonEncode(payload);
       
-      final r = await http.post(uri, headers: headers, body: body);
+      final r = await _http.post(uri, headers: headers, body: body);
       
       print('🔍 Response received');
       _logRes(tag, r);
@@ -1459,7 +1502,7 @@ class ApiService {
       final headers = _headers();
       final body = jsonEncode(payload);
       
-      final r = await http.put(uri, headers: headers, body: body);
+      final r = await _http.put(uri, headers: headers, body: body);
       
       print('🔍 Response received');
       _logRes(tag, r);
@@ -1483,7 +1526,7 @@ class ApiService {
       final uri = Uri.parse('$_base/question/questions/$questionId');
       final headers = _headers();
       
-      final r = await http.delete(uri, headers: headers);
+      final r = await _http.delete(uri, headers: headers);
       
       print('🔍 Response received');
       _logRes(tag, r);
@@ -1503,7 +1546,7 @@ class ApiService {
     const tag = 'API-sendInvite';
   await _ensureFreshToken();
     _logReq(tag, 'POST', '/invitations/invite-apprentice', payload);
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base/invitations/invite-apprentice'),
       headers: _headers(),
       body: jsonEncode(payload),
@@ -1518,7 +1561,7 @@ class ApiService {
     const tag = 'API-getPendingInvites';
   await _ensureFreshToken();
     _logReq(tag, 'GET', '/invitations/pending-invites');
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base/invitations/pending-invites'),
       headers: _headers(),
     );
@@ -1531,7 +1574,7 @@ class ApiService {
     const tag = 'API-revokeInvite';
   await _ensureFreshToken();
     _logReq(tag, 'DELETE', '/invitations/revoke-invite/$invitationId');
-    final r = await http.delete(
+    final r = await _http.delete(
       Uri.parse('$_base/invitations/revoke-invite/$invitationId'),
       headers: _headers(),
     );
@@ -1545,7 +1588,7 @@ class ApiService {
     const tag = 'API-validateInviteToken';
   await _ensureFreshToken();
     _logReq(tag, 'GET', '/invitations/validate-token/$token');
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base/invitations/validate-token/$token'),
       headers: _headers(),
     );
@@ -1558,7 +1601,7 @@ class ApiService {
     const tag = 'API-acceptInvite';
   await _ensureFreshToken();
     _logReq(tag, 'POST', '/invitations/accept-invite', payload);
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base/invitations/accept-invite'),
       headers: _headers(),
       body: jsonEncode(payload),
@@ -1573,7 +1616,7 @@ class ApiService {
     const tag = 'API-getApprenticeInvites';
   await _ensureFreshToken();
     _logReq(tag, 'GET', '/invitations/apprentice-invites?email=$email');
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base/invitations/apprentice-invites?email=$email'),
       headers: _headers(),
     );
@@ -1590,7 +1633,7 @@ class ApiService {
     const tag = 'API-getCategories';
   await _ensureFreshToken();
     _logReq(tag, 'GET', '/categories/');
-    final r = await http.get(
+    final r = await _http.get(
       Uri.parse('$_base/categories/'),
       headers: _headers(),
     );
@@ -1604,7 +1647,7 @@ class ApiService {
   await _ensureFreshToken();
     final body = {'name': name};
     _logReq(tag, 'POST', '/categories/', body);
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base/categories/'),
       headers: _headers(),
       body: jsonEncode(body),
@@ -1618,7 +1661,7 @@ class ApiService {
     const tag = 'API-deleteCategory';
   await _ensureFreshToken();
     _logReq(tag, 'DELETE', '/categories/$categoryId');
-    final r = await http.delete(
+    final r = await _http.delete(
       Uri.parse('$_base/categories/$categoryId'),
       headers: _headers(),
     );
@@ -1634,7 +1677,7 @@ class ApiService {
     const tag = 'API-agreementTemplates';
     await _ensureFreshToken();
     _logReq(tag, 'GET', '/agreements/templates');
-    final r = await http.get(Uri.parse('$_base/agreements/templates'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base/agreements/templates'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
     throw Exception('listAgreementTemplates failed (${r.statusCode})');
@@ -1661,7 +1704,7 @@ class ApiService {
       'fields': fields,
     };
     _logReq(tag, 'POST', '/agreements', payload);
-    final r = await http.post(Uri.parse('$_base/agreements'), headers: _headers(), body: jsonEncode(payload));
+    final r = await _http.post(Uri.parse('$_base/agreements'), headers: _headers(), body: jsonEncode(payload));
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body);
     throw Exception('createAgreement failed (${r.statusCode})');
@@ -1672,7 +1715,7 @@ class ApiService {
     await _ensureFreshToken();
     final uri = Uri.parse('$_base/agreements?skip=$skip&limit=$limit');
     _logReq(tag, 'GET', uri.path);
-    final r = await http.get(uri, headers: _headers());
+    final r = await _http.get(uri, headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
     throw Exception('listAgreements failed (${r.statusCode})');
@@ -1683,7 +1726,7 @@ class ApiService {
     await _ensureFreshToken();
     final uri = Uri.parse('$_base/agreements/my?skip=$skip&limit=$limit');
     _logReq(tag, 'GET', uri.path);
-    final r = await http.get(uri, headers: _headers());
+    final r = await _http.get(uri, headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
     throw Exception('listMyAgreements failed (${r.statusCode})');
@@ -1694,7 +1737,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/agreements/$agreementId/submit';
     _logReq(tag, 'POST', path);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body);
     throw Exception('submitAgreement failed (${r.statusCode})');
@@ -1705,7 +1748,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/agreements/$agreementId';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body);
     throw Exception('getAgreement failed (${r.statusCode})');
@@ -1720,7 +1763,7 @@ class ApiService {
     final path = '/agreements/$agreementId/sign/apprentice';
     final payload = { 'typed_name': typedName };
     _logReq(tag, 'POST', path, payload);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body);
     throw Exception('apprenticeSignAgreement failed (${r.statusCode})');
@@ -1735,7 +1778,7 @@ class ApiService {
     final path = '/agreements/$agreementId/sign/parent';
     final payload = { 'typed_name': typedName };
     _logReq(tag, 'POST', path, payload);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body);
     throw Exception('parentSignAgreement failed (${r.statusCode})');
@@ -1750,7 +1793,7 @@ class ApiService {
     final path = '/agreements/$agreementId/resend/parent-token';
     final payload = { if (reason != null) 'reason': reason };
     _logReq(tag, 'POST', path, payload.isEmpty ? null : payload);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body);
     if (r.statusCode == 429) {
@@ -1766,7 +1809,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/agreements/$agreementId/revoke';
     _logReq(tag, 'POST', path);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body);
     throw Exception('revokeAgreement failed (${r.statusCode})');
@@ -1777,7 +1820,7 @@ class ApiService {
       await _ensureFreshToken();
       final path = '/agreements/$agreementId/fields';
       _logReq(tag, 'PATCH', path, partialFields);
-      final r = await http.patch(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(partialFields));
+      final r = await _http.patch(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(partialFields));
       _logRes(tag, r);
       if (r.statusCode == 200) return jsonDecode(r.body);
       throw Exception('updateAgreementFields failed (${r.statusCode})');
@@ -1790,7 +1833,7 @@ class ApiService {
     final path = '/agreements/$agreementId/request-resend-parent';
     final payload = <String, dynamic>{ if (reason != null && reason.isNotEmpty) 'reason': reason };
     _logReq(tag, 'POST', path, payload.isEmpty ? null : payload);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body);
     if (r.statusCode == 409) throw Exception('Not awaiting parent signature');
@@ -1808,7 +1851,7 @@ class ApiService {
     _logReq(tag, 'POST', path, { 'reason': reason });
     http.Response r;
     try {
-      r = await http.post(
+      r = await _http.post(
         Uri.parse('$_base$path'),
         headers: _headers(),
         body: jsonEncode({ 'reason': reason }),
@@ -1839,7 +1882,7 @@ class ApiService {
     _logReq(tag, 'POST', path, payload.isEmpty ? null : payload);
     http.Response r;
     try {
-      r = await http.post(Uri.parse('$_base$path'), headers: headers, body: jsonEncode(payload));
+      r = await _http.post(Uri.parse('$_base$path'), headers: headers, body: jsonEncode(payload));
     } catch (e) {
       // Network / transport error – expose correlation id for cross-reference
       throw Exception('requestMeetingReschedule network error correlation=$correlationId err=$e');
@@ -1866,7 +1909,7 @@ class ApiService {
     final path = '/mentor/apprentice/$apprenticeId/reinstate';
     final payload = reason == null ? null : { 'reason': reason };
     _logReq(tag, 'POST', path, payload);
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base$path'),
       headers: _headers(),
       body: payload == null ? null : jsonEncode(payload),
@@ -1884,7 +1927,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/mentor/notifications';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
     throw Exception('mentorNotifications failed (${r.statusCode}): ${r.body}');
@@ -1895,7 +1938,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/mentor/notifications/history';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
     if (r.statusCode == 404) {
@@ -1912,7 +1955,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/mentor/notifications/$notificationId/dismiss';
     _logReq(tag, 'POST', path);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     if (r.statusCode == 404) {
@@ -1936,7 +1979,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/mentor/notifications/dismiss-all';
     _logReq(tag, 'POST', path);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) {
       final body = jsonDecode(r.body) as Map<String, dynamic>;
@@ -1960,7 +2003,7 @@ class ApiService {
       if (note != null && note.isNotEmpty) 'note': note,
     };
     _logReq(tag, 'POST', path, payload);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body);
     throw Exception('respondReschedule failed (${r.statusCode}): ${r.body}');
@@ -1977,7 +2020,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/assessments/spiritual-gifts/questions';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     throw Exception('getSpiritualGiftsQuestions failed (${r.statusCode}) ${r.body}');
@@ -1990,7 +2033,7 @@ class ApiService {
     const path = '/assessments/spiritual-gifts/submit';
     final payload = { 'template_key': _spiritualGiftsTemplateKey, 'answers': answers };
     _logReq(tag, 'POST', path, payload);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     throw Exception('submitSpiritualGifts failed (${r.statusCode}) ${r.body}');
@@ -2001,7 +2044,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/assessments/spiritual-gifts/latest';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) {
       final data = jsonDecode(r.body) as Map<String, dynamic>;
@@ -2017,7 +2060,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/assessments/spiritual-gifts/by-id/$assessmentId';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) {
       final data = jsonDecode(r.body) as Map<String, dynamic>;
@@ -2032,7 +2075,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/assessments/spiritual-gifts/$apprenticeId/latest';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) {
       final data = jsonDecode(r.body) as Map<String, dynamic>;
@@ -2089,8 +2132,8 @@ class ApiService {
     if (limit != null) qp['limit'] = limit.toString();
     final base = '/assessments/spiritual-gifts/$apprenticeId/history';
     final uri = Uri.parse('$_base$base').replace(queryParameters: qp.isEmpty ? null : qp);
-    _logReq(tag, 'GET', uri.path + (uri.query.isNotEmpty ? '?'+uri.query : ''));
-    final r = await http.get(uri, headers: _headers());
+    _logReq(tag, 'GET', uri.path + (uri.query.isNotEmpty ? '?${uri.query}' : ''));
+    final r = await _http.get(uri, headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     throw Exception('mentorGetApprenticeSpiritualGiftsHistory failed (${r.statusCode}) ${r.body}');
@@ -2104,8 +2147,8 @@ class ApiService {
     if (limit != null) qp['limit'] = limit.toString();
     const base = '/assessments/spiritual-gifts/history';
     final uri = Uri.parse('$_base$base').replace(queryParameters: qp.isEmpty ? null : qp);
-    _logReq(tag, 'GET', uri.path + (uri.query.isNotEmpty ? '?'+uri.query : ''));
-    final r = await http.get(uri, headers: _headers());
+    _logReq(tag, 'GET', uri.path + (uri.query.isNotEmpty ? '?${uri.query}' : ''));
+    final r = await _http.get(uri, headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     if (r.statusCode == 404) return {'items': [], 'next_cursor': null};
@@ -2124,7 +2167,7 @@ class ApiService {
       'include_html': false,
     };
     _logReq(tag, 'POST', path, payload);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
     _logRes(tag, r);
     if (r.statusCode == 200) return true;
     if (r.statusCode == 429) {
@@ -2144,7 +2187,7 @@ class ApiService {
       'include_html': false,
     };
     _logReq(tag, 'POST', path, payload);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
     _logRes(tag, r);
     if (r.statusCode == 200) return true;
     if (r.statusCode == 404) {
@@ -2171,7 +2214,7 @@ class ApiService {
       'include_html': false,
     };
     _logReq(tag, 'POST', path, body);
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base$path'),
       headers: _headers(),
       body: jsonEncode(body),
@@ -2189,7 +2232,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/spiritual-gifts/template/metadata';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     throw Exception('getSpiritualGiftsTemplateMetadata failed (${r.statusCode}) ${r.body}');
@@ -2200,7 +2243,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/spiritual-gifts/definitions';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) {
       final decoded = jsonDecode(r.body);
@@ -2227,7 +2270,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/users/me/deletion-summary';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     throw Exception('getAccountDeletionSummary failed (${r.statusCode}) ${r.body}');
@@ -2241,7 +2284,7 @@ class ApiService {
     const path = '/users/me/close-account';
     final body = {'confirmation_text': confirmationText};
     _logReq(tag, 'DELETE', path, body);
-    final r = await http.delete(
+    final r = await _http.delete(
       Uri.parse('$_base$path'),
       headers: _headers(),
       body: jsonEncode(body),
@@ -2276,7 +2319,7 @@ class ApiService {
       'is_private': isPrivate,
     };
     _logReq(tag, 'POST', path, body);
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base$path'),
       headers: _headers(),
       body: jsonEncode(body),
@@ -2293,7 +2336,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/mentor-notes/assessment/$assessmentId';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) {
       final decoded = jsonDecode(r.body);
@@ -2322,7 +2365,7 @@ class ApiService {
     if (followUpPlan != null) body['follow_up_plan'] = followUpPlan;
     if (isPrivate != null) body['is_private'] = isPrivate;
     _logReq(tag, 'PATCH', path, body);
-    final r = await http.patch(
+    final r = await _http.patch(
       Uri.parse('$_base$path'),
       headers: _headers(),
       body: jsonEncode(body),
@@ -2339,7 +2382,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/mentor-notes/$noteId';
     _logReq(tag, 'DELETE', path);
-    final r = await http.delete(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.delete(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 204 || r.statusCode == 200) return;
     throw Exception('deleteMentorNote failed (${r.statusCode}) ${r.body}');
@@ -2352,7 +2395,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/mentor-notes/shared/assessment/$assessmentId';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) {
       final decoded = jsonDecode(r.body);
@@ -2386,7 +2429,7 @@ class ApiService {
       if (deviceModel != null) 'device_model': deviceModel,
     };
     _logReq(tag, 'POST', path, {'platform': platform}); // Don't log full token
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base$path'),
       headers: _headers(),
       body: jsonEncode(body),
@@ -2404,7 +2447,7 @@ class ApiService {
     final path = '/push-notifications/unregister-device';
     final body = {'fcm_token': fcmToken};
     _logReq(tag, 'POST', path);
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base$path'),
       headers: _headers(),
       body: jsonEncode(body),
@@ -2425,7 +2468,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/push-notifications/my-devices';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) {
       final decoded = jsonDecode(r.body);
@@ -2469,7 +2512,7 @@ class ApiService {
       if (deviceInfo != null) 'device_info': deviceInfo,
     };
     _logReq(tag, 'POST', path, body);
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base$path'),
       headers: _headers(),
       body: jsonEncode(body),
@@ -2494,7 +2537,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/subscriptions/status';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     throw Exception('getSubscriptionStatus failed (${r.statusCode}) ${r.body}');
@@ -2508,7 +2551,7 @@ class ApiService {
     const path = '/subscriptions/restore';
     if (syncData != null) {
       _logReq(tag, 'POST', path, syncData);
-      final r = await http.post(
+      final r = await _http.post(
         Uri.parse('$_base$path'),
         headers: _headers(),
         body: jsonEncode(syncData),
@@ -2518,25 +2561,11 @@ class ApiService {
       throw Exception('restoreSubscription failed (${r.statusCode}) ${r.body}');
     } else {
       _logReq(tag, 'POST', path);
-      final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+      final r = await _http.post(Uri.parse('$_base$path'), headers: _headers());
       _logRes(tag, r);
       if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
       throw Exception('restoreSubscription failed (${r.statusCode}) ${r.body}');
     }
-  }
-
-  /// DEBUG: Manually set subscription tier (for testing without RevenueCat webhooks)
-  /// Valid tiers: free, mentor_premium, apprentice_premium, mentor_gifted
-  Future<Map<String, dynamic>> debugSetSubscriptionTier(String tier, {int expiresDays = 30}) async {
-    const tag = 'API-debugSetSubscriptionTier';
-    await _ensureFreshToken();
-    const path = '/subscriptions/admin/set-tier';
-    final body = {'tier': tier, 'expires_days': expiresDays};
-    _logReq(tag, 'POST', path, body);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(body));
-    _logRes(tag, r);
-    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
-    throw Exception('debugSetSubscriptionTier failed (${r.statusCode}) ${r.body}');
   }
 
   /* ── Mentor Gift Seats ────────────────────────────────────────────── */
@@ -2547,7 +2576,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/mentor/seats';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
     throw Exception('getMentorGiftSeats failed (${r.statusCode}) ${r.body}');
@@ -2566,7 +2595,7 @@ class ApiService {
       if (apprenticeName != null) 'apprentice_name': apprenticeName,
     };
     _logReq(tag, 'POST', path, body);
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base$path'),
       headers: _headers(),
       body: jsonEncode(body),
@@ -2607,7 +2636,7 @@ class ApiService {
       if (apprenticeId != null) 'apprentice_id': apprenticeId,
     };
     _logReq(tag, 'POST', path, body);
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base$path'),
       headers: _headers(),
       body: jsonEncode(body),
@@ -2632,7 +2661,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/mentor/seats/$seatId/revoke';
     _logReq(tag, 'POST', path);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200 || r.statusCode == 204) return;
     throw Exception('revokeMentorGiftSeat failed (${r.statusCode}) ${r.body}');
@@ -2654,7 +2683,7 @@ class ApiService {
       if (apprenticeName != null) 'apprentice_name': apprenticeName,
     };
     _logReq(tag, 'POST', path, body);
-    final r = await http.post(
+    final r = await _http.post(
       Uri.parse('$_base$path'),
       headers: _headers(),
       body: jsonEncode(body),
@@ -2670,7 +2699,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/mentor/seats/$seatId';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     throw Exception('getMentorGiftSeatDetails failed (${r.statusCode}) ${r.body}');
@@ -2684,7 +2713,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/apprentice/subscription-source';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     if (r.statusCode == 404) return {}; // No gifted subscription
@@ -2704,7 +2733,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/trivia/questions/draw?category=$category&difficulty=$difficulty&count=$count';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return List<Map<String, dynamic>>.from(jsonDecode(r.body));
     throw Exception('triviaDrawQuestions failed (${r.statusCode}) ${r.body}');
@@ -2715,7 +2744,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/trivia/single/submit';
     _logReq(tag, 'POST', path, payload);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     throw Exception('triviaSubmitSingleGame failed (${r.statusCode}) ${r.body}');
@@ -2734,7 +2763,7 @@ class ApiService {
     params.add('limit=$limit');
     final path = '/trivia/leaderboard?${params.join('&')}';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return List<Map<String, dynamic>>.from(jsonDecode(r.body));
     throw Exception('triviaGetLeaderboard failed (${r.statusCode}) ${r.body}');
@@ -2745,7 +2774,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/trivia/challenges';
     _logReq(tag, 'POST', path, payload);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     throw Exception('triviaCreateChallenge failed (${r.statusCode}) ${r.body}');
@@ -2756,7 +2785,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/trivia/challenges';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return List<Map<String, dynamic>>.from(jsonDecode(r.body));
     throw Exception('triviaListChallenges failed (${r.statusCode}) ${r.body}');
@@ -2767,7 +2796,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/trivia/challenges/$challengeId';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     throw Exception('triviaGetChallenge failed (${r.statusCode}) ${r.body}');
@@ -2778,7 +2807,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/trivia/challenges/$challengeId/accept';
     _logReq(tag, 'POST', path);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode != 200) throw Exception('triviaAcceptChallenge failed (${r.statusCode}) ${r.body}');
   }
@@ -2788,7 +2817,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/trivia/challenges/$challengeId/decline';
     _logReq(tag, 'POST', path);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode != 200) throw Exception('triviaDeclineChallenge failed (${r.statusCode}) ${r.body}');
   }
@@ -2798,7 +2827,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/trivia/challenges/$challengeId';
     _logReq(tag, 'DELETE', path);
-    final r = await http.delete(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.delete(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode != 200) throw Exception('triviaCancelChallenge failed (${r.statusCode}) ${r.body}');
   }
@@ -2808,7 +2837,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/trivia/challenges/$challengeId/forfeit';
     _logReq(tag, 'POST', path);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode != 200) throw Exception('triviaForfeitChallenge failed (${r.statusCode}) ${r.body}');
   }
@@ -2822,7 +2851,7 @@ class ApiService {
     final path = '/trivia/challenges/$challengeId/answer';
     final payload = {'answer': answer};
     _logReq(tag, 'POST', path, payload);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     throw Exception('triviaSubmitChallengeAnswer failed (${r.statusCode}) ${r.body}');
@@ -2833,7 +2862,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/trivia/challenges/$challengeId/nudge';
     _logReq(tag, 'POST', path);
-    final r = await http.post(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode != 200) throw Exception('triviaNudge failed (${r.statusCode}) ${r.body}');
   }
@@ -2843,7 +2872,7 @@ class ApiService {
     await _ensureFreshToken();
     final path = '/trivia/profile/$userId';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     throw Exception('triviaGetProfile failed (${r.statusCode}) ${r.body}');
@@ -2854,7 +2883,7 @@ class ApiService {
     await _ensureFreshToken();
     const path = '/trivia/connections';
     _logReq(tag, 'GET', path);
-    final r = await http.get(Uri.parse('$_base$path'), headers: _headers());
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     throw Exception('triviaGetConnections failed (${r.statusCode}) ${r.body}');

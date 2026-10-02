@@ -146,14 +146,14 @@ class _TriviaChallengeListScreenState extends State<TriviaChallengeListScreen> {
 
     // Sort: action needed first, then pending, then complete/expired
     final sorted = [..._challenges]..sort((a, b) {
-      int _priority(Map<String, dynamic> c) {
+      int priority(Map<String, dynamic> c) {
         if (c['is_my_turn'] == true) return 0;
         final s = c['status'] as String? ?? '';
         if (s == 'pending') return 1;
         if (s == 'active') return 2;
         return 3;
       }
-      return _priority(a).compareTo(_priority(b));
+      return priority(a).compareTo(priority(b));
     });
 
     return RefreshIndicator(
@@ -221,7 +221,7 @@ class _TriviaChallengeListScreenState extends State<TriviaChallengeListScreen> {
           color: Colors.grey[900],
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isMyTurn ? const Color(0xFFFFD700).withOpacity(0.5) : Colors.grey[800]!,
+            color: isMyTurn ? const Color(0xFFFFD700).withValues(alpha: 0.5) : Colors.grey[800]!,
           ),
         ),
         child: Column(
@@ -243,9 +243,9 @@ class _TriviaChallengeListScreenState extends State<TriviaChallengeListScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.15),
+                    color: statusColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: statusColor.withOpacity(0.5)),
+                    border: Border.all(color: statusColor.withValues(alpha: 0.5)),
                   ),
                   child: Text(
                     statusLabel,
