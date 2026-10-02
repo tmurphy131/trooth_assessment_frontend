@@ -64,12 +64,10 @@ android {
         release {
             // Release builds must use the upload key; see the taskGraph check below.
             signingConfig = signingConfigs.getByName("release")
-            // R8 shrinking: a release build with it launches fine, but sign-in,
-            // Firestore and RevenueCat weren't verified under it yet. Enable after
-            // a check on a real device (internal track):
-            // isMinifyEnabled = true
-            // isShrinkResources = true
-            // proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            // R8 shrinking. Flutter, Firebase and RevenueCat ship their own keep rules.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
         }
     }
 }
