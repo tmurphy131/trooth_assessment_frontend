@@ -15,7 +15,20 @@ env:
   API_BASE_URL: https://trooth-discipleship-api.onlyblv.com/
 
 jobs:
+  # Don't ship a build that fails analysis or tests.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable, flutter-version: '3.47.5', cache: true }
+      - run: flutter pub get
+      # Infos (avoid_print etc.) are reported but don't fail the build.
+      - run: flutter analyze --no-fatal-infos
+      - run: flutter test
+
   android:
+    needs: test
     if: github.event_name == 'push' || inputs.platform != 'ios'
     runs-on: ubuntu-latest
     steps:
@@ -41,6 +54,7 @@ jobs:
           status: completed
 
   ios:
+    needs: test
     if: github.event_name == 'push' || inputs.platform != 'android'
     runs-on: macos-26
     steps:
