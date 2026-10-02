@@ -101,6 +101,25 @@ void main() {
     await waitFor(tester, () => SubscriptionService().isInitialized, 'subscriptions (mentor)');
     expect(await Purchases.appUserID, mentorUid, reason: 'RevenueCat should identify the mentor');
 
+    // 1b. The bell opens Alerts as its own page (it once had no Scaffold:
+    //     layout errors, no back button, taps blocked) and comes back.
+    Future<void> clearOverlays() async {
+      for (final label in ['SKIP', 'Not now']) {
+        final f = find.text(label);
+        if (f.evaluate().isNotEmpty) {
+          await tester.tap(f.first);
+          await tester.pump(const Duration(milliseconds: 800));
+        }
+      }
+    }
+    await tester.pump(const Duration(seconds: 3)); // let tutorial/primer appear
+    await clearOverlays();
+    await clearOverlays();
+    await tester.tap(find.byTooltip('Alerts'));
+    await pumpUntil(tester, find.widgetWithText(AppBar, 'Alerts'));
+    await tester.pageBack();
+    await pumpUntil(tester, find.byType(MentorDashboardNew));
+
     // 2. Switch accounts on the same device. Before the fix, RevenueCat kept
     //    the first user's identity because configure() ran twice.
     await backToLogin(tester);
@@ -115,6 +134,8 @@ void main() {
     //     been asked, the explanation sheet appears (after the tutorial);
     //     "Not now" snoozes it.
     if (await PushNotificationService().getPermissionStatus() == AuthorizationStatus.notDetermined) {
+      // Step 1b may have snoozed the sheet ("Not now" is device-wide).
+      (await SharedPreferences.getInstance()).remove('notification_primer_snoozed_until');
       final primer = find.text('Stay in the loop');
       final skip = find.text('SKIP');
       await pumpUntil(tester, find.byWidgetPredicate((_) => primer.evaluate().isNotEmpty || skip.evaluate().isNotEmpty));
