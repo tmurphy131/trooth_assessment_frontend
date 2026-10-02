@@ -39,6 +39,6 @@ The backend URL is chosen at build time with `--dart-define=API_BASE_URL=<url>` 
 
 | Skill | Trigger | What it does |
 |-------|---------|--------------|
-| `/deploy-dev` | "deploy to dev" | Builds backend image, deploys to Cloud Run dev, confirms frontend defaults to dev, rebuilds Flutter (flutter clean → pub get → pod install) |
-| `/deploy-prod` | "deploy to production", "release to prod" | Builds backend image, deploys to Cloud Run prod, rebuilds Flutter (flutter clean → pub get → pod install) |
+| `/deploy-dev` | "deploy to dev" | Builds backend image, deploys to Cloud Run dev, confirms frontend defaults to dev, rebuilds Flutter (flutter clean → pub get → iOS config) |
+| `/deploy-prod` | "deploy to production", "release to prod" | Builds backend image, deploys to Cloud Run prod, rebuilds Flutter (flutter clean → pub get → iOS config) |
 | `/bump-version <version>` | "bump version", "update version to X.Y.Z" | Updates pubspec.yaml and Info.plist, commits the change |

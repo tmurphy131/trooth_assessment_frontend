@@ -236,7 +236,7 @@ jobs:
         with: { channel: stable, cache: true }
       - uses: ruby/setup-ruby@v1
         with: { ruby-version: '3.3', bundler-cache: true, working-directory: ios }
-      - run: flutter pub get && cd ios && pod install
+      - run: flutter pub get   # iOS plugins build with Swift Package Manager; no pod install
       - run: bundle exec fastlane beta
         working-directory: ios
         env:

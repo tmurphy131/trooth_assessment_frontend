@@ -11,5 +11,4 @@ export DEVELOPMENT_TEAM=""
 # Clean and run
 flutter clean
 flutter pub get
-cd ios && pod install && cd ..
 flutter run -d "iPhone 16 Plus"

@@ -93,8 +93,10 @@ cd "/Users/tmoney/Developer/trooth_assessment" && flutter clean && flutter pub g
 Then:
 
 ```
-cd "/Users/tmoney/Developer/trooth_assessment/ios" && rm -rf Pods Podfile.lock && pod install
+cd "/Users/tmoney/Developer/trooth_assessment" && flutter build ios --config-only
 ```
+
+iOS uses Swift Package Manager (no CocoaPods, no Podfile): this regenerates Flutter's iOS config and Swift package integration. Xcode fetches the packages on the next build.
 
 If either command fails, report the error and stop.
 
@@ -112,7 +114,7 @@ After all steps complete, print a summary:
 - [x] Frontend API URL: prod via --dart-define (no edit)
 - [x] DerivedData: [cleaned / skipped — X GB free]
 - [x] flutter clean + pub get
-- [x] pod install
+- [x] iOS config regenerated (Swift Package Manager)
 ```
 
 Replace any skipped or failed steps with `[ ]` and a short note.
