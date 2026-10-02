@@ -9,7 +9,10 @@ import 'package:trooth_assessment/utils/errors.dart';
 void main() {
   final api = ApiService();
 
-  setUp(() => api.setAuthForTesting(authorization: ({bool force = false}) async => null, canRetryAuth: () => false));
+  setUp(() {
+    api.setAuthForTesting(authorization: ({bool force = false}) async => null, canRetryAuth: () => false);
+    api.clearCache();
+  });
 
   void respondWith(http.Response Function(http.Request) handler) {
     api.httpClient = MockClient((req) async => handler(req));
@@ -103,6 +106,51 @@ void main() {
         return http.Response(jsonEncode({'id': 'a1'}), 200);
       });
       expect(await api.fetchOwnFullReport(assessmentId: 'a1'), {'id': 'a1'});
+    });
+  });
+
+  group('read cache', () {
+    test('repeat and concurrent reads share one request', () async {
+      var calls = 0;
+      respondWith((_) {
+        calls++;
+        return http.Response(jsonEncode({'has_premium': false}), 200);
+      });
+      await Future.wait([api.getSubscriptionStatus(), api.getSubscriptionStatus()]);
+      await api.getSubscriptionStatus();
+      expect(calls, 1);
+    });
+
+    test('each caller gets its own copy', () async {
+      respondWith((_) => http.Response(jsonEncode({'has_premium': false}), 200));
+      final a = await api.getSubscriptionStatus();
+      a['has_premium'] = true;
+      expect((await api.getSubscriptionStatus())['has_premium'], false);
+    });
+
+    test('a successful write clears cached reads', () async {
+      var reads = 0;
+      respondWith((req) {
+        if (req.method == 'GET') {
+          reads++;
+          return http.Response(jsonEncode({'has_premium': reads > 1}), 200);
+        }
+        return http.Response(jsonEncode({'ok': true}), 200);
+      });
+      expect((await api.getSubscriptionStatus())['has_premium'], false);
+      await api.restoreSubscription();
+      expect((await api.getSubscriptionStatus())['has_premium'], true);
+      expect(reads, 2);
+    });
+
+    test('failures are not cached', () async {
+      var calls = 0;
+      respondWith((_) {
+        calls++;
+        return calls == 1 ? http.Response('boom', 500) : http.Response(jsonEncode({'has_premium': true}), 200);
+      });
+      await expectLater(api.getSubscriptionStatus(), throwsA(isA<ApiException>()));
+      expect((await api.getSubscriptionStatus())['has_premium'], true);
     });
   });
 }

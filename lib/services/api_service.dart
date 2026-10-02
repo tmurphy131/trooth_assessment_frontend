@@ -60,6 +60,9 @@ class _ApiClient {
   /// Whether a 401 is worth retrying with a force-refreshed token.
   bool Function() canRetryAuth;
 
+  /// Called after any successful write, so cached reads can be dropped.
+  void Function()? onMutation;
+
   static const _timeout = Duration(seconds: 20);
 
   Future<http.Response> _send(String method, Uri url, Map<String, String>? headers, Object? body) async {
@@ -96,6 +99,9 @@ class _ApiClient {
       response = await attempt(force: true);
     }
     _log(method, url, response);
+    if (method != 'GET' && response.statusCode >= 200 && response.statusCode < 300) {
+      onMutation?.call();
+    }
     return response;
   }
 
@@ -139,15 +145,41 @@ class ApiService {
     http.Client(),
     authorization: _authorization,
     canRetryAuth: _isSignedIn,
-  );
+  )..onMutation = clearCache;
 
-  static bool _isSignedIn() {
+  static String? _currentUid() {
     try {
-      return FirebaseAuth.instance.currentUser != null;
+      return FirebaseAuth.instance.currentUser?.uid;
     } catch (_) {
-      return false; // Firebase not initialized (e.g. unit tests)
+      return null; // Firebase not initialized (e.g. unit tests)
     }
   }
+
+  static bool _isSignedIn() => _currentUid() != null;
+
+  /* ── Read cache ───────────────────────────────────────────────────── */
+  // Short-lived cache for a few reads that several screens request in a row
+  // (subscription status, profile, published templates). Bodies are cached
+  // as text and decoded per caller, so no caller can mutate another's data.
+  // Concurrent requests share one in-flight call. Any successful write and
+  // sign-out clear it; failures are never cached.
+  final _cache = <String, ({DateTime expires, Future<String> body})>{};
+
+  Future<String> _cachedBody(String key, Duration ttl, Future<String> Function() fetch) {
+    final cacheKey = '${_currentUid()}|$key';
+    final hit = _cache[cacheKey];
+    if (hit != null && hit.expires.isAfter(DateTime.now())) return hit.body;
+    final body = fetch();
+    _cache[cacheKey] = (expires: DateTime.now().add(ttl), body: body);
+    body.catchError((_) {
+      if (identical(_cache[cacheKey]?.body, body)) _cache.remove(cacheKey);
+      return '';
+    });
+    return body;
+  }
+
+  /// Drops every cached read (call on sign-out; writes do it automatically).
+  void clearCache() => _cache.clear();
 
   /// Swap the underlying client in tests (e.g. `MockClient`).
   @visibleForTesting
@@ -284,18 +316,23 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getUserProfile(String uid) async {
+    final body = await _cachedBody('/users/$uid', const Duration(minutes: 5), () => _fetchUserProfile(uid));
+    return jsonDecode(body) as Map<String, dynamic>;
+  }
+
+  Future<String> _fetchUserProfile(String uid) async {
     final primary = await _http.get(
       Uri.parse('$_base/users/$uid'),
       headers: _headers(),
     );
-    if (primary.statusCode == 200) return jsonDecode(primary.body);
+    if (primary.statusCode == 200) return primary.body;
     if (primary.statusCode == 404) {
       // Fallback to /users/me (some deployments may restrict direct ID lookups)
       final me = await _http.get(
         Uri.parse('$_base/users/me'),
         headers: _headers(),
       );
-      if (me.statusCode == 200) return jsonDecode(me.body);
+      if (me.statusCode == 200) return me.body;
       throw ApiException(me.statusCode, 'getUserProfile failed 404 primary; fallback /users/me => ${me.statusCode}');
     }
     throw ApiException(primary.statusCode, 'getUserProfile failed (${primary.statusCode})');
@@ -853,12 +890,15 @@ class ApiService {
   /* ─────────────────────────────────────────────────────────────────── */
 
   Future<List<dynamic>> getPublishedTemplates() async {
-    final r = await _http.get(
-      Uri.parse('$_base/templates/published'),
-      headers: _headers(),
-    );
-    if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
-    throw ApiException(r.statusCode, 'getPublishedTemplates failed (${r.statusCode})');
+    final body = await _cachedBody('/templates/published', const Duration(minutes: 5), () async {
+      final r = await _http.get(
+        Uri.parse('$_base/templates/published'),
+        headers: _headers(),
+      );
+      if (r.statusCode == 200) return r.body;
+      throw ApiException(r.statusCode, 'getPublishedTemplates failed (${r.statusCode})');
+    });
+    return jsonDecode(body) as List<dynamic>;
   }
 
   // Admin Template Management
@@ -2034,9 +2074,12 @@ class ApiService {
   /// Get current user's subscription status
   Future<Map<String, dynamic>> getSubscriptionStatus() async {
     const path = '/subscriptions/status';
-    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
-    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
-    throw ApiException(r.statusCode, 'getSubscriptionStatus failed (${r.statusCode}) ${r.body}');
+    final body = await _cachedBody(path, const Duration(seconds: 60), () async {
+      final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
+      if (r.statusCode == 200) return r.body;
+      throw ApiException(r.statusCode, 'getSubscriptionStatus failed (${r.statusCode}) ${r.body}');
+    });
+    return jsonDecode(body) as Map<String, dynamic>;
   }
 
   /// Restore subscription from RevenueCat (sync with backend)
