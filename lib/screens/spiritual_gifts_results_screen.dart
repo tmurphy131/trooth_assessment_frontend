@@ -10,6 +10,7 @@ import '../utils/haptics.dart';
 import '../ui/ui_constants.dart';
 import 'spiritual_gifts_definitions_screen.dart';
 import 'spiritual_gifts_history_screen.dart';
+import '../utils/errors.dart';
 
 /// Displays a Spiritual Gifts result (either freshly submitted or fetched latest).
 /// Expects either a pre-parsed result OR will fetch latest on init.
@@ -57,7 +58,7 @@ class _SpiritualGiftsResultsScreenState extends State<SpiritualGiftsResultsScree
     } catch (e) {
       setState(() {
         _loading = false;
-        _error = 'Failed to load results: $e';
+        _error = 'Failed to load results: ${friendlyError(e)}';
       });
     }
   }

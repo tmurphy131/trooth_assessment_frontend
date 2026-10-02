@@ -4,6 +4,7 @@ import '../widgets/spiritual_gifts_report_view.dart';
 import '../utils/haptics.dart';
 import '../services/api_service.dart';
 import 'spiritual_gifts_definitions_screen.dart';
+import '../utils/errors.dart';
 
 /// Generic full report screen for both apprentice (viewing historical submission)
 /// and mentor (viewing apprentice submission) contexts.
@@ -59,7 +60,7 @@ class _SpiritualGiftsFullReportScreenState extends State<SpiritualGiftsFullRepor
       }
       setState(() { _result = SpiritualGiftsResult.fromJson(json); _loading = false; });
     } catch (e) {
-      setState(() { _error = 'Failed to load report: $e'; _loading = false; });
+      setState(() { _error = 'Failed to load report: ${friendlyError(e)}'; _loading = false; });
     }
   }
 
@@ -82,7 +83,7 @@ class _SpiritualGiftsFullReportScreenState extends State<SpiritualGiftsFullRepor
             if (secs != null) _retryAt = DateTime.now().add(Duration(seconds: secs));
           }
         }
-        _snack('Email failed: $e', error: true);
+        _snack('Email failed: ${friendlyError(e)}', error: true);
       } finally { if (mounted) setState(() => _emailing = false); }
     } else {
       setState(() => _emailing = true);
@@ -91,7 +92,7 @@ class _SpiritualGiftsFullReportScreenState extends State<SpiritualGiftsFullRepor
         _snack('Email requested');
         Haptics.success();
       } catch (e) {
-        _snack('Email failed: $e', error: true);
+        _snack('Email failed: ${friendlyError(e)}', error: true);
       } finally { if (mounted) setState(() => _emailing = false); }
     }
   }

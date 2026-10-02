@@ -8,6 +8,7 @@ import '../services/api_service.dart';
 import '../models/mentor_note.dart';
 import '../theme.dart';
 import 'subscription_screen.dart';
+import '../utils/errors.dart';
 
 /// Screen for apprentices to view their own assessment report.
 /// Uses simplified report for free users, full AI report for premium users.
@@ -146,7 +147,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() { _error = 'Failed to load report: $e'; _loading = false; });
+        setState(() { _error = 'Failed to load report: ${friendlyError(e)}'; _loading = false; });
       }
     }
   }
@@ -260,7 +261,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${friendlyError(e)}')));
     }
   }
 
@@ -281,7 +282,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Email error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Email error: ${friendlyError(e)}')));
     }
   }
 

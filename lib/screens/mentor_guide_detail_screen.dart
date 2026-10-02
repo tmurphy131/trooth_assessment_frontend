@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../data/mentor_guides_data.dart';
 import 'package:trooth_assessment/theme.dart';
 
@@ -110,7 +109,7 @@ class MentorGuideDetailScreen extends StatelessWidget {
                             const SizedBox(width: 6),
                             Text(
                               category.name,
-                              style: GoogleFonts.poppins(
+                              style: TextStyle(fontFamily: 'Poppins', 
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                                 color: kPrimaryGold,
@@ -124,7 +123,7 @@ class MentorGuideDetailScreen extends StatelessWidget {
                     // Title
                     Text(
                       guide.title,
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(fontFamily: 'Poppins', 
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -136,7 +135,7 @@ class MentorGuideDetailScreen extends StatelessWidget {
                     // Summary
                     Text(
                       guide.summary,
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(fontFamily: 'Poppins', 
                         fontSize: 15,
                         color: Colors.white70,
                       ),
@@ -154,7 +153,7 @@ class MentorGuideDetailScreen extends StatelessWidget {
                         const SizedBox(width: 6),
                         Text(
                           '${guide.readTimeMinutes} min read',
-                          style: GoogleFonts.poppins(
+                          style: TextStyle(fontFamily: 'Poppins', 
                             fontSize: 13,
                             color: kPrimaryGold,
                           ),
@@ -172,40 +171,40 @@ class MentorGuideDetailScreen extends StatelessWidget {
               child: MarkdownBody(
                 data: guide.content,
                 styleSheet: MarkdownStyleSheet(
-                  h1: GoogleFonts.poppins(
+                  h1: TextStyle(fontFamily: 'Poppins', 
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
                     color: kCharcoal,
                     height: 1.4,
                   ),
-                  h2: GoogleFonts.poppins(
+                  h2: TextStyle(fontFamily: 'Poppins', 
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: kCharcoal,
                     height: 1.4,
                   ),
-                  h3: GoogleFonts.poppins(
+                  h3: TextStyle(fontFamily: 'Poppins', 
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                     color: kCharcoal,
                     height: 1.4,
                   ),
-                  h4: GoogleFonts.poppins(
+                  h4: TextStyle(fontFamily: 'Poppins', 
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: kCharcoal,
                     height: 1.4,
                   ),
-                  p: GoogleFonts.poppins(
+                  p: TextStyle(fontFamily: 'Poppins', 
                     fontSize: 15,
                     color: kText,
                     height: 1.7,
                   ),
-                  listBullet: GoogleFonts.poppins(
+                  listBullet: TextStyle(fontFamily: 'Poppins', 
                     fontSize: 15,
                     color: kText,
                   ),
-                  blockquote: GoogleFonts.poppins(
+                  blockquote: TextStyle(fontFamily: 'Poppins', 
                     fontSize: 15,
                     fontStyle: FontStyle.italic,
                     color: kMutedText,
@@ -220,14 +219,14 @@ class MentorGuideDetailScreen extends StatelessWidget {
                     ),
                   ),
                   blockquotePadding: const EdgeInsets.only(left: 16),
-                  strong: GoogleFonts.poppins(
+                  strong: TextStyle(fontFamily: 'Poppins', 
                     fontWeight: FontWeight.w600,
                     color: kCharcoal,
                   ),
-                  em: GoogleFonts.poppins(
+                  em: TextStyle(fontFamily: 'Poppins', 
                     fontStyle: FontStyle.italic,
                   ),
-                  code: GoogleFonts.sourceCodePro(
+                  code: TextStyle(fontFamily: 'Menlo', fontFamilyFallback: const ['Courier', 'monospace'], 
                     fontSize: 14,
                     backgroundColor: kSurface,
                     color: kCharcoal,
@@ -279,7 +278,7 @@ class MentorGuideDetailScreen extends StatelessWidget {
         children: [
           Text(
             'Related Guides',
-            style: GoogleFonts.poppins(
+            style: TextStyle(fontFamily: 'Poppins', 
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: kCharcoal,
@@ -329,7 +328,7 @@ class MentorGuideDetailScreen extends StatelessWidget {
                             children: [
                               Text(
                                 relatedGuide.title,
-                                style: GoogleFonts.poppins(
+                                style: TextStyle(fontFamily: 'Poppins', 
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                   color: kCharcoal,
@@ -337,7 +336,7 @@ class MentorGuideDetailScreen extends StatelessWidget {
                               ),
                               Text(
                                 '${relatedGuide.readTimeMinutes} min read',
-                                style: GoogleFonts.poppins(
+                                style: TextStyle(fontFamily: 'Poppins', 
                                   fontSize: 12,
                                   color: kMutedText,
                                 ),

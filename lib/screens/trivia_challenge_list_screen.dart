@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'trivia_setup_screen.dart';
 import 'trivia_challenge_detail_screen.dart';
+import '../utils/errors.dart';
 
 class TriviaChallengeListScreen extends StatefulWidget {
   const TriviaChallengeListScreen({super.key});
@@ -63,7 +64,7 @@ class _TriviaChallengeListScreenState extends State<TriviaChallengeListScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not cancel: $e'), backgroundColor: Colors.redAccent),
+          SnackBar(content: Text('Could not cancel: ${friendlyError(e)}'), backgroundColor: Colors.redAccent),
         );
       }
     }

@@ -64,8 +64,10 @@ class TutorialService {
     await Future.delayed(const Duration(milliseconds: 500));
 
     if (!context.mounted) return;
+    // A deep link or notification may have pushed another screen meanwhile.
+    if (ModalRoute.of(context)?.isCurrent == false) return;
 
-    TutorialCoachMark(
+    _active = TutorialCoachMark(
       targets: targets,
       colorShadow: const Color(0xFF1A1A1A),
       opacityShadow: 0.9,
@@ -88,7 +90,18 @@ class TutorialService {
         onSkip?.call();
         return true; // Return true to allow skip
       },
-    ).show(context: context);
+    )..show(context: context);
+  }
+
+  static TutorialCoachMark? _active;
+
+  /// Removes a showing tutorial without marking it seen (it shows again next
+  /// time). Call before navigating from outside the screen (deep links,
+  /// notification taps); the overlay sits above every route.
+  static void dismissActive() {
+    final active = _active;
+    _active = null;
+    if (active != null && active.isShowing) active.removeOverlayEntry();
   }
 
   /// Create a target for the tutorial

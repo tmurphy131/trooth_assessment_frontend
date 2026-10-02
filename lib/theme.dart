@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 // T[root]H App Theme Colors
 final Color kPrimaryGold = const Color(0xFFD4AF37);
@@ -21,7 +20,7 @@ ThemeData buildAppTheme() {
       onSecondary: Colors.white,
       onSurface: kText,
     ),
-    textTheme: GoogleFonts.poppinsTextTheme(base.textTheme).apply(
+    textTheme: base.textTheme.apply(fontFamily: 'Poppins').apply(
       bodyColor: kText,
       displayColor: kText,
     ),
@@ -31,7 +30,7 @@ ThemeData buildAppTheme() {
       foregroundColor: Colors.white,
       centerTitle: true,
       elevation: 2,
-      titleTextStyle: GoogleFonts.poppins(
+      titleTextStyle: TextStyle(fontFamily: 'Poppins', 
         fontSize: 20,
         fontWeight: FontWeight.bold,
         color: Colors.white,
@@ -44,7 +43,7 @@ ThemeData buildAppTheme() {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        textStyle: GoogleFonts.poppins(
+        textStyle: TextStyle(fontFamily: 'Poppins', 
           fontWeight: FontWeight.w600,
         ),
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),

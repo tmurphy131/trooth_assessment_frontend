@@ -5,6 +5,7 @@ import '../services/subscription_service.dart';
 import 'simple_login_screen.dart';
 import 'support_screen.dart';
 import 'subscription_screen.dart';
+import '../utils/errors.dart';
 
 class MentorProfileScreen extends StatefulWidget {
   const MentorProfileScreen({super.key});
@@ -47,7 +48,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
       _avatarCtrl.text = (p['avatar_url'] ?? '').toString();
       _bioCtrl.text = (p['bio'] ?? '').toString();
     } catch (e) {
-      _error = 'Failed to load: $e';
+      _error = 'Failed to load: ${friendlyError(e)}';
     } finally {
       if (mounted) setState(() { _loading = false; });
     }
@@ -67,7 +68,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile saved'), behavior: SnackBarBehavior.floating));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Save failed: $e'), behavior: SnackBarBehavior.floating));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Save failed: ${friendlyError(e)}'), behavior: SnackBarBehavior.floating));
     } finally {
       if (mounted) setState(() { _loading = false; });
     }
@@ -325,7 +326,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load account data: $e'), behavior: SnackBarBehavior.floating),
+        SnackBar(content: Text('Failed to load account data: ${friendlyError(e)}'), behavior: SnackBarBehavior.floating),
       );
       return;
     }
@@ -482,7 +483,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
       setState(() { _loading = false; });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to close account: $e'),
+          content: Text('Failed to close account: ${friendlyError(e)}'),
           behavior: SnackBarBehavior.floating,
           backgroundColor: Colors.red,
         ),

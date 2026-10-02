@@ -14,7 +14,7 @@ if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
     println("[gradle] Loaded keystore properties for release signing.")
 } else {
-    println("[gradle] key.properties not found. Release build will fall back to debug signing.")
+    println("[gradle] key.properties not found. Release builds will fail; debug builds are fine.")
 }
 
 android {
@@ -62,21 +62,28 @@ android {
 
     buildTypes {
         release {
-            // Use release signing config if keystore is provided; otherwise fall back to debug for convenience.
-            signingConfig = if (keystoreProperties.isNotEmpty()) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
-            // Optional: enable code shrinking / obfuscation later if desired
+            // Release builds must use the upload key; see the taskGraph check below.
+            signingConfig = signingConfigs.getByName("release")
+            // R8 shrinking: a release build with it launches fine, but sign-in,
+            // Firestore and RevenueCat weren't verified under it yet. Enable after
+            // a check on a real device (internal track):
             // isMinifyEnabled = true
-            // proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // isShrinkResources = true
+            // proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
         }
     }
 }
 
 flutter {
     source = "../.."
+}
+
+// Fail fast instead of producing a debug-signed release that Play rejects.
+gradle.taskGraph.whenReady {
+    val buildsRelease = allTasks.any { it.project == project && it.name.contains("Release") }
+    if (buildsRelease && keystoreProperties.isEmpty) {
+        throw GradleException("android/key.properties is missing: release builds need the upload keystore.")
+    }
 }
 
 dependencies {

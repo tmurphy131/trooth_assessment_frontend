@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/api_service.dart';
+import '../utils/errors.dart';
 
 class AssessmentScreen extends StatefulWidget {
   final String? templateId;
@@ -836,7 +837,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
       }
       
     } catch (e) {
-      _showMessage('Failed to save draft: $e', isError: true);
+      _showMessage('Failed to save draft: ${friendlyError(e)}', isError: true);
     } finally {
       setState(() {
         _isSaving = false;
@@ -890,7 +891,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
       }
       
     } catch (e) {
-      _showMessage('Failed to submit assessment: $e', isError: true);
+      _showMessage('Failed to submit assessment: ${friendlyError(e)}', isError: true);
     } finally {
       setState(() {
         _isSaving = false;

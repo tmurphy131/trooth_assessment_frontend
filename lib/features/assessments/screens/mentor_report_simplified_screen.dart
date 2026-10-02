@@ -4,6 +4,7 @@ import '../models/mentor_report_v2.dart';
 import '../../../services/api_service.dart';
 import '../../../screens/subscription_screen.dart';
 import 'dart:developer' as dev;
+import '../../../utils/errors.dart';
 
 /// Simplified mentor report with three-tier progressive disclosure:
 /// TIER 1: Health score, 3 strengths, 3 gaps, 1 urgent flag, 1 primary action
@@ -856,7 +857,7 @@ class _MentorReportSimplifiedScreenState extends State<MentorReportSimplifiedScr
       setState(() => _loadingFullReport = false);
       dev.log('Error fetching full report: $e');
       scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Error loading full report: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text('Error loading full report: ${friendlyError(e)}'), backgroundColor: Colors.red),
       );
       // Fallback to basic report
       navigator.push(

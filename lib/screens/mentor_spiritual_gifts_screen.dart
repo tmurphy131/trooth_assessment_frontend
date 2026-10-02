@@ -10,6 +10,7 @@ import 'spiritual_gifts_definitions_screen.dart';
 import 'subscription_screen.dart';
 import '../utils/haptics.dart';
 import 'spiritual_gifts_full_report_screen.dart';
+import '../utils/errors.dart';
 
 /// Mentor view: pick an apprentice, view latest gifts result, navigate to history.
 class MentorSpiritualGiftsScreen extends StatefulWidget {
@@ -56,7 +57,7 @@ class _MentorSpiritualGiftsScreenState extends State<MentorSpiritualGiftsScreen>
       });
       await _restoreLastSelection();
     } catch (e) {
-      setState(() { _loadingList = false; _error = 'Failed to load apprentices: $e'; });
+      setState(() { _loadingList = false; _error = 'Failed to load apprentices: ${friendlyError(e)}'; });
     }
   }
 
@@ -99,7 +100,7 @@ class _MentorSpiritualGiftsScreenState extends State<MentorSpiritualGiftsScreen>
         setState(() { _latest = SpiritualGiftsResult.fromJson(json); _loadingResult = false; });
       }
     } catch (e) {
-      setState(() { _loadingResult = false; _error = 'Failed to load latest result: $e'; });
+      setState(() { _loadingResult = false; _error = 'Failed to load latest result: ${friendlyError(e)}'; });
     }
   }
 
@@ -329,7 +330,7 @@ class _MentorLatestResultViewState extends State<_MentorLatestResultView> {
       }
       final msg = e.toString().contains('RATE_LIMIT')
           ? 'Rate limit hit. ${_retryAt != null ? 'Wait ${_remaining()}s.' : 'Try again later.'}'
-          : 'Failed to request email: $e';
+          : 'Failed to request email: ${friendlyError(e)}';
       _snack(msg, error: true);
     } finally {
       if (mounted) setState(() => _emailing = false);
@@ -559,7 +560,7 @@ class _MentorSpiritualGiftsHistoryScreenState extends State<MentorSpiritualGifts
       final page = SpiritualGiftsHistoryPage.fromJson(json);
       setState(() { _items..clear()..addAll(page.items); _nextCursor = page.nextCursor; _initialLoading = false; });
     } catch (e) {
-      setState(() { _initialLoading = false; _error = 'Failed: $e'; });
+      setState(() { _initialLoading = false; _error = 'Failed: ${friendlyError(e)}'; });
     }
   }
 
@@ -571,7 +572,7 @@ class _MentorSpiritualGiftsHistoryScreenState extends State<MentorSpiritualGifts
       final page = SpiritualGiftsHistoryPage.fromJson(json);
       setState(() { _items.addAll(page.items); _nextCursor = page.nextCursor; });
     } catch (e) {
-      _snack('Load more failed: $e', error: true);
+      _snack('Load more failed: ${friendlyError(e)}', error: true);
     } finally { setState(() => _pageLoading = false); }
   }
 
@@ -580,7 +581,7 @@ class _MentorSpiritualGiftsHistoryScreenState extends State<MentorSpiritualGifts
       final json = await _api.mentorGetApprenticeSpiritualGiftsHistory(widget.apprenticeId, limit: 10);
       final page = SpiritualGiftsHistoryPage.fromJson(json);
       setState(() { _items..clear()..addAll(page.items); _nextCursor = page.nextCursor; });
-    } catch (e) { _snack('Refresh failed: $e', error: true); }
+    } catch (e) { _snack('Refresh failed: ${friendlyError(e)}', error: true); }
   }
 
   void _snack(String msg, {bool error = false}) {

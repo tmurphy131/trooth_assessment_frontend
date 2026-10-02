@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../data/mentor_guides_data.dart';
 import 'package:trooth_assessment/theme.dart';
 import 'mentor_guide_detail_screen.dart';
@@ -127,7 +126,7 @@ class _MentorGuidesListScreenState extends State<MentorGuidesListScreen> {
                       children: [
                         Text(
                           category.name,
-                          style: GoogleFonts.poppins(
+                          style: TextStyle(fontFamily: 'Poppins', 
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
                             color: kCharcoal,
@@ -136,7 +135,7 @@ class _MentorGuidesListScreenState extends State<MentorGuidesListScreen> {
                         const SizedBox(height: 4),
                         Text(
                           category.description,
-                          style: GoogleFonts.poppins(
+                          style: TextStyle(fontFamily: 'Poppins', 
                             fontSize: 14,
                             color: kMutedText,
                           ),
@@ -144,7 +143,7 @@ class _MentorGuidesListScreenState extends State<MentorGuidesListScreen> {
                         const SizedBox(height: 4),
                         Text(
                           '$guideCount guides',
-                          style: GoogleFonts.poppins(
+                          style: TextStyle(fontFamily: 'Poppins', 
                             fontSize: 12,
                             color: kPrimaryGold,
                             fontWeight: FontWeight.w500,
@@ -190,7 +189,7 @@ class _MentorGuidesListScreenState extends State<MentorGuidesListScreen> {
                     const SizedBox(width: 4),
                     Text(
                       'All Categories',
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(fontFamily: 'Poppins', 
                         fontSize: 14,
                         color: kPrimaryGold,
                         fontWeight: FontWeight.w500,
@@ -211,7 +210,7 @@ class _MentorGuidesListScreenState extends State<MentorGuidesListScreen> {
                     const SizedBox(width: 6),
                     Text(
                       category.name,
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(fontFamily: 'Poppins', 
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: kCharcoal,
@@ -272,7 +271,7 @@ class _MentorGuidesListScreenState extends State<MentorGuidesListScreen> {
                             children: [
                               Text(
                                 guide.title,
-                                style: GoogleFonts.poppins(
+                                style: TextStyle(fontFamily: 'Poppins', 
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
                                   color: kCharcoal,
@@ -281,7 +280,7 @@ class _MentorGuidesListScreenState extends State<MentorGuidesListScreen> {
                               const SizedBox(height: 4),
                               Text(
                                 guide.summary,
-                                style: GoogleFonts.poppins(
+                                style: TextStyle(fontFamily: 'Poppins', 
                                   fontSize: 13,
                                   color: kMutedText,
                                 ),
@@ -299,7 +298,7 @@ class _MentorGuidesListScreenState extends State<MentorGuidesListScreen> {
                                   const SizedBox(width: 4),
                                   Text(
                                     '${guide.readTimeMinutes} min read',
-                                    style: GoogleFonts.poppins(
+                                    style: TextStyle(fontFamily: 'Poppins', 
                                       fontSize: 12,
                                       color: kMutedText,
                                     ),

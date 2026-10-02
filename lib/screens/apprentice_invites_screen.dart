@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/api_service.dart';
+import '../utils/errors.dart';
 
 class ApprenticeInvitesScreen extends StatefulWidget {
   final User? user;
@@ -34,7 +35,7 @@ class _ApprenticeInvitesScreenState extends State<ApprenticeInvitesScreen> {
       await _loadPendingInvites();
     } catch (e) {
       setState(() {
-        _error = 'Failed to initialize: $e';
+        _error = 'Failed to initialize: ${friendlyError(e)}';
         _isLoading = false;
       });
     }
@@ -56,7 +57,7 @@ class _ApprenticeInvitesScreenState extends State<ApprenticeInvitesScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = 'Failed to load pending invites: $e';
+        _error = 'Failed to load pending invites: ${friendlyError(e)}';
         _isLoading = false;
       });
     }
@@ -354,7 +355,7 @@ class _ApprenticeInvitesScreenState extends State<ApprenticeInvitesScreen> {
       _showMessage('Invitation accepted successfully! Welcome to your mentoring program.');
 
     } catch (e) {
-      _showMessage('Failed to accept invitation: $e', isError: true);
+      _showMessage('Failed to accept invitation: ${friendlyError(e)}', isError: true);
     }
   }
 
@@ -374,7 +375,7 @@ class _ApprenticeInvitesScreenState extends State<ApprenticeInvitesScreen> {
       _showMessage('Invitation declined.');
 
     } catch (e) {
-      _showMessage('Failed to decline invitation: $e', isError: true);
+      _showMessage('Failed to decline invitation: ${friendlyError(e)}', isError: true);
     }
   }
 

@@ -3,6 +3,7 @@ import '../services/api_service.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'agreement_preview_screen.dart';
+import '../utils/errors.dart';
 
 // Tiny holder for hour/minute used by next-meeting calculation
 class _HM {
@@ -62,7 +63,7 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
         _loading = false;
       });
     } catch (e) {
-      setState(() { _error = 'Failed to load: $e'; _loading = false; });
+      setState(() { _error = 'Failed to load: ${friendlyError(e)}'; _loading = false; });
     }
   }
 
@@ -133,7 +134,7 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
                     await _fetch();
                   } catch (e) {
                     setState(() => submitting = false);
-                    _snack('Failed to sign: $e');
+                    _snack('Failed to sign: ${friendlyError(e)}');
                   }
                 },
                 child: submitting
@@ -152,7 +153,7 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
       await _api.requestParentResendRequest(ag['id']);
       _snack('Request sent to your mentor to resend the parent link');
     } catch (e) {
-      _snack('Failed to send request: $e');
+      _snack('Failed to send request: ${friendlyError(e)}');
     }
   }
 
@@ -208,7 +209,7 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
                     await _fetch();
                   } catch (e) {
                     setState(() { submitting = false; });
-                    _snack('Failed: $e');
+                    _snack('Failed: ${friendlyError(e)}');
                   }
                 },
                 child: submitting
@@ -240,7 +241,7 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
       if (!ok) { _snack('Cannot open link'); return; }
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (e) {
-      _snack('Failed to open: $e');
+      _snack('Failed to open: ${friendlyError(e)}');
     }
   }
 
@@ -509,7 +510,7 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
                             ),
                           );
                         } catch (e) {
-                          _snack('Failed to load mentor profile: $e');
+                          _snack('Failed to load mentor profile: ${friendlyError(e)}');
                         }
                       },
                       icon: const Icon(Icons.person, size: 18, color: Colors.amber),
@@ -693,7 +694,7 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
                   _snack('Reschedule request sent to your mentor');
                 } catch (e) {
                   setState(() => submitting = false);
-                  _snack('Failed to send request: $e');
+                  _snack('Failed to send request: ${friendlyError(e)}');
                 }
               },
               child: submitting

@@ -17,6 +17,7 @@ import 'apprentice_resources_screen.dart';
 import 'apprentice_profile_screen.dart';
 import 'subscription_screen.dart';
 import 'trivia_home_screen.dart';
+import '../utils/errors.dart';
 
 class ApprenticeDashboardNew extends StatefulWidget {
   const ApprenticeDashboardNew({super.key});
@@ -233,7 +234,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
         });
       }
     } catch (e) {
-      if (mounted) setState(() { _error = 'Failed to load assessments: $e'; _isLoading = false; });
+      if (mounted) setState(() { _error = 'Failed to load assessments: ${friendlyError(e)}'; _isLoading = false; });
     }
   }
 
@@ -916,7 +917,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
       }
       
     } catch (e) {
-      _showMessage('Failed to start assessment: $e', isError: true);
+      _showMessage('Failed to start assessment: ${friendlyError(e)}', isError: true);
     }
   }
   
@@ -1367,7 +1368,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Failed to delete draft: $e',
+              'Failed to delete draft: ${friendlyError(e)}',
               style: const TextStyle(fontFamily: 'Poppins'),
             ),
             backgroundColor: Colors.red,

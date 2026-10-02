@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/subscription_service.dart';
 import '../services/api_service.dart';
+import '../utils/errors.dart';
 
 class MentorGiftSeatsScreen extends StatefulWidget {
   const MentorGiftSeatsScreen({super.key});
@@ -51,7 +52,7 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'Failed to load data: $e';
+          _error = 'Failed to load data: ${friendlyError(e)}';
           _isLoading = false;
         });
       }
@@ -103,7 +104,7 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to purchase gift seat: $e'),
+          content: Text('Failed to purchase gift seat: ${friendlyError(e)}'),
           backgroundColor: Colors.red,
         ),
       );
@@ -196,7 +197,7 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to assign seat: $e'),
+          content: Text('Failed to assign seat: ${friendlyError(e)}'),
           backgroundColor: Colors.red,
         ),
       );

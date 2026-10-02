@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'trivia_game_screen.dart';
 import 'trivia_challenge_create_screen.dart';
+import '../utils/errors.dart';
 
 enum TriviaMode { single, multiplayer }
 
@@ -56,7 +57,7 @@ class _TriviaSetupScreenState extends State<TriviaSetupScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load questions: $e')),
+        SnackBar(content: Text('Failed to load questions: ${friendlyError(e)}')),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);

@@ -13,6 +13,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/subscription_service.dart';
 import '../services/api_service.dart';
 import 'mentor_gift_seats_screen.dart';
+import '../utils/errors.dart';
 
 class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({super.key});
@@ -129,7 +130,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       // Also check premium status from API (more reliable after purchase)
       _isPremiumFromApi = await _apiService.isPremiumUser();
     } catch (e, stack) {
-      _error = 'Failed to load subscription options: $e';
+      _error = 'Failed to load subscription options: ${friendlyError(e)}';
       addDebug('FATAL ERROR: $e');
       addDebug('Stack: ${stack.toString().split('\n').take(5).join('\n')}');
     } finally {
@@ -157,7 +158,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Purchase failed: $e'),
+            content: Text('Purchase failed: ${friendlyError(e)}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -196,7 +197,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Restore failed: $e'),
+            content: Text('Restore failed: ${friendlyError(e)}'),
             backgroundColor: Colors.red,
           ),
         );

@@ -21,6 +21,7 @@ import 'mentor_spiritual_gifts_screen.dart';
 import '../utils/assessments.dart';
 import '../mixins/mentor_dashboard_tutorial.dart';
 import 'trivia_home_screen.dart';
+import '../utils/errors.dart';
 
 class MentorDashboardNew extends StatefulWidget {
   const MentorDashboardNew({super.key});
@@ -97,7 +98,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Failed to initialize: $e';
+        _error = 'Failed to initialize: ${friendlyError(e)}';
         _isLoadingApprentices = false;
         _isLoadingAssessments = false;
       });
@@ -184,7 +185,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
       });
     } catch (e) {
       setState(() {
-        _error = 'Failed to load apprentices: $e';
+        _error = 'Failed to load apprentices: ${friendlyError(e)}';
         _isLoadingApprentices = false;
       });
     }
@@ -248,7 +249,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not load assessment: $e')),
+        SnackBar(content: Text('Could not load assessment: ${friendlyError(e)}')),
       );
       }
     }
@@ -383,7 +384,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Failed to load completed assessments: $e';
+        _error = 'Failed to load completed assessments: ${friendlyError(e)}';
         _isLoadingAssessments = false;
       });
     }
@@ -1312,7 +1313,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete draft: $e')),
+          SnackBar(content: Text('Failed to delete draft: ${friendlyError(e)}')),
         );
       }
     }
@@ -1867,7 +1868,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
         );
       }
     } catch (e) {
-      _showMessage('Failed to load apprentice profile: $e', isError: true);
+      _showMessage('Failed to load apprentice profile: ${friendlyError(e)}', isError: true);
     }
   }
 
@@ -1878,7 +1879,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
       if (!mounted) return;
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => MentorAssessmentResultsScreen(apprenticeId: apprenticeId, apprenticeName: name)));
     } catch (e) {
-      _showMessage('Unable to open assessments: $e', isError: true);
+      _showMessage('Unable to open assessments: ${friendlyError(e)}', isError: true);
     }
   }
 
@@ -1954,7 +1955,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                   } catch (e) {
                     setState(() => submitting = false);
                     if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: ${friendlyError(e)}')));
                   }
                 },
                 child: submitting ? const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)) : const Text('Terminate'),

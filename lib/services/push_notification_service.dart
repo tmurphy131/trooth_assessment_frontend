@@ -132,7 +132,7 @@ class PushNotificationService {
     );
 
     await _localNotifications.initialize(
-      initSettings,
+      settings: initSettings,
       onDidReceiveNotificationResponse: _onLocalNotificationTap,
     );
 
@@ -301,10 +301,10 @@ class PushNotificationService {
     final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     
     await _localNotifications.show(
-      id,
-      title,
-      body,
-      details,
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: details,
       payload: payload,
     );
   }

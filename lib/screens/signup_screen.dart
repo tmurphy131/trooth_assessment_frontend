@@ -6,6 +6,7 @@ import '../utils/role_cache.dart';
 import '../services/api_service.dart';
 import 'mentor_dashboard_new.dart';
 import 'apprentice_dashboard_new.dart';
+import '../utils/errors.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -131,7 +132,7 @@ class _SignupScreenState extends State<SignupScreen> {
     } on FirebaseAuthException catch (e) {
       setState(() => _error = e.message);
     } catch (e) {
-      setState(() => _error = 'Unexpected error: $e');
+      setState(() => _error = 'Unexpected error: ${friendlyError(e)}');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

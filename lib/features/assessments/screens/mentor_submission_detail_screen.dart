@@ -17,6 +17,7 @@ import '../models/mentor_report_v2.dart';
 import '../widgets/insight_card.dart';
 import 'mentor_report_simplified_screen.dart';
 import '../../../screens/subscription_screen.dart';
+import '../../../utils/errors.dart';
 
 class MentorSubmissionDetailScreen extends StatefulWidget {
   final String assessmentId;
@@ -158,7 +159,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
         setState(() => _notesLoading = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to add note: $e'), backgroundColor: Colors.red),
+            SnackBar(content: Text('Failed to add note: ${friendlyError(e)}'), backgroundColor: Colors.red),
           );
         }
       }
@@ -193,7 +194,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
         setState(() => _notesLoading = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to update note: $e'), backgroundColor: Colors.red),
+            SnackBar(content: Text('Failed to update note: ${friendlyError(e)}'), backgroundColor: Colors.red),
           );
         }
       }
@@ -231,7 +232,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
         setState(() => _notesLoading = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete note: $e'), backgroundColor: Colors.red),
+            SnackBar(content: Text('Failed to delete note: ${friendlyError(e)}'), backgroundColor: Colors.red),
           );
         }
       }
@@ -269,7 +270,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
       setState(() { _detail = d; _report = r; _loading = false; });
     } catch (e) {
       if (!mounted) return;
-      setState(() { _error = 'Failed to load: $e'; _loading = false; });
+      setState(() { _error = 'Failed to load: ${friendlyError(e)}'; _loading = false; });
     }
   }
 
@@ -384,7 +385,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
       }
       final res = await ApiService().emailMentorReportByAssessment(assessmentId: widget.assessmentId, toEmail: to, includePdf: true);
       if (!mounted) return; ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Email sent for assessment ${res['assessment_id']}')));
-    } catch (e) { if (!mounted) return; ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Email failed: $e'))); }
+    } catch (e) { if (!mounted) return; ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Email failed: ${friendlyError(e)}'))); }
   }
 
   /// Show export options bottom sheet
@@ -511,7 +512,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${friendlyError(e)}')));
     }
   }
 
@@ -554,7 +555,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${friendlyError(e)}')));
     }
   }
 
@@ -1520,7 +1521,7 @@ class _PdfPreviewScreen extends StatelessWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Share error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Share error: ${friendlyError(e)}')));
     }
   }
 
@@ -1538,7 +1539,7 @@ class _PdfPreviewScreen extends StatelessWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${friendlyError(e)}')));
     }
   }
 }

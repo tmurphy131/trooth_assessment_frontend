@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/api_service.dart';
 import '../services/subscription_service.dart';
 import 'subscription_screen.dart';
+import '../utils/errors.dart';
 
 class TemplateManagementScreen extends StatefulWidget {
   final User? user;
@@ -57,7 +58,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
       } catch (e) {
         print('❌ Backend connectivity failed: $e');
         setState(() {
-          _error = 'Cannot connect to backend: $e';
+          _error = 'Cannot connect to backend: ${friendlyError(e)}';
           _isLoading = false;
         });
         return;
@@ -82,7 +83,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
     } catch (e) {
       print('❌ Template Management: Failed to initialize: $e');
       setState(() {
-        _error = 'Failed to initialize: $e';
+        _error = 'Failed to initialize: ${friendlyError(e)}';
         _isLoading = false;
       });
     }
@@ -106,7 +107,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
     } catch (e) {
       print('❌ Failed to load templates: $e');
       setState(() {
-        _error = 'Failed to load templates: $e';
+        _error = 'Failed to load templates: ${friendlyError(e)}';
         _isLoading = false;
       });
     }
@@ -770,7 +771,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
       
     } catch (e) {
       print('❌ Failed to create template: $e');
-      _showMessage('Failed to create template: $e', isError: true);
+      _showMessage('Failed to create template: ${friendlyError(e)}', isError: true);
     }
   }
 
@@ -784,7 +785,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
     try {
       fullTemplate = await _apiService.getTemplate(template['id'] as String);
     } catch (e) {
-      _showMessage('Failed to load template details: $e', isError: true);
+      _showMessage('Failed to load template details: ${friendlyError(e)}', isError: true);
       return;
     }
 
@@ -942,7 +943,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
       _showMessage('Template updated successfully!');
     } catch (e) {
       print('❌ Template update failed: $e');
-      _showMessage('Failed to update template: $e', isError: true);
+      _showMessage('Failed to update template: ${friendlyError(e)}', isError: true);
     }
   }
 
@@ -994,7 +995,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
         _showMessage('Template deleted successfully!');
       } catch (e) {
         print('❌ Template deletion failed: $e');
-        _showMessage('Failed to delete template: $e', isError: true);
+        _showMessage('Failed to delete template: ${friendlyError(e)}', isError: true);
       }
     }
   }
@@ -1006,7 +1007,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
       await _loadTemplates();
       _showMessage('Template cloned successfully!');
     } catch (e) {
-      _showMessage('Failed to clone template: $e', isError: true);
+      _showMessage('Failed to clone template: ${friendlyError(e)}', isError: true);
     }
   }
 
@@ -1029,7 +1030,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
         await _loadTemplates();
         _showMessage('Template unpublished successfully!');
       } catch (e) {
-        _showMessage('Failed to unpublish template: $e', isError: true);
+        _showMessage('Failed to unpublish template: ${friendlyError(e)}', isError: true);
       }
     } else {
       // Publish the template
@@ -1046,7 +1047,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
         await _loadTemplates();
         _showMessage('Template published successfully!');
       } catch (e) {
-        String errorMessage = 'Failed to publish template: $e';
+        String errorMessage = 'Failed to publish template: ${friendlyError(e)}';
         if (e.toString().contains('Cannot publish template without questions')) {
           errorMessage = 'Cannot publish template without questions. Please add at least one question first.';
         }
@@ -1194,7 +1195,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
                         templateQuestions.removeAt(index);
                       });
                     } catch (e) {
-                      _showMessage('Failed to remove question: $e', isError: true);
+                      _showMessage('Failed to remove question: ${friendlyError(e)}', isError: true);
                     }
                   },
                   icon: const Icon(Icons.delete, color: Colors.red, size: 18),
@@ -1358,7 +1359,7 @@ class _QuestionCreationDialogState extends State<_QuestionCreationDialog> {
               } catch (e) {
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to create category: $e')),
+                  SnackBar(content: Text('Failed to create category: ${friendlyError(e)}')),
                 );
               }
             },
@@ -1731,7 +1732,7 @@ class _QuestionCreationDialogState extends State<_QuestionCreationDialog> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to create question: $e')),
+        SnackBar(content: Text('Failed to create question: ${friendlyError(e)}')),
       );
     }
   }

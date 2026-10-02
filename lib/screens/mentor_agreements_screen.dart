@@ -3,6 +3,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import '../services/api_service.dart';
 import 'agreement_preview_screen.dart';
 import 'apprentice_invite_screen.dart';
+import '../utils/errors.dart';
 
 class MentorAgreementsScreen extends StatefulWidget {
   const MentorAgreementsScreen({super.key});
@@ -67,7 +68,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
         _loadingTemplates = false;
       });
     } catch (e) {
-      setState(() { _error = 'Failed to load templates: $e'; _loadingTemplates = false; });
+      setState(() { _error = 'Failed to load templates: ${friendlyError(e)}'; _loadingTemplates = false; });
     }
   }
 
@@ -106,7 +107,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
         }
       });
     } catch (e) {
-      setState(() { _error = 'Create failed: $e'; });
+      setState(() { _error = 'Create failed: ${friendlyError(e)}'; });
     } finally {
       setState(() { _creating = false; });
     }
@@ -142,7 +143,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
         }
       });
     } catch (e) {
-      setState(() { _error = 'Load agreements failed: $e'; });
+      setState(() { _error = 'Load agreements failed: ${friendlyError(e)}'; });
     } finally {
       setState(() { _loadingExisting = false; });
     }
@@ -155,7 +156,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
       final updated = await _api.submitAgreement(_currentAgreement!['id']);
       setState(() { _currentAgreement = updated; });
     } catch (e) {
-      setState(() { _error = 'Submit failed: $e'; });
+      setState(() { _error = 'Submit failed: ${friendlyError(e)}'; });
     } finally {
       setState(() { _submitting = false; });
     }
@@ -181,7 +182,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
       setState(() { _currentAgreement = updated; });
       _showSnack('Preview updated');
     } catch (e) {
-      _showSnack('Failed to regenerate: $e');
+      _showSnack('Failed to regenerate: ${friendlyError(e)}');
     } finally {
       setState(() { _regenerating = false; });
     }
@@ -195,7 +196,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
       setState(() { _currentAgreement = updated; });
       _showSnack('Parent token resent');
     } catch (e) {
-      setState(() { _error = 'Resend failed: $e'; });
+      setState(() { _error = 'Resend failed: ${friendlyError(e)}'; });
     } finally {
       setState(() { _resendingParent = false; });
     }
@@ -222,7 +223,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
       setState(() { _currentAgreement = updated; });
       _showSnack('Agreement revoked');
     } catch (e) {
-      setState(() { _error = 'Revoke failed: $e'; });
+      setState(() { _error = 'Revoke failed: ${friendlyError(e)}'; });
     } finally {
       setState(() { _revoking = false; });
     }

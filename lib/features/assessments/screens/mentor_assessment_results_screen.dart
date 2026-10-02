@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../services/api_service.dart';
+import '../../../utils/errors.dart';
 
 class MentorAssessmentResultsList extends StatefulWidget {
   final String apprenticeId;
@@ -31,7 +32,7 @@ class _MentorAssessmentResultsListState extends State<MentorAssessmentResultsLis
       setState(() { _assessments = typed; _loading = false; });
     } catch (e) {
       if (!mounted) return;
-      setState(() { _error = 'Failed to load: $e'; _loading = false; });
+      setState(() { _error = 'Failed to load: ${friendlyError(e)}'; _loading = false; });
     }
   }
 

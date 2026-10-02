@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../data/apprentice_weekly_tips_data.dart';
 import '../data/apprentice_guides_data.dart';
 import 'package:trooth_assessment/theme.dart';
@@ -105,7 +104,7 @@ class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
             children: [
               Text(
                 title,
-                style: GoogleFonts.poppins(
+                style: TextStyle(fontFamily: 'Poppins', 
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: kCharcoal,
@@ -113,7 +112,7 @@ class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
               ),
               Text(
                 subtitle,
-                style: GoogleFonts.poppins(
+                style: TextStyle(fontFamily: 'Poppins', 
                   fontSize: 13,
                   color: kMutedText,
                 ),
@@ -126,7 +125,7 @@ class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
             onPressed: onAction,
             child: Text(
               actionLabel,
-              style: GoogleFonts.poppins(
+              style: TextStyle(fontFamily: 'Poppins', 
                 color: kPrimaryGold,
                 fontWeight: FontWeight.w600,
               ),
@@ -177,7 +176,7 @@ class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
                     ),
                     child: Text(
                       'WEEK ${tip.weekNumber}',
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(fontFamily: 'Poppins', 
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: kPrimaryGold,
@@ -196,7 +195,7 @@ class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
               const SizedBox(height: 16),
               Text(
                 tip.title,
-                style: GoogleFonts.poppins(
+                style: TextStyle(fontFamily: 'Poppins', 
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -205,7 +204,7 @@ class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
               const SizedBox(height: 8),
               Text(
                 tip.content.split('\n\n').first,
-                style: GoogleFonts.poppins(
+                style: TextStyle(fontFamily: 'Poppins', 
                   fontSize: 14,
                   color: Colors.white70,
                   height: 1.5,
@@ -218,7 +217,7 @@ class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
                 children: [
                   Text(
                     'Read more',
-                    style: GoogleFonts.poppins(
+                    style: TextStyle(fontFamily: 'Poppins', 
                       color: kPrimaryGold,
                       fontWeight: FontWeight.w600,
                     ),
@@ -289,7 +288,7 @@ class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
                     const Spacer(),
                     Text(
                       category.name,
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(fontFamily: 'Poppins', 
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: kCharcoal,
@@ -299,7 +298,7 @@ class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
                     ),
                     Text(
                       '$guideCount guides',
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(fontFamily: 'Poppins', 
                         fontSize: 11,
                         color: kMutedText,
                       ),
@@ -365,14 +364,14 @@ class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
               ),
               title: Text(
                 link['title'] as String,
-                style: GoogleFonts.poppins(
+                style: TextStyle(fontFamily: 'Poppins', 
                   fontWeight: FontWeight.w600,
                   color: kCharcoal,
                 ),
               ),
               subtitle: Text(
                 link['subtitle'] as String,
-                style: GoogleFonts.poppins(
+                style: TextStyle(fontFamily: 'Poppins', 
                   fontSize: 12,
                   color: kMutedText,
                 ),

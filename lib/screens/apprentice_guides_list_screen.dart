@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../data/apprentice_guides_data.dart';
 import 'package:trooth_assessment/theme.dart';
 import 'apprentice_guide_detail_screen.dart';
@@ -139,7 +138,7 @@ class _ApprenticeGuidesListScreenState extends State<ApprenticeGuidesListScreen>
                       children: [
                         Text(
                           category.name,
-                          style: GoogleFonts.poppins(
+                          style: TextStyle(fontFamily: 'Poppins', 
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
                             color: kCharcoal,
@@ -148,7 +147,7 @@ class _ApprenticeGuidesListScreenState extends State<ApprenticeGuidesListScreen>
                         const SizedBox(height: 4),
                         Text(
                           category.description,
-                          style: GoogleFonts.poppins(
+                          style: TextStyle(fontFamily: 'Poppins', 
                             fontSize: 14,
                             color: kMutedText,
                           ),
@@ -156,7 +155,7 @@ class _ApprenticeGuidesListScreenState extends State<ApprenticeGuidesListScreen>
                         const SizedBox(height: 4),
                         Text(
                           guideCount > 0 ? '$guideCount guides' : 'Coming soon',
-                          style: GoogleFonts.poppins(
+                          style: TextStyle(fontFamily: 'Poppins', 
                             fontSize: 12,
                             color: guideCount > 0 ? kPrimaryGold : kMutedText,
                             fontWeight: FontWeight.w500,
@@ -205,7 +204,7 @@ class _ApprenticeGuidesListScreenState extends State<ApprenticeGuidesListScreen>
                     const SizedBox(width: 4),
                     Text(
                       'All Categories',
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(fontFamily: 'Poppins', 
                         fontSize: 14,
                         color: kPrimaryGold,
                         fontWeight: FontWeight.w500,
@@ -225,7 +224,7 @@ class _ApprenticeGuidesListScreenState extends State<ApprenticeGuidesListScreen>
                   const SizedBox(width: 6),
                   Text(
                     category.name,
-                    style: GoogleFonts.poppins(
+                    style: TextStyle(fontFamily: 'Poppins', 
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: kCharcoal,
@@ -252,7 +251,7 @@ class _ApprenticeGuidesListScreenState extends State<ApprenticeGuidesListScreen>
                       const SizedBox(height: 16),
                       Text(
                         'Coming Soon',
-                        style: GoogleFonts.poppins(
+                        style: TextStyle(fontFamily: 'Poppins', 
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
                           color: kMutedText,
@@ -261,7 +260,7 @@ class _ApprenticeGuidesListScreenState extends State<ApprenticeGuidesListScreen>
                       const SizedBox(height: 8),
                       Text(
                         'Guides for this category are being written.',
-                        style: GoogleFonts.poppins(
+                        style: TextStyle(fontFamily: 'Poppins', 
                           fontSize: 14,
                           color: kMutedText,
                         ),
@@ -316,7 +315,7 @@ class _ApprenticeGuidesListScreenState extends State<ApprenticeGuidesListScreen>
                                   children: [
                                     Text(
                                       guide.title,
-                                      style: GoogleFonts.poppins(
+                                      style: TextStyle(fontFamily: 'Poppins', 
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
                                         color: kCharcoal,
@@ -325,7 +324,7 @@ class _ApprenticeGuidesListScreenState extends State<ApprenticeGuidesListScreen>
                                     const SizedBox(height: 4),
                                     Text(
                                       guide.summary,
-                                      style: GoogleFonts.poppins(
+                                      style: TextStyle(fontFamily: 'Poppins', 
                                         fontSize: 13,
                                         color: kMutedText,
                                       ),
@@ -343,7 +342,7 @@ class _ApprenticeGuidesListScreenState extends State<ApprenticeGuidesListScreen>
                                         const SizedBox(width: 4),
                                         Text(
                                           '${guide.readTimeMinutes} min read',
-                                          style: GoogleFonts.poppins(
+                                          style: TextStyle(fontFamily: 'Poppins', 
                                             fontSize: 12,
                                             color: kMutedText,
                                           ),

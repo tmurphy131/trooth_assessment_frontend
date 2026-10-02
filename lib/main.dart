@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'firebase_options.dart';
 import 'package:app_links/app_links.dart';
@@ -24,6 +25,7 @@ import 'data/weekly_tips_data.dart';
 import 'data/apprentice_weekly_tips_data.dart';
 import 'screens/trivia_challenge_detail_screen.dart';
 import 'utils/deep_links.dart';
+import 'services/tutorial_service.dart';
 import 'screens/apprentice_invites_screen.dart';
 import 'screens/mentor_agreements_screen.dart';
 
@@ -100,6 +102,18 @@ void main() {
     firebaseStopwatch.stop();
     debugPrint('✅ Firebase.initializeApp completed in ${firebaseStopwatch.elapsedMilliseconds}ms');
 
+    // Crash reporting (release only; debug errors stay in the console).
+    final crashlytics = FirebaseCrashlytics.instance;
+    await crashlytics.setCrashlyticsCollectionEnabled(!kDebugMode);
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.dumpErrorToConsole(details);
+      crashlytics.recordFlutterFatalError(details);
+    };
+    PlatformDispatcher.instance.onError = (error, stack) {
+      crashlytics.recordError(error, stack, fatal: true);
+      return true;
+    };
+
   // Explicit sign-in only: listen for auth changes and update ApiService token.
   FirebaseAuth.instance.authStateChanges().listen((user) async {
     if (user != null) {
@@ -164,6 +178,9 @@ void main() {
   }, (error, stack) {
     // Last‑resort zone error logging
     debugPrint('💥 Uncaught zone error: $error\n$stack');
+    if (Firebase.apps.isNotEmpty) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    }
   },
       // print() output reaches device logs in release builds; keep it debug-only.
       zoneSpecification: ZoneSpecification(
@@ -177,7 +194,9 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void _handleIncomingUri(Uri link) {
   final routeName = routeNameForLink(link);
-  if (routeName != null) navigatorKey.currentState?.pushNamed(routeName);
+  if (routeName == null) return;
+  TutorialService.dismissActive();
+  navigatorKey.currentState?.pushNamed(routeName);
 }
 
 /// Handle notification tap - navigate to appropriate screen based on notification data
@@ -185,6 +204,7 @@ void _handleNotificationTap(Map<String, dynamic> data) {
   debugPrint('🔔 Handling notification tap: $data');
   
   final type = data['type'] as String?;
+  TutorialService.dismissActive();
   
   switch (type) {
     case 'assessment_submitted':

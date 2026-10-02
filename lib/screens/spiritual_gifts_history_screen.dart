@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/spiritual_gifts_models.dart';
 import '../services/api_service.dart';
+import '../utils/errors.dart';
 
 /// Paginated history of Spiritual Gifts submissions for the authenticated user.
 class SpiritualGiftsHistoryScreen extends StatefulWidget {
@@ -46,7 +47,7 @@ class _SpiritualGiftsHistoryScreenState extends State<SpiritualGiftsHistoryScree
         } catch (_) {/* silent fallback */}
       }
     } catch (e) {
-      setState(() { _initialLoading = false; _error = true; _errorMsg = 'Failed to load history: $e'; });
+      setState(() { _initialLoading = false; _error = true; _errorMsg = 'Failed to load history: ${friendlyError(e)}'; });
     }
   }
 
@@ -59,7 +60,7 @@ class _SpiritualGiftsHistoryScreenState extends State<SpiritualGiftsHistoryScree
         _nextCursor = page.nextCursor;
       });
     } catch (e) {
-      _snack('Refresh failed: $e', error: true);
+      _snack('Refresh failed: ${friendlyError(e)}', error: true);
     }
   }
 
@@ -74,7 +75,7 @@ class _SpiritualGiftsHistoryScreenState extends State<SpiritualGiftsHistoryScree
         _nextCursor = page.nextCursor;
       });
     } catch (e) {
-      _snack('Failed to load more: $e', error: true);
+      _snack('Failed to load more: ${friendlyError(e)}', error: true);
     } finally {
       setState(() => _pageLoading = false);
     }

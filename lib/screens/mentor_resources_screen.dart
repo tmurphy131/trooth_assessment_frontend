@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../data/weekly_tips_data.dart';
 import '../data/mentor_guides_data.dart';
@@ -7,6 +6,7 @@ import '../services/api_service.dart';
 import 'package:trooth_assessment/theme.dart';
 import 'weekly_tip_detail_screen.dart';
 import 'mentor_guides_list_screen.dart';
+import '../utils/errors.dart';
 
 class MentorResourcesScreen extends StatefulWidget {
   const MentorResourcesScreen({super.key});
@@ -44,7 +44,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
       });
     } catch (e) {
       setState(() {
-        _resourcesError = 'Failed to load: $e';
+        _resourcesError = 'Failed to load: ${friendlyError(e)}';
         _loadingResources = false;
       });
     }
@@ -65,7 +65,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
       });
     } catch (e) {
       setState(() {
-        _resourcesError = 'Failed to load resources: $e';
+        _resourcesError = 'Failed to load resources: ${friendlyError(e)}';
         _loadingResources = false;
       });
     }
@@ -101,7 +101,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
             ),
             title: Text(
               isEdit ? 'Edit Resource' : 'New Resource',
-              style: GoogleFonts.poppins(
+              style: TextStyle(fontFamily: 'Poppins', 
                 fontWeight: FontWeight.bold,
                 color: kCharcoal,
               ),
@@ -113,7 +113,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                 children: [
                   TextField(
                     controller: titleCtrl,
-                    style: GoogleFonts.poppins(),
+                    style: const TextStyle(fontFamily: 'Poppins'),
                     decoration: InputDecoration(
                       labelText: 'Title',
                       labelStyle: TextStyle(color: kMutedText),
@@ -131,7 +131,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                   TextField(
                     controller: descCtrl,
                     maxLines: 3,
-                    style: GoogleFonts.poppins(),
+                    style: const TextStyle(fontFamily: 'Poppins'),
                     decoration: InputDecoration(
                       labelText: 'Description (optional)',
                       labelStyle: TextStyle(color: kMutedText),
@@ -148,7 +148,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: linkCtrl,
-                    style: GoogleFonts.poppins(),
+                    style: const TextStyle(fontFamily: 'Poppins'),
                     decoration: InputDecoration(
                       labelText: 'Link URL (https://...)',
                       labelStyle: TextStyle(color: kMutedText),
@@ -182,17 +182,17 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                       DropdownMenuItem<String>(
                         value: null,
                         child: Text('— None —',
-                            style: GoogleFonts.poppins(color: kMutedText)),
+                            style: TextStyle(fontFamily: 'Poppins', color: kMutedText)),
                       ),
                       DropdownMenuItem<String>(
                         value: '__ALL__',
                         child: Text('All Apprentices',
-                            style: GoogleFonts.poppins()),
+                            style: const TextStyle(fontFamily: 'Poppins')),
                       ),
                       ..._apprentices.map((a) => DropdownMenuItem<String>(
                             value: a['id'] as String,
                             child: Text(a['name'] ?? a['email'] ?? 'Unnamed',
-                                style: GoogleFonts.poppins()),
+                                style: const TextStyle(fontFamily: 'Poppins')),
                           )),
                     ],
                     onChanged: (v) => setDialogState(() {
@@ -203,7 +203,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                   Row(
                     children: [
                       Text('Share with apprentice',
-                          style: GoogleFonts.poppins()),
+                          style: const TextStyle(fontFamily: 'Poppins')),
                       const Spacer(),
                       Switch(
                         value: isShared,
@@ -221,7 +221,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
               TextButton(
                 onPressed: saving ? null : () => Navigator.of(ctx).pop(),
                 child: Text('Cancel',
-                    style: GoogleFonts.poppins(color: kMutedText)),
+                    style: TextStyle(fontFamily: 'Poppins', color: kMutedText)),
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -281,7 +281,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                           });
                           if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Failed to save: $e')));
+                              SnackBar(content: Text('Failed to save: ${friendlyError(e)}')));
                         }
                       },
                 child: saving
@@ -307,7 +307,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Failed to update: $e')));
+          .showSnackBar(SnackBar(content: Text('Failed to update: ${friendlyError(e)}')));
     }
   }
 
@@ -317,14 +317,14 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Delete Resource',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
         content: Text('Are you sure you want to delete "${r['title']}"?',
-            style: GoogleFonts.poppins()),
+            style: const TextStyle(fontFamily: 'Poppins')),
         actions: [
           TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
               child:
-                  Text('Cancel', style: GoogleFonts.poppins(color: kMutedText))),
+                  Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: kMutedText))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
@@ -341,7 +341,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
+          .showSnackBar(SnackBar(content: Text('Failed to delete: ${friendlyError(e)}')));
     }
   }
 
@@ -438,7 +438,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
             children: [
               Text(
                 title,
-                style: GoogleFonts.poppins(
+                style: TextStyle(fontFamily: 'Poppins', 
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: kCharcoal,
@@ -446,7 +446,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
               ),
               Text(
                 subtitle,
-                style: GoogleFonts.poppins(
+                style: TextStyle(fontFamily: 'Poppins', 
                   fontSize: 13,
                   color: kMutedText,
                 ),
@@ -459,7 +459,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
             onPressed: onAction,
             child: Text(
               actionLabel,
-              style: GoogleFonts.poppins(
+              style: TextStyle(fontFamily: 'Poppins', 
                 color: kPrimaryGold,
                 fontWeight: FontWeight.w600,
               ),
@@ -510,7 +510,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                     ),
                     child: Text(
                       'WEEK ${tip.weekNumber}',
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(fontFamily: 'Poppins', 
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: kPrimaryGold,
@@ -529,7 +529,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
               const SizedBox(height: 16),
               Text(
                 tip.title,
-                style: GoogleFonts.poppins(
+                style: TextStyle(fontFamily: 'Poppins', 
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -538,7 +538,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
               const SizedBox(height: 8),
               Text(
                 tip.content.split('\n\n').first,
-                style: GoogleFonts.poppins(
+                style: TextStyle(fontFamily: 'Poppins', 
                   fontSize: 14,
                   color: Colors.white70,
                   height: 1.5,
@@ -551,7 +551,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                 children: [
                   Text(
                     'Read more',
-                    style: GoogleFonts.poppins(
+                    style: TextStyle(fontFamily: 'Poppins', 
                       color: kPrimaryGold,
                       fontWeight: FontWeight.w600,
                     ),
@@ -615,7 +615,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                     const SizedBox(height: 10),
                     Text(
                       category.name,
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(fontFamily: 'Poppins', 
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: kCharcoal,
@@ -625,7 +625,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                     ),
                     Text(
                       '$guideCount guides',
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(fontFamily: 'Poppins', 
                         fontSize: 11,
                         color: kMutedText,
                       ),
@@ -684,7 +684,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
             const SizedBox(height: 8),
             Text(
               _resourcesError!,
-              style: GoogleFonts.poppins(color: kMutedText),
+              style: TextStyle(fontFamily: 'Poppins', color: kMutedText),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
@@ -710,7 +710,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
             isExpanded: true,
             decoration: InputDecoration(
               labelText: 'Filter by apprentice',
-              labelStyle: GoogleFonts.poppins(color: kMutedText, fontSize: 14),
+              labelStyle: TextStyle(fontFamily: 'Poppins', color: kMutedText, fontSize: 14),
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               border: OutlineInputBorder(
@@ -721,12 +721,12 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
             items: [
               DropdownMenuItem<String>(
                 value: null,
-                child: Text('All apprentices', style: GoogleFonts.poppins()),
+                child: Text('All apprentices', style: const TextStyle(fontFamily: 'Poppins')),
               ),
               ..._apprentices.map((a) => DropdownMenuItem<String>(
                     value: a['id'] as String,
                     child: Text(a['name'] ?? a['email'] ?? 'Unnamed',
-                        style: GoogleFonts.poppins()),
+                        style: const TextStyle(fontFamily: 'Poppins')),
                   )),
             ],
             onChanged: (v) => _applyFilter(v),
@@ -748,7 +748,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                 const SizedBox(height: 12),
                 Text(
                   'No resources yet',
-                  style: GoogleFonts.poppins(
+                  style: TextStyle(fontFamily: 'Poppins', 
                     color: kMutedText,
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
@@ -757,7 +757,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                 const SizedBox(height: 4),
                 Text(
                   'Tap "Add New" to create your first resource',
-                  style: GoogleFonts.poppins(
+                  style: TextStyle(fontFamily: 'Poppins', 
                     color: kMutedText,
                     fontSize: 13,
                   ),
@@ -820,7 +820,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                   children: [
                     Text(
                       title,
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(fontFamily: 'Poppins', 
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: kCharcoal,
@@ -830,7 +830,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                       const SizedBox(height: 2),
                       Text(
                         desc,
-                        style: GoogleFonts.poppins(
+                        style: TextStyle(fontFamily: 'Poppins', 
                           fontSize: 13,
                           color: kMutedText,
                         ),
@@ -842,7 +842,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                       const SizedBox(height: 4),
                       Text(
                         url,
-                        style: GoogleFonts.poppins(
+                        style: TextStyle(fontFamily: 'Poppins', 
                           fontSize: 12,
                           color: kPrimaryGold,
                         ),
@@ -873,7 +873,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                       children: [
                         Icon(Icons.edit, size: 20, color: kCharcoal),
                         const SizedBox(width: 8),
-                        Text('Edit', style: GoogleFonts.poppins()),
+                        Text('Edit', style: const TextStyle(fontFamily: 'Poppins')),
                       ],
                     ),
                   ),
@@ -889,7 +889,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                         const SizedBox(width: 8),
                         Text(
                           shared ? 'Make Private' : 'Share',
-                          style: GoogleFonts.poppins(),
+                          style: const TextStyle(fontFamily: 'Poppins'),
                         ),
                       ],
                     ),
@@ -901,7 +901,7 @@ class _MentorResourcesScreenState extends State<MentorResourcesScreen> {
                         const Icon(Icons.delete, size: 20, color: Colors.redAccent),
                         const SizedBox(width: 8),
                         Text('Delete',
-                            style: GoogleFonts.poppins(color: Colors.redAccent)),
+                            style: TextStyle(fontFamily: 'Poppins', color: Colors.redAccent)),
                       ],
                     ),
                   ),

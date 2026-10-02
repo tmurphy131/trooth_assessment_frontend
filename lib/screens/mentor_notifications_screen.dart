@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../utils/errors.dart';
 
 class MentorNotificationsScreen extends StatefulWidget {
   final Future<void> Function()? onActivity; // callback to parent to refresh badge counts
@@ -30,7 +31,7 @@ class _MentorNotificationsScreenState extends State<MentorNotificationsScreen> {
           : await _api.mentorNotificationsHistory();
       setState(() { _items = list.cast<Map<String, dynamic>>(); });
     } catch (e) {
-      setState(() { _error = 'Failed to load: $e'; });
+      setState(() { _error = 'Failed to load: ${friendlyError(e)}'; });
     } finally {
       setState(() { _loading = false; });
     }
@@ -49,7 +50,7 @@ class _MentorNotificationsScreenState extends State<MentorNotificationsScreen> {
       if (widget.onActivity != null) widget.onActivity!();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Dismiss failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Dismiss failed: ${friendlyError(e)}')));
     }
   }
 
@@ -90,7 +91,7 @@ class _MentorNotificationsScreenState extends State<MentorNotificationsScreen> {
                   if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Dismissed $count notifications')));
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Bulk dismiss failed: $e')));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Bulk dismiss failed: ${friendlyError(e)}')));
                 }
               },
               icon: const Icon(Icons.clear_all, color: Colors.amber, size: 18),
@@ -271,7 +272,7 @@ class _MentorNotificationsScreenState extends State<MentorNotificationsScreen> {
                   } catch (e) {
                     setState(() { submitting = false; });
                     if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: ${friendlyError(e)}')));
                   }
                 },
                 child: submitting

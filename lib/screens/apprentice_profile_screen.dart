@@ -6,6 +6,7 @@ import '../services/subscription_service.dart';
 import 'simple_login_screen.dart';
 import 'support_screen.dart';
 import 'subscription_screen.dart';
+import '../utils/errors.dart';
 
 class ApprenticeProfileScreen extends StatefulWidget {
   const ApprenticeProfileScreen({super.key});
@@ -56,7 +57,7 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
         }
       }
     } catch (e) {
-      _error = 'Failed to load profile: $e';
+      _error = 'Failed to load profile: ${friendlyError(e)}';
     } finally {
       if (mounted) setState(() { _loading = false; });
     }
@@ -388,7 +389,7 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load account data: $e'), behavior: SnackBarBehavior.floating),
+        SnackBar(content: Text('Failed to load account data: ${friendlyError(e)}'), behavior: SnackBarBehavior.floating),
       );
       return;
     }
@@ -545,7 +546,7 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
       setState(() { _loading = false; });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to close account: $e'),
+          content: Text('Failed to close account: ${friendlyError(e)}'),
           behavior: SnackBarBehavior.floating,
           backgroundColor: Colors.red,
         ),

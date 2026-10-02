@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
 import 'mentor_dashboard_new.dart';
 import 'apprentice_dashboard_new.dart';
+import '../utils/errors.dart';
 
 /// Screen shown to OAuth users after authentication to select their role
 /// This screen does NOT ask for name/email since that's already provided by OAuth
@@ -94,7 +95,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
+        SnackBar(content: Text('Error: ${friendlyError(e)}')),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../data/apprentice_weekly_tips_data.dart';
 import 'package:trooth_assessment/theme.dart';
 
@@ -31,7 +30,7 @@ class ApprenticeWeeklyTipDetailScreen extends StatelessWidget {
                 ),
                 child: Text(
                   'WEEK ${tip.weekNumber}',
-                  style: GoogleFonts.poppins(
+                  style: TextStyle(fontFamily: 'Poppins', 
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: kPrimaryGold,
@@ -44,7 +43,7 @@ class ApprenticeWeeklyTipDetailScreen extends StatelessWidget {
               // Title
               Text(
                 tip.title,
-                style: GoogleFonts.poppins(
+                style: TextStyle(fontFamily: 'Poppins', 
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: kCharcoal,
@@ -56,7 +55,7 @@ class ApprenticeWeeklyTipDetailScreen extends StatelessWidget {
               // Content
               Text(
                 tip.content,
-                style: GoogleFonts.poppins(
+                style: TextStyle(fontFamily: 'Poppins', 
                   fontSize: 16,
                   color: kText,
                   height: 1.7,
@@ -97,7 +96,7 @@ class ApprenticeWeeklyTipDetailScreen extends StatelessWidget {
                           const SizedBox(width: 8),
                           Text(
                             'Scripture',
-                            style: GoogleFonts.poppins(
+                            style: TextStyle(fontFamily: 'Poppins', 
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: kPrimaryGold,
@@ -108,7 +107,7 @@ class ApprenticeWeeklyTipDetailScreen extends StatelessWidget {
                       const SizedBox(height: 12),
                       Text(
                         tip.scripture!,
-                        style: GoogleFonts.poppins(
+                        style: TextStyle(fontFamily: 'Poppins', 
                           fontSize: 15,
                           fontStyle: FontStyle.italic,
                           color: kCharcoal,
@@ -143,7 +142,7 @@ class ApprenticeWeeklyTipDetailScreen extends StatelessWidget {
                           const SizedBox(width: 8),
                           Text(
                             'Action Step',
-                            style: GoogleFonts.poppins(
+                            style: TextStyle(fontFamily: 'Poppins', 
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: kPrimaryGold,
@@ -154,7 +153,7 @@ class ApprenticeWeeklyTipDetailScreen extends StatelessWidget {
                       const SizedBox(height: 12),
                       Text(
                         tip.actionStep!,
-                        style: GoogleFonts.poppins(
+                        style: TextStyle(fontFamily: 'Poppins', 
                           fontSize: 15,
                           color: Colors.white,
                           height: 1.6,

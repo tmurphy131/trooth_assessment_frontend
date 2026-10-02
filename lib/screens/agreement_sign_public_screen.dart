@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'agreement_signed_success_screen.dart';
+import '../utils/errors.dart';
 
 /// Screen that allows an apprentice or parent to sign via a deep link token.
 /// Expect navigation with: AgreementSignPublicScreen(token: 'uuid', tokenType: 'apprentice'|'parent')
@@ -41,7 +42,7 @@ class _AgreementSignPublicScreenState extends State<AgreementSignPublicScreen> {
         setState(() { _error = 'Failed (${r.statusCode})'; _loading = false; });
       }
     } catch (e) {
-      setState(() { _error = 'Network error: $e'; _loading = false; });
+      setState(() { _error = 'Network error: ${friendlyError(e)}'; _loading = false; });
     }
   }
 
@@ -62,7 +63,7 @@ class _AgreementSignPublicScreenState extends State<AgreementSignPublicScreen> {
         setState(() { _error = 'Sign failed (${r.statusCode}): ${r.bodySnippet}'; });
       }
     } catch (e) {
-      setState(() { _error = 'Network error: $e'; });
+      setState(() { _error = 'Network error: ${friendlyError(e)}'; });
     } finally {
       setState(() { _signing = false; });
     }

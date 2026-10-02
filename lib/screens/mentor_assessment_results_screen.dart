@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:trooth_assessment/utils/assessments.dart';
 import 'package:trooth_assessment/screens/mentor_spiritual_gifts_screen.dart';
 import '../services/api_service.dart';
+import '../utils/errors.dart';
 
 class MentorAssessmentResultsScreen extends StatefulWidget {
   final String apprenticeId;
@@ -33,7 +34,7 @@ class _MentorAssessmentResultsScreenState extends State<MentorAssessmentResultsS
         _loading = false;
       });
     } catch (e) {
-      setState(() { _error = 'Failed to load assessments: $e'; _loading = false; });
+      setState(() { _error = 'Failed to load assessments: ${friendlyError(e)}'; _loading = false; });
     }
   }
 

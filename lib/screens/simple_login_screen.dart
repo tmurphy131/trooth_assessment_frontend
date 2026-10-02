@@ -9,11 +9,14 @@ import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 
+import '../firebase_options.dart';
+
 import 'mentor_dashboard_new.dart';
 import 'apprentice_dashboard_new.dart';
 import 'signup_screen.dart';
 import 'role_selection_screen.dart';
 import '../utils/role_cache.dart';
+import '../utils/errors.dart';
 
 class SimpleLoginScreen extends StatefulWidget {
   const SimpleLoginScreen({super.key});
@@ -186,28 +189,46 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
+        SnackBar(content: Text('Error: ${friendlyError(e)}')),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  static Future<void>? _googleInit;
+
+  /// google_sign_in 7 must be initialized once before use. Android's
+  /// Credential Manager needs the web OAuth client as serverClientId to issue
+  /// an ID token Firebase accepts; iOS uses its own client ID.
+  static Future<void> _initGoogleSignIn() => _googleInit ??= GoogleSignIn.instance.initialize(
+        clientId: Platform.isIOS ? DefaultFirebaseOptions.ios.iosClientId : null,
+        serverClientId: Platform.isAndroid ? _googleWebClientId : null,
+      );
+
+  // client_type 3 in android/app/google-services.json
+  static const _googleWebClientId =
+      '557349072084-mrv2vcpgroue179src3hfd00emhvbo8a.apps.googleusercontent.com';
+
   /// Google Sign-In
   Future<void> _signInWithGoogle() async {
     setState(() => _isLoading = true);
     try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) {
-        // User cancelled the sign-in
-        if (mounted) setState(() => _isLoading = false);
-        return;
+      await _initGoogleSignIn();
+      final GoogleSignInAccount googleUser;
+      try {
+        googleUser = await GoogleSignIn.instance.authenticate();
+      } on GoogleSignInException catch (e) {
+        if (e.code == GoogleSignInExceptionCode.canceled) {
+          if (mounted) setState(() => _isLoading = false);
+          return; // user closed the sheet; not an error
+        }
+        rethrow;
       }
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      // Firebase only needs the ID token.
       final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
+        idToken: googleUser.authentication.idToken,
       );
 
       final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
@@ -231,7 +252,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google sign-in failed: ${e.toString()}')),
+          SnackBar(content: Text('Google sign-in failed: ${friendlyError(e)}')),
         );
       }
     } finally {
@@ -308,7 +329,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Apple sign-in failed: ${e.toString()}')),
+          SnackBar(content: Text('Apple sign-in failed: ${friendlyError(e)}')),
         );
       }
     } finally {

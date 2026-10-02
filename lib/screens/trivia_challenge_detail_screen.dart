@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/api_service.dart';
+import '../utils/errors.dart';
 
 class TriviaChallengeDetailScreen extends StatefulWidget {
   final String challengeId;
@@ -137,7 +138,7 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to submit answer: $e'), backgroundColor: Colors.redAccent),
+          SnackBar(content: Text('Failed to submit answer: ${friendlyError(e)}'), backgroundColor: Colors.redAccent),
         );
         _startAnswering(); // allow retry
       }
@@ -156,7 +157,7 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString().contains('once per day') ? 'You can only nudge once per day.' : 'Failed to nudge: $e'),
+            content: Text(e.toString().contains('once per day') ? 'You can only nudge once per day.' : 'Failed to nudge: ${friendlyError(e)}'),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -171,7 +172,7 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.redAccent),
+          SnackBar(content: Text('Failed: ${friendlyError(e)}'), backgroundColor: Colors.redAccent),
         );
       }
     }
@@ -200,7 +201,7 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.redAccent),
+          SnackBar(content: Text('Failed: ${friendlyError(e)}'), backgroundColor: Colors.redAccent),
         );
       }
     }
@@ -250,7 +251,7 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.redAccent),
+          SnackBar(content: Text('Failed: ${friendlyError(e)}'), backgroundColor: Colors.redAccent),
         );
       }
     }

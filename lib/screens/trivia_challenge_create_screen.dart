@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'trivia_challenge_detail_screen.dart';
+import '../utils/errors.dart';
 
 class TriviaChallengeCreateScreen extends StatefulWidget {
   final String category;
@@ -78,7 +79,7 @@ class _TriviaChallengeCreateScreenState extends State<TriviaChallengeCreateScree
       setState(() => _isCreating = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Could not create challenge: $e'),
+          content: Text('Could not create challenge: ${friendlyError(e)}'),
           backgroundColor: Colors.redAccent,
         ),
       );

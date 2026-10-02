@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../utils/errors.dart';
 
 class AssessmentResultsScreen extends StatefulWidget {
   final Map<String, dynamic> assessment;
@@ -39,7 +40,7 @@ class _AssessmentResultsScreenState extends State<AssessmentResultsScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = 'Failed to load detailed results: $e';
+        _error = 'Failed to load detailed results: ${friendlyError(e)}';
         _isLoading = false;
       });
     }

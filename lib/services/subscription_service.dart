@@ -14,6 +14,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'api_service.dart';
+import '../utils/errors.dart';
 
 /// Subscription tier enum matching backend SubscriptionTier
 enum SubscriptionTier {
@@ -262,7 +263,7 @@ class SubscriptionService extends ChangeNotifier {
 
       _isInitialized = true;
     } catch (e) {
-      _error = 'Failed to initialize subscription service: $e';
+      _error = 'Failed to initialize subscription service: ${friendlyError(e)}';
       dev.log('SubscriptionService: $_error');
     } finally {
       _isLoading = false;
@@ -284,7 +285,7 @@ class SubscriptionService extends ChangeNotifier {
       
       dev.log('SubscriptionService: Status refreshed - tier=${_status.tier}, isPremium=${_status.isPremium}, isGrandfathered=${_status.isGrandfathered}');
     } catch (e) {
-      _error = 'Failed to fetch subscription status: $e';
+      _error = 'Failed to fetch subscription status: ${friendlyError(e)}';
       dev.log('SubscriptionService: $_error');
       // Keep existing status on error
     } finally {
@@ -377,7 +378,7 @@ class SubscriptionService extends ChangeNotifier {
         dev.log('SubscriptionService: Purchase cancelled by user');
         return false;
       }
-      _error = 'Purchase failed: $e';
+      _error = 'Purchase failed: ${friendlyError(e)}';
       dev.log('SubscriptionService: $_error');
       return false;
     } finally {
@@ -400,7 +401,7 @@ class SubscriptionService extends ChangeNotifier {
       
       return _status.isPremium;
     } catch (e) {
-      _error = 'Restore failed: $e';
+      _error = 'Restore failed: ${friendlyError(e)}';
       dev.log('SubscriptionService: $_error');
       return false;
     } finally {
@@ -564,7 +565,7 @@ class SubscriptionService extends ChangeNotifier {
         _error = null; // Not an error
         return null;
       }
-      _error = 'Failed to purchase gift seat: $e';
+      _error = 'Failed to purchase gift seat: ${friendlyError(e)}';
       dev.log('SubscriptionService: $_error');
       return null;
     } finally {
@@ -603,7 +604,7 @@ class SubscriptionService extends ChangeNotifier {
       await refreshStatus(); // Update available seats count
       return MentorGiftSeat.fromJson(data);
     } catch (e) {
-      _error = 'Failed to create gift seat: $e';
+      _error = 'Failed to create gift seat: ${friendlyError(e)}';
       dev.log('SubscriptionService: $_error');
       return null;
     } finally {
@@ -622,7 +623,7 @@ class SubscriptionService extends ChangeNotifier {
       await refreshStatus();
       return true;
     } catch (e) {
-      _error = 'Failed to revoke gift seat: $e';
+      _error = 'Failed to revoke gift seat: ${friendlyError(e)}';
       dev.log('SubscriptionService: $_error');
       return false;
     } finally {

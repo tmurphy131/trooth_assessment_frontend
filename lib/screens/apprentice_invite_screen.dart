@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/api_service.dart';
+import '../utils/errors.dart';
 
 class ApprenticeInviteScreen extends StatefulWidget {
   final User? user;
@@ -40,7 +41,7 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
       ]);
     } catch (e) {
       setState(() {
-        _error = 'Failed to initialize: $e';
+        _error = 'Failed to initialize: ${friendlyError(e)}';
         _isLoading = false;
       });
     }
@@ -60,7 +61,7 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = 'Failed to load pending invites: $e';
+        _error = 'Failed to load pending invites: ${friendlyError(e)}';
         _isLoading = false;
       });
     }
@@ -474,7 +475,7 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
       _showMessage('Invitation sent successfully!');
       
     } catch (e) {
-      _showMessage('Failed to send invitation: $e', isError: true);
+      _showMessage('Failed to send invitation: ${friendlyError(e)}', isError: true);
     }
   }
 
@@ -491,7 +492,7 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
       await _loadPendingInvites();
       _showMessage('Invitation revoked successfully!');
     } catch (e) {
-      _showMessage('Failed to revoke invitation: $e', isError: true);
+      _showMessage('Failed to revoke invitation: ${friendlyError(e)}', isError: true);
     }
   }
 
@@ -602,7 +603,7 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
     } catch (e) {
       setState(() { _loadingInactive = false; });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load inactive: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load inactive: ${friendlyError(e)}')));
       }
     }
   }
@@ -736,7 +737,7 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
                   } catch (e) {
                     setLocalState(() => submitting = false);
                     if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: ${friendlyError(e)}')));
                   }
                 },
                 child: submitting

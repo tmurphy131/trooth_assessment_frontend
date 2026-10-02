@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../utils/errors.dart';
 
 enum HistoryMode { selfMaster, selfGeneric, mentorMaster, mentorGeneric }
 
@@ -62,7 +63,7 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
         _loading = false;
       });
     } catch (e) {
-      setState(() { _error = 'Failed to load history: $e'; _loading = false; });
+      setState(() { _error = 'Failed to load history: ${friendlyError(e)}'; _loading = false; });
     }
   }
 
@@ -85,7 +86,7 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
       }
       _toast('Report emailed');
     } catch (e) {
-      _toast('Email failed: $e', error: true);
+      _toast('Email failed: ${friendlyError(e)}', error: true);
     }
   }
 

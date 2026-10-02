@@ -6,6 +6,7 @@ import 'spiritual_gifts_assessment_screen.dart';
 import 'spiritual_gifts_history_screen.dart';
 import 'spiritual_gifts_full_report_screen.dart';
 import 'apprentice_report_screen.dart';
+import '../utils/errors.dart';
 
 class ProgressScreen extends StatefulWidget {
   const ProgressScreen({super.key});
@@ -49,7 +50,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
         _loading = false;
       });
     } catch (e) {
-      setState(() { _error = 'Failed to load progress: $e'; _loading = false; });
+      setState(() { _error = 'Failed to load progress: ${friendlyError(e)}'; _loading = false; });
     }
   }
 
@@ -67,7 +68,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
       });
     } catch (e) {
       setState(() { _loadingMore = false; });
-      _toast('Failed to load more: $e', error: true);
+      _toast('Failed to load more: ${friendlyError(e)}', error: true);
     }
   }
 
@@ -357,7 +358,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
     } catch (e) {
       if (!mounted) return;
       Navigator.of(context).pop(); // close loading dialog
-      _toast('Failed to load spiritual gifts report: $e', error: true);
+      _toast('Failed to load spiritual gifts report: ${friendlyError(e)}', error: true);
     }
   }
 
@@ -394,7 +395,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
       });
       _toast('Deleted "$title"', error: false);
     } catch (e) {
-      _toast('Failed to delete: $e', error: true);
+      _toast('Failed to delete: ${friendlyError(e)}', error: true);
       // Reload to restore the list
       _load();
     }
