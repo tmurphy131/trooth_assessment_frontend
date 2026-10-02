@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'firebase_options.dart';
@@ -13,8 +12,7 @@ import 'screens/assessment_screen.dart';
 import 'theme.dart';
 import 'screens/auth_gate.dart';
 import 'services/api_service.dart';
-import 'services/push_notification_service.dart';
-import 'services/subscription_service.dart';
+import 'services/session_controller.dart';
 import 'features/assessments/screens/mentor_submission_detail_screen.dart';
 import 'features/assessments/screens/mentor_report_v2_screen.dart';
 import 'features/assessments/data/assessments_repository.dart';
@@ -114,46 +112,8 @@ void main() {
       return true;
     };
 
-  // Explicit sign-in only: listen for auth changes and update ApiService token.
-  FirebaseAuth.instance.authStateChanges().listen((user) async {
-    if (user != null) {
-      try {
-        final result = await user.getIdTokenResult();
-        final token = result.token;
-        if (token != null) {
-          ApiService().bearerToken = token;
-          print('🔐 User signed in');
-          
-          // Initialize subscription service after successful sign-in
-          try {
-            await SubscriptionService().initialize(user.uid);
-            print('💳 Subscription service initialized');
-          } catch (e) {
-            print('⚠️ Subscription service init failed: $e');
-          }
-          
-          // Initialize push notifications after successful sign-in
-          // Small delay to ensure auth token is fully set up
-          Future.delayed(const Duration(milliseconds: 500), () async {
-            try {
-              final pushService = PushNotificationService();
-              // Set up notification tap handler
-              pushService.onNotificationTap = _handleNotificationTap;
-              await pushService.initialize();
-            } catch (e) {
-              print('⚠️ Push notification init failed: $e');
-            }
-          });
-        }
-      } catch (e) {
-        print('⚠️ Failed to fetch ID token after sign-in: $e');
-      }
-    } else {
-      ApiService().bearerToken = null;
-      SubscriptionService().clear(); // Clear subscription state on logout
-      print('👋 User signed out; cleared bearer token');
-    }
-  });
+  // Sign-in/sign-out side effects (RevenueCat, push, caches) live in one place.
+  SessionController().start(onNotificationTap: _handleNotificationTap);
 
   // Handle initial link (cold start) and stream (app_links)
   final appLinks = AppLinks();

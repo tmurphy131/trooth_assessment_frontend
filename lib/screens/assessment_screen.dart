@@ -98,17 +98,6 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
 
   Future<void> _initializeAssessment() async {
     try {
-      if (user != null) {
-        final token = await user!.getIdToken();
-        if (token != null && token.isNotEmpty) {
-          print('🔐 Assessment Screen - Got Firebase token: ${token.substring(0, 20)}... (length: ${token.length})');
-        } else {
-          print('❌ Assessment Screen - Empty or null token received');
-        }
-        _apiService.bearerToken = token;
-      } else {
-        print('❌ Assessment Screen - No user found');
-      }
 
       await _loadOrCreateDraft();
 

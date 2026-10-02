@@ -7,7 +7,6 @@ import 'simple_login_screen.dart';
 import 'mentor_dashboard_new.dart';
 import 'apprentice_dashboard_new.dart';
 import 'signup_screen.dart';
-import '../services/api_service.dart';
 import '../utils/role_cache.dart';
 
 /// AuthGate checks Firebase Auth state on app startup and routes accordingly:
@@ -51,18 +50,6 @@ class _AuthGateState extends State<AuthGate> {
 
       debugPrint('🔐 AuthGate: Found user ${user.email}, fetching role...');
       
-      // User exists → refresh token and set in ApiService
-      try {
-        final result = await user.getIdTokenResult(true); // force refresh
-        final token = result.token;
-        if (token != null) {
-          ApiService().bearerToken = token;
-          debugPrint('🔐 AuthGate: Token refreshed');
-        }
-      } catch (e) {
-        debugPrint('⚠️ AuthGate: Token refresh failed: $e');
-      }
-
       // Fetch role from Firestore
       final doc = await FirebaseFirestore.instance
           .collection('users')

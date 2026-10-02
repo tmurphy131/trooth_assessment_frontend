@@ -64,12 +64,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
         return;
       }
       
-      if (user != null) {
-        final token = await user!.getIdToken();
-        print('🔑 Token obtained: ${token?.substring(0, 20) ?? 'null'}...');
-        _apiService.bearerToken = token;
-        print('🔗 API Base URL: ${_apiService.baseUrl}');
-      } else {
+      if (user == null) {
         print('❌ No user found! Cannot authenticate API calls.');
         setState(() {
           _error = 'No authenticated user found';

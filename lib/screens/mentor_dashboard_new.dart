@@ -78,11 +78,6 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
 
   Future<void> _initializeAndLoadData() async {
     try {
-      // Set the bearer token for API calls
-      if (user != null) {
-        final token = await user!.getIdToken();
-        _apiService.bearerToken = token;
-      }
       // First load apprentices, then load dependent data to avoid empty results on first paint
       await _loadApprentices();
       await Future.wait([

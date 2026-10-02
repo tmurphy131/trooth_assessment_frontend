@@ -30,11 +30,6 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
 
   Future<void> _initializeData() async {
     try {
-      if (user != null) {
-        final token = await user!.getIdToken();
-        _apiService.bearerToken = token;
-      }
-      
       await Future.wait([
         _loadPendingInvites(),
         _primeInactiveCount(),

@@ -1,8 +1,6 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../screens/simple_login_screen.dart';
-import '../services/push_notification_service.dart';
-import '../services/subscription_service.dart';
+import '../services/session_controller.dart';
 
 void logoutAndRedirect(BuildContext context) async {
   final confirm = await showDialog<bool>(
@@ -37,16 +35,4 @@ void logoutAndRedirect(BuildContext context) async {
 /// Single sign-out path: unregister push, detach RevenueCat, then Firebase.
 /// Use this for logout and account deletion so the next user on the device
 /// starts clean.
-Future<void> signOutEverywhere() async {
-  try {
-    await PushNotificationService().onLogout();
-  } catch (e) {
-    debugPrint('⚠️ Failed to unregister push notifications: $e');
-  }
-  try {
-    await SubscriptionService().signOut();
-  } catch (e) {
-    debugPrint('⚠️ Failed to reset subscription state: $e');
-  }
-  await FirebaseAuth.instance.signOut();
-}
+Future<void> signOutEverywhere() => SessionController().signOut();

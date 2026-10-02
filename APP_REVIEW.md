@@ -473,7 +473,7 @@ Also replace `widget_test.dart` and add `flutter analyze && flutter test` as the
 | 7.4 autofill | **Fixed** |
 | 8.1 / 8.2 / 8.4 links and export compliance | **Fixed:** see the iOS signing note below. |
 | 1.2 Firebase and google_sign_in majors | **Fixed:** firebase_core 4.15, auth 6.7, firestore 6.10, messaging 16.7 (iOS SDK 12.19), google_sign_in 7.2 (Credential Manager on Android, web client as `serverClientId`), flutter_local_notifications 22.3. Device-tested on iOS against dev. **Note:** Firebase stops publishing CocoaPods after October 2026, so the iOS build needs to move to Swift Package Manager (currently disabled in `pubspec.yaml`). |
-| 2.7 Firestore role rules | **Open:** the rules aren't in the repo; check that `users/{uid}.role` is create-only. |
+| 2.7 Firestore role rules | **Fixed in repo, not deployed:** the live rules let users rewrite their own `role`. New `firestore.rules`: role is set once at signup (mentor or apprentice), there are no client deletes, and everything else stays closed. The live database was checked first (only `users`, all 78 docs mentor/apprentice). 7 emulator tests in `test/firestore_rules`. Deploy with `firebase deploy --only firestore:rules`. |
 | 2.8 hardcoded RevenueCat keys | **Fixed:** misleading TODO replaced with a note that these are public SDK keys. |
 | 3.6 response caching | **Fixed:** a short-lived read cache in ApiService covers subscription status (60 s), user profile and published templates (5 min). Concurrent requests share one call, entries are scoped to the signed-in user, and each caller decodes its own copy. Any successful write or sign-out clears it, and failures are never cached. |
 | 3.8 Google Fonts runtime fetch | **Fixed:** `google_fonts` removed. Poppins is fully bundled (Medium and SemiBold added from google/fonts, OFL), so there are no runtime font downloads. |
@@ -483,7 +483,8 @@ Also replace `widget_test.dart` and add `flutter analyze && flutter test` as the
 | 8.7 16 KB pages | **Verified:** every 64-bit `.so` is zip-aligned and has LOAD segments of 2^14 or larger. |
 | Splash screens (new) | **Fixed:** iOS lost the logo (black screen) before the first frame because `AppDelegate` builds `FlutterViewController(engine:)`, which doesn't show the launch screen; it now calls `loadDefaultSplashScreenView()`. Android 12+ squeezed the wide wordmark into its circular icon; it now uses a square icon with the logo inside the safe circle. Both platforms measure 150 units wide, and the Flutter loading screen matches. |
 | Tutorial overlay over deep links (new) | **Fixed:** the tutorial is dismissed before link and notification navigation, and isn't shown if its screen is no longer on top. |
-| 4.1, 4.4, 7.1-7.3, 7.5, 8.3, 8.5 | **Deferred:** larger efforts, unchanged. |
+| 4.4 session setup spread across files | **Fixed:** `SessionController` (`lib/services/session_controller.dart`) owns sign-in and sign-out side effects in order: RevenueCat identity, subscription state, push, and the read cache. Steps run one at a time so a quick sign-out → sign-in can't interleave; push setup runs alongside, so the iOS permission prompt can't block the queue. Screens no longer set tokens (removed from `main.dart`, AuthGate and five screens, one of which logged part of the token), and the 500 ms delay is gone. Device-tested on iOS against dev. |
+| 4.1, 7.1-7.3, 7.5, 8.3, 8.5 | **Deferred:** larger efforts, unchanged. |
 
 **Release note:** Associated Domains is already enabled on the App ID. If the match provisioning profiles predate that, regenerate them before the next tag so they include the `applinks:links.onlyblv.com` entitlement.
 
