@@ -39,6 +39,16 @@ void main() {
     api.bearerToken = null;
   });
 
+  test('plus-addressed emails survive the invites query', () async {
+    String? sent;
+    respondWith((req) {
+      sent = req.url.queryParameters['email'];
+      return http.Response('[]', 200);
+    });
+    await api.getApprenticeInvites('a+b@example.com');
+    expect(sent, 'a+b@example.com');
+  });
+
   group('fetchOwnFullReport', () {
     test('403 means premium is required', () async {
       respondWith((_) => http.Response('forbidden', 403));

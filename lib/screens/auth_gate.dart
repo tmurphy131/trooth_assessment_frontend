@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'simple_login_screen.dart';
 import 'mentor_dashboard_new.dart';
 import 'apprentice_dashboard_new.dart';
 import 'signup_screen.dart';
 import '../services/api_service.dart';
+import '../utils/role_cache.dart';
 
 /// AuthGate checks Firebase Auth state on app startup and routes accordingly:
 /// - If user is logged in → fetch role from Firestore → navigate to appropriate dashboard
@@ -73,7 +73,7 @@ class _AuthGateState extends State<AuthGate> {
       final role = data?['role'] as String?;
       
       debugPrint('🔐 AuthGate: User role = $role');
-      if (role != null) await _cacheRole(user.uid, role);
+      if (role != null) await cacheRole(user.uid, role);
       
       if (!mounted) return;
       _routeForRole(role);
@@ -82,10 +82,10 @@ class _AuthGateState extends State<AuthGate> {
       // Still signed in, just offline or the server is down. Use the last
       // known role rather than bouncing the user to the login screen.
       final user = FirebaseAuth.instance.currentUser;
-      final cachedRole = user == null ? null : await _cachedRole(user.uid);
+      final lastRole = user == null ? null : await cachedRole(user.uid);
       if (!mounted) return;
-      if (cachedRole != null) {
-        _routeForRole(cachedRole);
+      if (lastRole != null) {
+        _routeForRole(lastRole);
         return;
       }
       FlutterNativeSplash.remove();
@@ -99,24 +99,6 @@ class _AuthGateState extends State<AuthGate> {
   void _retry() {
     setState(() => _isLoading = true);
     _checkAuthState();
-  }
-
-  static String _roleKey(String uid) => 'cached_role_$uid';
-
-  Future<void> _cacheRole(String uid, String role) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_roleKey(uid), role);
-    } catch (_) {}
-  }
-
-  Future<String?> _cachedRole(String uid) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getString(_roleKey(uid));
-    } catch (_) {
-      return null;
-    }
   }
 
   void _routeForRole(String? role) {

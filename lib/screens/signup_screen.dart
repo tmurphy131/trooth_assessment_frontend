@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../utils/role_cache.dart';
 import '../services/api_service.dart';
 import 'mentor_dashboard_new.dart';
 import 'apprentice_dashboard_new.dart';
@@ -117,6 +118,7 @@ class _SignupScreenState extends State<SignupScreen> {
         'onboarded': true,
         'created_at': FieldValue.serverTimestamp(),
       });
+      await cacheRole(currentUser.uid, _role!);
 
       if (!mounted) return;
       final Widget destination = _role == 'mentor'

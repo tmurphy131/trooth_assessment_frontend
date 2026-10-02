@@ -13,6 +13,7 @@ import 'mentor_dashboard_new.dart';
 import 'apprentice_dashboard_new.dart';
 import 'signup_screen.dart';
 import 'role_selection_screen.dart';
+import '../utils/role_cache.dart';
 
 class SimpleLoginScreen extends StatefulWidget {
   const SimpleLoginScreen({super.key});
@@ -45,6 +46,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
       final doc = await FirebaseFirestore.instance.collection('users').doc(cred.user!.uid).get();
       final data = doc.data();
       final role = data?['role'] as String?; // could be null for legacy users
+      if (role != null) await cacheRole(cred.user!.uid, role);
       if (role == 'mentor') {
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
@@ -97,6 +99,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
     final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
     final data = doc.data();
     final role = data?['role'] as String?;
+    if (role != null) await cacheRole(user.uid, role);
     
     if (!mounted) return;
     

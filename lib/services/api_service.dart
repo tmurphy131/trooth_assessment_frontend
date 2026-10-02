@@ -1615,9 +1615,9 @@ class ApiService {
   Future<List<dynamic>> getApprenticeInvites(String email) async {
     const tag = 'API-getApprenticeInvites';
   await _ensureFreshToken();
-    _logReq(tag, 'GET', '/invitations/apprentice-invites?email=$email');
+    _logReq(tag, 'GET', '/invitations/apprentice-invites?email=${Uri.encodeQueryComponent(email)}');
     final r = await _http.get(
-      Uri.parse('$_base/invitations/apprentice-invites?email=$email'),
+      Uri.parse('$_base/invitations/apprentice-invites?email=${Uri.encodeQueryComponent(email)}'),
       headers: _headers(),
     );
     _logRes(tag, r);
@@ -2731,7 +2731,7 @@ class ApiService {
   }) async {
     const tag = 'API-triviaDrawQuestions';
     await _ensureFreshToken();
-    final path = '/trivia/questions/draw?category=$category&difficulty=$difficulty&count=$count';
+    final path = '/trivia/questions/draw?category=${Uri.encodeQueryComponent(category)}&difficulty=$difficulty&count=$count';
     _logReq(tag, 'GET', path);
     final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     _logRes(tag, r);
