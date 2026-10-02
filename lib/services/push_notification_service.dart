@@ -63,10 +63,15 @@ class PushNotificationService {
       // Initialize local notifications for foreground display
       await _initializeLocalNotifications();
 
-      // Request permission
-      final permissionGranted = await requestPermission();
-      if (!permissionGranted) {
-        debugPrint('🔔 Push notification permission not granted');
+      // Never show the system prompt cold: until the user has been asked
+      // (via NotificationPrimer -> enableFromUser), stop here.
+      final status = await getPermissionStatus();
+      if (status == AuthorizationStatus.notDetermined) {
+        debugPrint('🔔 Notification permission not asked yet; waiting for the primer');
+        return false;
+      }
+      if (status == AuthorizationStatus.denied) {
+        debugPrint('🔔 Push notification permission denied');
         return false;
       }
 
@@ -194,6 +199,14 @@ class PushNotificationService {
 
     return status == AuthorizationStatus.authorized ||
            status == AuthorizationStatus.provisional;
+  }
+
+  /// Asks for permission (after the in-app explanation) and, if granted,
+  /// finishes setup and registers the device.
+  Future<bool> enableFromUser() async {
+    final granted = await requestPermission();
+    if (!granted) return false;
+    return initialize();
   }
 
   /// Check current permission status without requesting

@@ -7,6 +7,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -17,6 +18,7 @@ import 'package:trooth_assessment/screens/apprentice_dashboard_new.dart';
 import 'package:trooth_assessment/screens/auth_gate.dart';
 import 'package:trooth_assessment/screens/mentor_dashboard_new.dart';
 import 'package:trooth_assessment/screens/simple_login_screen.dart';
+import 'package:trooth_assessment/services/push_notification_service.dart';
 import 'package:trooth_assessment/services/subscription_service.dart';
 import 'package:trooth_assessment/utils/logout_util.dart';
 
@@ -108,6 +110,23 @@ void main() {
     expect(apprenticeUid, isNot(mentorUid));
     await waitFor(tester, () => SubscriptionService().isInitialized, 'subscriptions (apprentice)');
     expect(await Purchases.appUserID, apprenticeUid, reason: 'RevenueCat should follow the new user');
+
+    // 2b. Notifications: never a cold system prompt. If permission hasn't
+    //     been asked, the explanation sheet appears (after the tutorial);
+    //     "Not now" snoozes it.
+    if (await PushNotificationService().getPermissionStatus() == AuthorizationStatus.notDetermined) {
+      final primer = find.text('Stay in the loop');
+      final skip = find.text('SKIP');
+      await pumpUntil(tester, find.byWidgetPredicate((_) => primer.evaluate().isNotEmpty || skip.evaluate().isNotEmpty));
+      if (skip.evaluate().isNotEmpty) await tester.tap(skip.first);
+      await pumpUntil(tester, primer);
+      expect(await PushNotificationService().getPermissionStatus(), AuthorizationStatus.notDetermined,
+          reason: 'the system prompt must not appear before the user opts in');
+      await tester.tap(find.text('Not now'));
+      await tester.pump(const Duration(seconds: 1));
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('notification_primer_snoozed_until'), isNotNull);
+    }
 
     // 3. Offline launch with an empty Firestore cache: AuthGate should use the
     //    role cached at sign-in instead of showing the login screen.

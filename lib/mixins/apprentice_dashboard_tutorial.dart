@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/notification_primer.dart';
 import '../services/tutorial_service.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
@@ -25,8 +26,15 @@ mixin ApprenticeDashboardTutorial<T extends StatefulWidget> on State<T> {
   /// Call this in initState() to set up tutorial
   void initApprenticeTutorial() {
     // Show tutorial after first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      showApprenticeTutorialIfNeeded();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final seen = await TutorialService.hasSeenTutorial(tutorialId);
+      await showApprenticeTutorialIfNeeded();
+      // Returning users: no tutorial, so explain notifications shortly after
+      // the dashboard settles. First-timers get it when the tutorial ends.
+      if (seen) {
+        await Future.delayed(const Duration(seconds: 2));
+        _afterTutorial();
+      }
     });
   }
 
@@ -42,7 +50,9 @@ mixin ApprenticeDashboardTutorial<T extends StatefulWidget> on State<T> {
       tutorialId: tutorialId,
       targets: targets,
       forceShow: force,
+      onSkip: _afterTutorial,
       onFinish: () {
+        _afterTutorial();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -163,5 +173,13 @@ mixin ApprenticeDashboardTutorial<T extends StatefulWidget> on State<T> {
   /// Reset the tutorial to show it again
   Future<void> resetApprenticeTutorial() async {
     await TutorialService.resetTutorial(tutorialId);
+  }
+
+  void _afterTutorial() {
+    if (!mounted) return;
+    NotificationPrimer.maybeShow(
+      context,
+      reason: 'Hear from your mentor: new invitations, agreements to sign, weekly tips and trivia challenges.',
+    );
   }
 }
