@@ -98,7 +98,7 @@ class _MentorReportSimplifiedScreenState extends State<MentorReportSimplifiedScr
                       ),
                       child: const Text(
                         'PRO',
-                        style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                     ),
                   ),
@@ -1373,7 +1373,7 @@ class _PremiumFullReportScreen extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(name.toString(), style: TextStyle(fontSize: 13, color: Colors.grey[300])),
+                            Flexible(child: Text(name.toString(), style: TextStyle(fontSize: 13, color: Colors.grey[300]))),
                             Text('$score%', style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
                           ],
                         ),
@@ -1636,7 +1636,7 @@ class _PremiumFullReportScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(severity.toString().toUpperCase(),
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: severityColor.shade300)),
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: severityColor.shade300)),
                 ),
               ],
             ),

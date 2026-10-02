@@ -256,12 +256,12 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
           ),
         ),
         centerTitle: true,
-        leading: IconButton(
+        leading: IconButton(tooltip: 'Back', 
           icon: const Icon(Icons.arrow_back, color: Colors.amber),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          IconButton(
+          IconButton(tooltip: 'Refresh', 
             icon: const Icon(Icons.refresh, color: Colors.amber),
             onPressed: _loadData,
           ),
@@ -328,7 +328,7 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Flexible(child: const Text(
                 'Your Gift Seats',
                 style: TextStyle(
                   color: Colors.white,
@@ -336,7 +336,7 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
                   fontWeight: FontWeight.bold,
                   fontFamily: 'Poppins',
                 ),
-              ),
+              )),
               if (activeSeats > 0)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -452,7 +452,7 @@ class _MentorGiftSeatsScreenState extends State<MentorGiftSeatsScreen> {
             'Tap the button below to gift premium access to an apprentice.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.grey[600],
+              color: Colors.grey[500],
               fontFamily: 'Poppins',
               fontSize: 13,
             ),

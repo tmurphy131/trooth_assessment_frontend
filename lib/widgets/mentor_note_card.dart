@@ -58,7 +58,7 @@ class MentorNoteCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text('·', style: TextStyle(color: Colors.grey[600])),
+                  Text('·', style: TextStyle(color: Colors.grey[500])),
                   const SizedBox(width: 8),
                 ],
                 // Timestamp
@@ -81,7 +81,7 @@ class MentorNoteCard extends StatelessWidget {
                   Text(
                     '(edited)',
                     style: TextStyle(
-                      color: Colors.grey[600],
+                      color: Colors.grey[500],
                       fontSize: 11,
                       fontStyle: FontStyle.italic,
                     ),
@@ -114,7 +114,7 @@ class MentorNoteCard extends StatelessWidget {
                   Text(
                     'Private',
                     style: TextStyle(
-                      color: Colors.grey[600],
+                      color: Colors.grey[500],
                       fontSize: 12,
                     ),
                   ),

@@ -145,7 +145,7 @@ class _TriviaChallengeCreateScreenState extends State<TriviaChallengeCreateScree
                           style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'),
                           decoration: InputDecoration(
                             hintText: "Opponent's email address",
-                            hintStyle: const TextStyle(color: Colors.white38, fontFamily: 'Poppins'),
+                            hintStyle: const TextStyle(color: Colors.white60, fontFamily: 'Poppins'),
                             filled: true,
                             fillColor: Colors.grey[900],
                             border: OutlineInputBorder(

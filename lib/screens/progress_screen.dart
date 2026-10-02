@@ -79,8 +79,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
       appBar: AppBar(
         title: const Text('Progress', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
         backgroundColor: Colors.black,
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)),
-        actions: [IconButton(onPressed: _load, icon: const Icon(Icons.refresh, color: Colors.amber))],
+        leading: IconButton(tooltip: 'Back', icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)),
+        actions: [IconButton(tooltip: 'Refresh', onPressed: _load, icon: const Icon(Icons.refresh, color: Colors.amber))],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: Colors.amber))

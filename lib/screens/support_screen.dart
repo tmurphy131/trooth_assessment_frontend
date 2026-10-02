@@ -113,7 +113,7 @@ class _SupportScreenState extends State<SupportScreen> {
           ),
         ),
         centerTitle: true,
-        leading: IconButton(
+        leading: IconButton(tooltip: 'Back', 
           icon: const Icon(Icons.arrow_back, color: Colors.amber),
           onPressed: () => Navigator.pop(context),
         ),
@@ -404,7 +404,7 @@ class _SupportScreenState extends State<SupportScreen> {
     return InputDecoration(
       hintText: hint,
       hintStyle: TextStyle(
-        color: Colors.grey[600],
+        color: Colors.grey[500],
         fontFamily: 'Poppins',
       ),
       filled: true,

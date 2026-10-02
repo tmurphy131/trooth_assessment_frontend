@@ -163,7 +163,7 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
               children: [
                 Text(
                   'Your Top Badge',
-                  style: TextStyle(color: Colors.white38, fontFamily: 'Poppins', fontSize: 10),
+                  style: TextStyle(color: Colors.white60, fontFamily: 'Poppins', fontSize: 11),
                 ),
                 Text(
                   displayName,
@@ -283,7 +283,7 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
               style: const TextStyle(
                 color: Colors.white54,
                 fontFamily: 'Poppins',
-                fontSize: 9,
+                fontSize: 11,
               ),
               textAlign: TextAlign.center,
             ),
@@ -337,7 +337,7 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
                           badge > 99 ? '99+' : badge.toString(),
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 9,
+                            fontSize: 11,
                             fontFamily: 'Poppins',
                             fontWeight: FontWeight.bold,
                           ),

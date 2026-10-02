@@ -71,7 +71,7 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
         backgroundColor: Colors.grey[850],
         title: const Text('My Profile', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(
+          IconButton(tooltip: 'Refresh', 
             onPressed: _loading ? null : _load,
             icon: const Icon(Icons.refresh, color: Colors.amber),
           ),
@@ -279,7 +279,7 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
                             style: TextStyle(
                               color: Colors.amber,
                               fontFamily: 'Poppins',
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

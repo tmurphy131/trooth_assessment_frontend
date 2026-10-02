@@ -503,7 +503,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
                           'OFFICIAL',
                           style: TextStyle(
                             color: Colors.black,
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: FontWeight.bold,
                             fontFamily: 'Poppins',
                           ),
@@ -1169,14 +1169,14 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
                     questionType == 'multiple_choice' ? 'Multiple Choice' : 'Open Ended',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 10,
+                      fontSize: 11,
                       fontFamily: 'Poppins',
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
                 const Spacer(),
-                IconButton(
+                IconButton(tooltip: 'Delete', 
                   onPressed: () async {
                     try {
                       // Remove from template on backend
@@ -1545,14 +1545,14 @@ class _QuestionCreationDialogState extends State<_QuestionCreationDialog> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
+                    Flexible(child: Text(
                       'Answer Options',
                       style: TextStyle(
                         color: Colors.grey[300],
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.bold,
                       ),
-                    ),
+                    )),
                     TextButton.icon(
                       onPressed: () {
                         setState(() {
@@ -1652,7 +1652,7 @@ class _QuestionCreationDialogState extends State<_QuestionCreationDialog> {
                 ),
               ],
             ),
-            IconButton(
+            IconButton(tooltip: 'Delete', 
               onPressed: _options.length > 2 ? () {
                 setState(() {
                   _options.removeAt(index);

@@ -273,7 +273,7 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
           style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 18),
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.refresh, color: Color(0xFFFFD700)), onPressed: () => _load()),
+          IconButton(tooltip: 'Refresh', icon: const Icon(Icons.refresh, color: Color(0xFFFFD700)), onPressed: () => _load()),
           if (canQuit)
             IconButton(
               icon: const Icon(Icons.exit_to_app, color: Colors.white54),
@@ -388,7 +388,7 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
                 ),
                 const SizedBox(height: 4),
                 if (myRole == 'challenger')
-                  const Text('(you)', style: TextStyle(color: Colors.white38, fontFamily: 'Poppins', fontSize: 10)),
+                  const Text('(you)', style: TextStyle(color: Colors.white60, fontFamily: 'Poppins', fontSize: 11)),
                 const SizedBox(height: 6),
                 Text(
                   cScore.toString(),
@@ -397,7 +397,7 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
               ],
             ),
           ),
-          const Text('vs', style: TextStyle(color: Colors.white38, fontFamily: 'Poppins', fontSize: 14)),
+          const Text('vs', style: TextStyle(color: Colors.white60, fontFamily: 'Poppins', fontSize: 14)),
           Expanded(
             child: Column(
               children: [
@@ -414,7 +414,7 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
                 ),
                 const SizedBox(height: 4),
                 if (myRole == 'challenged')
-                  const Text('(you)', style: TextStyle(color: Colors.white38, fontFamily: 'Poppins', fontSize: 10)),
+                  const Text('(you)', style: TextStyle(color: Colors.white60, fontFamily: 'Poppins', fontSize: 11)),
                 const SizedBox(height: 6),
                 Text(
                   dScore.toString(),
@@ -435,7 +435,7 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Question ${current + 1} / $total', style: const TextStyle(color: Colors.white54, fontFamily: 'Poppins', fontSize: 12)),
+            Flexible(child: Text('Question ${current + 1} / $total', style: const TextStyle(color: Colors.white54, fontFamily: 'Poppins', fontSize: 12))),
           ],
         ),
         const SizedBox(height: 6),
@@ -788,7 +788,7 @@ class _TriviaChallengeDetailScreenState extends State<TriviaChallengeDetailScree
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: const TextStyle(color: Colors.white38, fontFamily: 'Poppins', fontSize: 10)),
+                  Text(label, style: const TextStyle(color: Colors.white60, fontFamily: 'Poppins', fontSize: 11)),
                   Text(answer.toUpperCase(), style: TextStyle(color: color, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 12)),
                 ],
               ),

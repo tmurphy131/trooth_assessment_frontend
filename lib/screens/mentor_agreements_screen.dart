@@ -244,7 +244,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
         backgroundColor: Colors.grey[850],
         title: const Text('Mentor Agreements', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, color: Colors.white)),
         actions: [
-          IconButton(
+          IconButton(tooltip: 'Refresh', 
             icon: const Icon(Icons.refresh, color: Colors.amber),
             onPressed: _loadingTemplates ? null : _loadTemplates,
           )
@@ -292,26 +292,26 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
             TextFormField(
               controller: _apprenticeNameCtrl,
               style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Apprentice Full Name', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white38)),
+              decoration: const InputDecoration(labelText: 'Apprentice Full Name', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white60)),
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _apprenticeEmailCtrl,
               style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Apprentice Email', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white38)),
+              decoration: const InputDecoration(labelText: 'Apprentice Email', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white60)),
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _meetingLocationCtrl,
               style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Meeting Location', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white38)),
+              decoration: const InputDecoration(labelText: 'Meeting Location', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white60)),
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _meetingDurationCtrl,
               style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Meeting Duration (minutes)', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white38)),
+              decoration: const InputDecoration(labelText: 'Meeting Duration (minutes)', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white60)),
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 12),
@@ -325,32 +325,32 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
                 TextFormField(
                   controller: _meetingDayCtrl,
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Meeting Day (e.g. Tuesdays)', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white38)),
+                  decoration: const InputDecoration(labelText: 'Meeting Day (e.g. Tuesdays)', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white60)),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _meetingTimeCtrl,
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Meeting Time (e.g. 4:00 PM PST)', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white38)),
+                  decoration: const InputDecoration(labelText: 'Meeting Time (e.g. 4:00 PM PST)', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white60)),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _meetingFrequencyCtrl,
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Meeting Frequency (e.g. Weekly)', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white38)),
+                  decoration: const InputDecoration(labelText: 'Meeting Frequency (e.g. Weekly)', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white60)),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _startDateCtrl,
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Start Date (e.g. 2025-09-15)', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white38)),
+                  decoration: const InputDecoration(labelText: 'Start Date (e.g. 2025-09-15)', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white60)),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _additionalNotesCtrl,
                   style: const TextStyle(color: Colors.white),
                   maxLines: 3,
-                  decoration: const InputDecoration(labelText: 'Additional Notes', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white38)),
+                  decoration: const InputDecoration(labelText: 'Additional Notes', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white60)),
                 ),
                 const SizedBox(height: 8),
               ],
@@ -375,7 +375,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
               TextFormField(
                 controller: _parentEmailCtrl,
                 style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Parent Email', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white38)),
+                decoration: const InputDecoration(labelText: 'Parent Email', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white60)),
                 keyboardType: TextInputType.emailAddress,
               ),
             const SizedBox(height: 16),

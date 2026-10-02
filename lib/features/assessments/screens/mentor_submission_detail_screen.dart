@@ -280,7 +280,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.of(context).maybePop()),
+        leading: IconButton(tooltip: 'Back', icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.of(context).maybePop()),
         title: Text('Submission · ${widget.apprenticeName}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
@@ -649,7 +649,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
             const SizedBox(height: 16),
             Text(
               'Loading report...',
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: Colors.grey[500]),
             ),
           ],
         ),
@@ -786,7 +786,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
                           ),
                           child: const Text(
                             'PRO',
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black),
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black),
                           ),
                         ),
                       ],
@@ -1347,7 +1347,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
             const SizedBox(height: 16),
             Text('No notes yet', style: TextStyle(color: Colors.grey[500], fontSize: 18)),
             const SizedBox(height: 8),
-            Text('Tap the + button to add your first note', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+            Text('Tap the + button to add your first note', style: TextStyle(color: Colors.grey[500], fontSize: 14)),
           ],
         ),
       );
@@ -1845,7 +1845,7 @@ class _PremiumReportFullScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(color: severityColor.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
-                  child: Text(severity.toUpperCase(), style: TextStyle(color: severityColor, fontSize: 10, fontWeight: FontWeight.bold)),
+                  child: Text(severity.toUpperCase(), style: TextStyle(color: severityColor, fontSize: 11, fontWeight: FontWeight.bold)),
                 ),
             ]),
             if (summary != null) ...[const SizedBox(height: 8), Text(summary, style: const TextStyle(color: Colors.white70))],

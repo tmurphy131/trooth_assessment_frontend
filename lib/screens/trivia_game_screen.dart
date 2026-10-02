@@ -368,9 +368,10 @@ class _TriviaGameScreenState extends State<TriviaGameScreen>
         children: [
           Row(
             children: [
-              GestureDetector(
-                onTap: _confirmQuit,
-                child: const Icon(Icons.close, color: Colors.white54, size: 22),
+              IconButton(
+                tooltip: 'Quit game',
+                onPressed: _confirmQuit,
+                icon: const Icon(Icons.close, color: Colors.white70, size: 22),
               ),
             ],
           ),
@@ -407,7 +408,7 @@ class _TriviaGameScreenState extends State<TriviaGameScreen>
                       ),
                     ),
                   ),
-                  const Text('seconds', style: TextStyle(color: Colors.white54, fontFamily: 'Poppins', fontSize: 10)),
+                  const Text('seconds', style: TextStyle(color: Colors.white54, fontFamily: 'Poppins', fontSize: 11)),
                 ],
               ),
               // Streak + multiplier
@@ -449,10 +450,10 @@ class _TriviaGameScreenState extends State<TriviaGameScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              Flexible(child: Text(
                 'Q${_currentIndex + 1}',
                 style: const TextStyle(color: Colors.white54, fontFamily: 'Poppins', fontSize: 11),
-              ),
+              )),
               if (_graceTokens > 0)
                 Row(
                   children: [

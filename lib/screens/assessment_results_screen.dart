@@ -53,7 +53,7 @@ class _AssessmentResultsScreenState extends State<AssessmentResultsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
-        leading: IconButton(
+        leading: IconButton(tooltip: 'Back', 
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),

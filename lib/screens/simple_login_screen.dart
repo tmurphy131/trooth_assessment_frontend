@@ -666,7 +666,7 @@ class _LoginDebugBadgeState extends State<_LoginDebugBadge> {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(color: Colors.blueGrey.shade800, borderRadius: BorderRadius.circular(6)),
-        child: const Text('LOGIN', style: TextStyle(color: Colors.white70, fontSize: 10, letterSpacing: 1.2)),
+        child: const Text('LOGIN', style: TextStyle(color: Colors.white70, fontSize: 11, letterSpacing: 1.2)),
       ),
     );
   }

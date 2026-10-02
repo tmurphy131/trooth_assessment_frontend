@@ -376,7 +376,7 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 10),
             const Text(
               'These are placeholder definitions and will be replaced with authoritative content.',
-              style: TextStyle(color: Colors.white38, fontFamily: 'Poppins', fontSize: 12),
+              style: TextStyle(color: Colors.white60, fontFamily: 'Poppins', fontSize: 12),
               textAlign: TextAlign.center,
             ),
           ],

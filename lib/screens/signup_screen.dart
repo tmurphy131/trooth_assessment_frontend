@@ -231,7 +231,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     autofillHints: const [AutofillHints.newPassword],
                     textInputAction: TextInputAction.next,
                     decoration: _dec('Password').copyWith(
-                          suffixIcon: IconButton(
+                          suffixIcon: IconButton(tooltip: _showPassword ? 'Hide password' : 'Show password', 
                             icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility),
                             onPressed: () => setState(() => _showPassword = !_showPassword),
                           ),
@@ -249,7 +249,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     autofillHints: const [AutofillHints.newPassword],
                     textInputAction: TextInputAction.done,
                     decoration: _dec('Confirm Password').copyWith(
-                          suffixIcon: IconButton(
+                          suffixIcon: IconButton(tooltip: _showConfirmPassword ? 'Hide password' : 'Show password', 
                             icon: Icon(_showConfirmPassword ? Icons.visibility_off : Icons.visibility),
                             onPressed: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
                           ),

@@ -759,7 +759,7 @@ class _MentorHistoryItem extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
                           ),
-                          child: const Text('Tie 3rd', style: TextStyle(color: Colors.amber, fontSize: 10, fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                          child: const Text('Tie 3rd', style: TextStyle(color: Colors.amber, fontSize: 11, fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
                         ),
                       ],
                     ],

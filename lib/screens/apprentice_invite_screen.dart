@@ -109,7 +109,7 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
                       _inactiveApprentices.length > 99 ? '99+' : _inactiveApprentices.length.toString(),
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 9,
+                        fontSize: 11,
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.bold,
                       ),

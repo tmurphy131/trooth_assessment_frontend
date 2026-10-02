@@ -97,8 +97,8 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         title: Text(widget.title, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
-        leading: IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back, color: Colors.white)),
-        actions: [IconButton(onPressed: () => _fetch(initial: true), icon: const Icon(Icons.refresh, color: Colors.amber))],
+        leading: IconButton(tooltip: 'Back', onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back, color: Colors.white)),
+        actions: [IconButton(tooltip: 'Refresh', onPressed: () => _fetch(initial: true), icon: const Icon(Icons.refresh, color: Colors.amber))],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: Colors.amber))

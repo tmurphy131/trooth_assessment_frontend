@@ -356,7 +356,7 @@ class _Chip extends StatelessWidget {
       margin: const EdgeInsets.only(left: 6),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12), border: outline!=null? Border.all(color: outline!, width: 1): null),
-      child: Text(label, style: TextStyle(fontSize: 10, fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: darkText? Colors.black : Colors.amber)),
+      child: Text(label, style: TextStyle(fontSize: 11, fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: darkText? Colors.black : Colors.amber)),
     );
   }
 }

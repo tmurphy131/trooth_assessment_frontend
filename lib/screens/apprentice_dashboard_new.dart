@@ -43,12 +43,31 @@ class _SpiritualGiftsQuickActionsSheet extends StatelessWidget {
                 width: 48,
                 height: 5,
                 margin: const EdgeInsets.only(bottom: 18),
-                decoration: BoxDecoration(color: Colors.grey[700], borderRadius: BorderRadius.circular(3)),
+                decoration: BoxDecoration(
+                  color: Colors.grey[700],
+                  borderRadius: BorderRadius.circular(3),
+                ),
               ),
             ),
-            const Text('Spiritual Gifts', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 18)),
+            const Text(
+              'Spiritual Gifts',
+              style: TextStyle(
+                color: Colors.white,
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
             const SizedBox(height: 6),
-            Text("Choose what you'd like to do with your Spiritual Gifts Assessment.", style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontFamily: 'Poppins', fontSize: 12, height: 1.3)),
+            Text(
+              "Choose what you'd like to do with your Spiritual Gifts Assessment.",
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.7),
+                fontFamily: 'Poppins',
+                fontSize: 12,
+                height: 1.3,
+              ),
+            ),
             const SizedBox(height: 18),
             _action(
               context,
@@ -56,7 +75,12 @@ class _SpiritualGiftsQuickActionsSheet extends StatelessWidget {
               label: 'View Latest Results',
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const SpiritualGiftsResultsScreen()));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const SpiritualGiftsResultsScreen(),
+                  ),
+                );
               },
             ),
             _action(
@@ -65,7 +89,12 @@ class _SpiritualGiftsQuickActionsSheet extends StatelessWidget {
               label: 'View History',
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const SpiritualGiftsHistoryScreen()));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const SpiritualGiftsHistoryScreen(),
+                  ),
+                );
               },
             ),
             _action(
@@ -84,7 +113,9 @@ class _SpiritualGiftsQuickActionsSheet extends StatelessWidget {
                 if (proceed) {
                   // Use the captured navigator to push after sheet + dialog dismissed
                   navigator.push(
-                    MaterialPageRoute(builder: (_) => const SpiritualGiftsAssessmentScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const SpiritualGiftsAssessmentScreen(),
+                    ),
                   );
                 }
               },
@@ -93,16 +124,25 @@ class _SpiritualGiftsQuickActionsSheet extends StatelessWidget {
             Center(
               child: TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel', style: TextStyle(color: Colors.grey, fontFamily: 'Poppins')),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: Colors.grey, fontFamily: 'Poppins'),
+                ),
               ),
-            )
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _action(BuildContext context, {required IconData icon, required String label, required VoidCallback onTap, Color? color}) {
+  Widget _action(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    Color? color,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -115,16 +155,26 @@ class _SpiritualGiftsQuickActionsSheet extends StatelessWidget {
           backgroundColor: (color ?? Colors.blue).withValues(alpha: 0.15),
           child: Icon(icon, color: color ?? Colors.blue),
         ),
-        title: Text(label, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+        title: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         onTap: onTap,
       ),
     );
   }
 }
-class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with ApprenticeDashboardTutorial {
+
+class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew>
+    with ApprenticeDashboardTutorial {
   final user = FirebaseAuth.instance.currentUser;
   final _apiService = ApiService();
-  late Future<Map<String, dynamic>> _giftsLatestFuture = _apiService.getSpiritualGiftsLatest();
+  late Future<Map<String, dynamic>> _giftsLatestFuture = _apiService
+      .getSpiritualGiftsLatest();
   List<Map<String, dynamic>> _assessments = [];
   // Cache of templateId -> template name for displaying draft titles
   Map<String, String> _templateNameById = {};
@@ -155,7 +205,10 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
     if (email == null) return;
     try {
       final invites = await _apiService.getApprenticeInvites(email);
-      if (mounted) setState(() { _inviteCount = invites.length; });
+      if (mounted)
+        setState(() {
+          _inviteCount = invites.length;
+        });
     } catch (e) {
       debugPrint('Failed to load invites: $e');
     }
@@ -192,7 +245,10 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
       if (uid == null) return;
       final profile = await _apiService.getUserProfile(uid);
       final name = (profile['name'] as String?)?.trim();
-      if (mounted) setState(() { _name = (name == null || name.isEmpty) ? null : name; });
+      if (mounted)
+        setState(() {
+          _name = (name == null || name.isEmpty) ? null : name;
+        });
     } catch (e) {
       debugPrint('Failed to load apprentice profile name: $e');
     }
@@ -200,19 +256,31 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
 
   Future<void> _loadAssessments() async {
     try {
-      setState(() { _isLoading = true; _error = null; });
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
       // Fetch all drafts (includes in-progress + possibly submitted depending on backend behavior)
       final list = await _apiService.getAllDrafts();
       // Normalize & filter to only those NOT submitted (drafts still in progress)
-      final items = list
-          .map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e as Map))
-          .where((m) => m['is_submitted'] != true) // keep only active drafts
-          .toList()
-        ..sort((a,b){
-          final da = DateTime.tryParse(a['updated_at'] ?? a['created_at'] ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
-            final db = DateTime.tryParse(b['updated_at'] ?? b['created_at'] ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
-          return db.compareTo(da); // newest first
-        });
+      final items =
+          list
+              .map<Map<String, dynamic>>(
+                (e) => Map<String, dynamic>.from(e as Map),
+              )
+              .where(
+                (m) => m['is_submitted'] != true,
+              ) // keep only active drafts
+              .toList()
+            ..sort((a, b) {
+              final da =
+                  DateTime.tryParse(a['updated_at'] ?? a['created_at'] ?? '') ??
+                  DateTime.fromMillisecondsSinceEpoch(0);
+              final db =
+                  DateTime.tryParse(b['updated_at'] ?? b['created_at'] ?? '') ??
+                  DateTime.fromMillisecondsSinceEpoch(0);
+              return db.compareTo(da); // newest first
+            });
       // Build a lookup of template IDs to names to render accurate draft titles
       Map<String, String> names = {};
       try {
@@ -220,7 +288,8 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
         for (final t in templates) {
           final id = (t['id'] ?? t['template_id'])?.toString();
           if (id == null) continue;
-          final name = (t['name'] ?? t['display_name'] ?? t['title'] ?? '').toString();
+          final name = (t['name'] ?? t['display_name'] ?? t['title'] ?? '')
+              .toString();
           if (name.trim().isNotEmpty) names[id] = name.trim();
         }
       } catch (_) {
@@ -234,30 +303,29 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
         });
       }
     } catch (e) {
-      if (mounted) setState(() { _error = 'Failed to load assessments: ${friendlyError(e)}'; _isLoading = false; });
+      if (mounted)
+        setState(() {
+          _error = 'Failed to load assessments: ${friendlyError(e)}';
+          _isLoading = false;
+        });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return BaseDashboard(
-      body: Padding(
+      // One scrolling list so nothing clips when the user enlarges text.
+      body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildWelcomeCard(),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 300,
-              child: _buildQuickActions(),
-            ),
-            const SizedBox(height: 12),
-            _buildTriviaTile(),
-            const SizedBox(height: 20),
-            Expanded(child: _buildRecentAssessments()),
-          ],
-        ),
+        children: [
+          _buildWelcomeCard(),
+          const SizedBox(height: 12),
+          _buildQuickActions(),
+          const SizedBox(height: 12),
+          _buildTriviaTile(),
+          const SizedBox(height: 20),
+          _buildRecentAssessments(),
+        ],
       ),
       additionalActions: [
         // Profile icon
@@ -296,7 +364,10 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
                 right: 6,
                 top: 6,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.redAccent,
                     borderRadius: BorderRadius.circular(10),
@@ -305,7 +376,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
                     _inviteCount.toString(),
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 10,
+                      fontSize: 11,
                       fontFamily: 'Poppins',
                       fontWeight: FontWeight.bold,
                     ),
@@ -387,65 +458,81 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
         ),
         const SizedBox(height: 6),
         // First row: New Assessment + Spiritual Gifts
-        Expanded(
+        IntrinsicHeight(
           child: Row(
-          children: [
-            Expanded(
-              child: _buildActionCard(
-                cardKey: newAssessmentCardKey,
-                icon: Icons.quiz,
-                title: 'New Assessment',
-                subtitle: 'Start a spiritual assessment',
-                color: Colors.amber,
-                onTap: _startNewAssessment,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _buildActionCard(
+                  cardKey: newAssessmentCardKey,
+                  icon: Icons.quiz,
+                  title: 'New Assessment',
+                  subtitle: 'Start a spiritual assessment',
+                  color: Colors.amber,
+                  onTap: _startNewAssessment,
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: FutureBuilder<Map<String, dynamic>>(
-                future: _giftsLatestFuture,
-                builder: (context, snap) {
-                  final hasResult = snap.hasData && (snap.data?.isNotEmpty ?? false);
-                  return _buildActionCard(
-                    cardKey: spiritualGiftsCardKey,
-                    icon: Icons.auto_awesome,
-                    title: 'Spiritual Gifts',
-                    subtitle: hasResult ? 'View or retake assessment' : 'Discover your gifts',
-                    color: Colors.tealAccent.shade700,
-                    onTap: () async {
-                      if (!hasResult) {
-                        final proceed = await _showSpiritualGiftsDisclaimer();
-                        if (proceed == true && mounted) {
-                          if (!context.mounted) return;
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const SpiritualGiftsAssessmentScreen()),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FutureBuilder<Map<String, dynamic>>(
+                  future: _giftsLatestFuture,
+                  builder: (context, snap) {
+                    final hasResult =
+                        snap.hasData && (snap.data?.isNotEmpty ?? false);
+                    return _buildActionCard(
+                      cardKey: spiritualGiftsCardKey,
+                      icon: Icons.auto_awesome,
+                      title: 'Spiritual Gifts',
+                      subtitle: hasResult
+                          ? 'View or retake assessment'
+                          : 'Discover your gifts',
+                      color: Colors.tealAccent.shade700,
+                      onTap: () async {
+                        if (!hasResult) {
+                          final proceed = await _showSpiritualGiftsDisclaimer();
+                          if (proceed == true && mounted) {
+                            if (!context.mounted) return;
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const SpiritualGiftsAssessmentScreen(),
+                              ),
+                            );
+                            // They may have just finished it; re-check for a result.
+                            if (mounted)
+                              setState(
+                                () => _giftsLatestFuture = _apiService
+                                    .getSpiritualGiftsLatest(),
+                              );
+                          }
+                        } else {
+                          if (!mounted) return;
+                          showModalBottomSheet(
+                            context: context,
+                            backgroundColor: Colors.grey[900],
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(26),
+                              ),
+                            ),
+                            builder: (_) => _SpiritualGiftsQuickActionsSheet(
+                              onRequestStart: _showSpiritualGiftsDisclaimer,
+                            ),
                           );
-                          // They may have just finished it; re-check for a result.
-                          if (mounted) setState(() => _giftsLatestFuture = _apiService.getSpiritualGiftsLatest());
                         }
-                      } else {
-                        if (!mounted) return;
-                        showModalBottomSheet(
-                          context: context,
-                          backgroundColor: Colors.grey[900],
-                          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
-                          builder: (_) => _SpiritualGiftsQuickActionsSheet(
-                            onRequestStart: _showSpiritualGiftsDisclaimer,
-                          ),
-                        );
-                      }
-                    },
-                  );
-                },
+                      },
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
         ),
         const SizedBox(height: 20),
         // Second row: View Progress + Resources
-        Expanded(
+        IntrinsicHeight(
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
                 child: _buildActionCard(
@@ -468,7 +555,9 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
                   subtitle: 'Guides & weekly tips',
                   color: Colors.orange,
                   onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ApprenticeResourcesScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const ApprenticeResourcesScreen(),
+                    ),
                   ),
                 ),
               ),
@@ -503,20 +592,32 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
               ),
               child: Stack(
                 children: [
-                  const Center(child: Icon(Icons.quiz, color: Color(0xFFFFD700), size: 22)),
+                  const Center(
+                    child: Icon(Icons.quiz, color: Color(0xFFFFD700), size: 22),
+                  ),
                   if (_triviaPendingCount > 0)
                     Positioned(
                       right: 0,
                       top: 0,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 1,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.redAccent,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          _triviaPendingCount > 9 ? '9+' : '$_triviaPendingCount',
-                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
+                          _triviaPendingCount > 9
+                              ? '9+'
+                              : '$_triviaPendingCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Poppins',
+                          ),
                         ),
                       ),
                     ),
@@ -530,13 +631,22 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
                 children: [
                   const Text(
                     'Bible Trivia',
-                    style: TextStyle(color: Color(0xFFFFD700), fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 14),
+                    style: TextStyle(
+                      color: Color(0xFFFFD700),
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
                   Text(
                     _triviaPendingCount > 0
                         ? '$_triviaPendingCount challenge${_triviaPendingCount > 1 ? 's' : ''} waiting for you'
                         : 'Test your knowledge & challenge others',
-                    style: TextStyle(color: Colors.grey[400], fontFamily: 'Poppins', fontSize: 11),
+                    style: TextStyle(
+                      color: Colors.grey[400],
+                      fontFamily: 'Poppins',
+                      fontSize: 11,
+                    ),
                   ),
                 ],
               ),
@@ -618,53 +728,64 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Draft Assessments',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
+            const Expanded(
+              child: Text(
+                'Draft Assessments',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
                   fontFamily: 'Poppins',
                 ),
               ),
-              SizedBox(
-                height: 28,
-                width: 28,
-                child: IconButton(
-                  padding: EdgeInsets.zero,
-                  onPressed: _loadAssessments,
-                  icon: const Icon(Icons.refresh, color: Colors.amber, size: 18),
-                  tooltip: 'Refresh',
-                ),
+            ),
+            SizedBox(
+              height: 28,
+              width: 28,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                onPressed: _loadAssessments,
+                icon: const Icon(Icons.refresh, color: Colors.amber, size: 18),
+                tooltip: 'Refresh',
               ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Expanded(
-            child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: Colors.amber, strokeWidth: 2),
-                  )
-                : _error != null
-                    ? Center(
-                        child: Text(
-                          _error!,
-                          style: TextStyle(color: Colors.grey[400], fontFamily: 'Poppins', fontSize: 12),
-                          textAlign: TextAlign.center,
-                        ),
-                      )
-                    : _assessments.isEmpty
-                        ? _buildEmptyStateCompact()
-                        : ListView.builder(
-                            padding: EdgeInsets.zero,
-                            itemCount: _assessments.length,
-                            itemBuilder: (context, index) {
-                              return _buildAssessmentCardCompact(_assessments[index]);
-                            },
-                          ),
-          ),
-        ],
-      );
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        if (_isLoading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: CircularProgressIndicator(
+                color: Colors.amber,
+                strokeWidth: 2,
+              ),
+            ),
+          )
+        else if (_error != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: Text(
+                _error!,
+                style: TextStyle(
+                  color: Colors.grey[400],
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          )
+        else if (_assessments.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: _buildEmptyStateCompact(),
+          )
+        else
+          ..._assessments.map(_buildAssessmentCardCompact),
+      ],
+    );
   }
 
   Widget _buildEmptyStateCompact() {
@@ -674,22 +795,33 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
         children: [
           Icon(Icons.assignment_outlined, size: 24, color: Colors.grey[600]),
           const SizedBox(width: 10),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'No drafts yet',
-                style: TextStyle(color: Colors.grey[400], fontSize: 13, fontFamily: 'Poppins', fontWeight: FontWeight.w500),
-              ),
-              GestureDetector(
-                onTap: _startNewAssessment,
-                child: Text(
-                  'Start a new assessment →',
-                  style: TextStyle(color: Colors.amber[300], fontSize: 11, fontFamily: 'Poppins'),
+          Flexible(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'No drafts yet',
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: 13,
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-            ],
+                GestureDetector(
+                  onTap: _startNewAssessment,
+                  child: Text(
+                    'Start a new assessment →',
+                    style: TextStyle(
+                      color: Colors.amber[300],
+                      fontSize: 11,
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -728,7 +860,11 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
                   color: Colors.amber.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Icon(Icons.edit_note, color: Colors.amber, size: 18),
+                child: const Icon(
+                  Icons.edit_note,
+                  color: Colors.amber,
+                  size: 18,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -738,14 +874,23 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'Poppins'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Poppins',
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     if (timeInfo.isNotEmpty)
                       Text(
                         timeInfo,
-                        style: TextStyle(color: Colors.grey[500], fontSize: 10, fontFamily: 'Poppins'),
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 11,
+                          fontFamily: 'Poppins',
+                        ),
                       ),
                   ],
                 ),
@@ -798,9 +943,12 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
     );
   }
 
-  Future<bool> _showDeleteConfirmationDialog(String? draftId, String title) async {
+  Future<bool> _showDeleteConfirmationDialog(
+    String? draftId,
+    String title,
+  ) async {
     if (draftId == null) return false;
-    
+
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -815,20 +963,14 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
         ),
         content: Text(
           'Are you sure you want to delete the draft "$title"? This action cannot be undone.',
-          style: const TextStyle(
-            color: Colors.white,
-            fontFamily: 'Poppins',
-          ),
+          style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text(
               'Cancel',
-              style: TextStyle(
-                color: Colors.grey,
-                fontFamily: 'Poppins',
-              ),
+              style: TextStyle(color: Colors.grey, fontFamily: 'Poppins'),
             ),
           ),
           TextButton(
@@ -847,7 +989,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
         ],
       ),
     );
-    
+
     if (result == true) {
       await _deleteDraft(draftId);
       return true;
@@ -858,11 +1000,17 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
   String _resolveDraftTitle(Map<String, dynamic> assessment) {
     // Prefer explicit template name fields if available
     final templateObj = assessment['template'];
-    final fromTemplateObj = (templateObj is Map) ? (templateObj['name'] ?? templateObj['display_name'])?.toString() : null;
-    if (fromTemplateObj != null && fromTemplateObj.trim().isNotEmpty) return fromTemplateObj.trim();
+    final fromTemplateObj = (templateObj is Map)
+        ? (templateObj['name'] ?? templateObj['display_name'])?.toString()
+        : null;
+    if (fromTemplateObj != null && fromTemplateObj.trim().isNotEmpty)
+      return fromTemplateObj.trim();
 
-    final templateName = (assessment['template_name'] ?? assessment['templateTitle'])?.toString();
-    if (templateName != null && templateName.trim().isNotEmpty) return templateName.trim();
+    final templateName =
+        (assessment['template_name'] ?? assessment['templateTitle'])
+            ?.toString();
+    if (templateName != null && templateName.trim().isNotEmpty)
+      return templateName.trim();
 
     // Try lookup from cached published templates
     final templateId = assessment['template_id']?.toString();
@@ -871,7 +1019,9 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
 
     // Fall back to any provided title/name, then a generic label
     final fallback = (assessment['title'] ?? assessment['name'])?.toString();
-    if (fallback != null && fallback.trim().isNotEmpty && fallback.trim().toLowerCase() != 'spiritual assessment') {
+    if (fallback != null &&
+        fallback.trim().isNotEmpty &&
+        fallback.trim().toLowerCase() != 'spiritual assessment') {
       return fallback.trim();
     }
     return 'Assessment';
@@ -881,14 +1031,14 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
     try {
       // First, get available templates
       final templates = await _apiService.getPublishedTemplates();
-      
+
       if (templates.isEmpty) {
         _showMessage('No assessments available at this time.', isError: true);
         return;
       }
-      
+
       Map<String, dynamic>? selectedTemplate;
-      
+
       // If only one template, use it directly
       if (templates.length == 1) {
         selectedTemplate = templates.first as Map<String, dynamic>;
@@ -896,35 +1046,40 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
         // Show selection dialog for multiple templates
         selectedTemplate = await _showAssessmentSelectionDialog(templates);
       }
-      
+
       if (selectedTemplate == null) {
         return; // User cancelled selection
       }
-      
+
       // Navigate to preview screen instead of directly to assessment
       if (!mounted) return;
       final result = await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => AssessmentPreviewScreen(template: selectedTemplate!),
+          builder: (context) =>
+              AssessmentPreviewScreen(template: selectedTemplate!),
         ),
       );
-      
+
       // If assessment was completed, refresh the assessments list
       if (result == true) {
         await _loadAssessments();
         _showMessage('Assessment completed successfully!');
       }
-      
     } catch (e) {
-      _showMessage('Failed to start assessment: ${friendlyError(e)}', isError: true);
+      _showMessage(
+        'Failed to start assessment: ${friendlyError(e)}',
+        isError: true,
+      );
     }
   }
-  
-  Future<Map<String, dynamic>?> _showAssessmentSelectionDialog(List<dynamic> templates) async {
+
+  Future<Map<String, dynamic>?> _showAssessmentSelectionDialog(
+    List<dynamic> templates,
+  ) async {
     final subscriptionService = SubscriptionService();
     final isPremium = subscriptionService.isPremium;
-    
+
     return showDialog<Map<String, dynamic>>(
       context: context,
       builder: (BuildContext context) {
@@ -948,19 +1103,24 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
                 final isMaster = template['is_master_assessment'] == true;
                 final isLocked = template['is_locked'] as bool? ?? true;
                 final canAccess = !isLocked || isPremium;
-                
+
                 return Card(
                   color: isMaster ? Colors.amber[700] : Colors.grey[800],
                   margin: const EdgeInsets.symmetric(vertical: 4),
                   child: ListTile(
                     dense: true,
-                    visualDensity: const VisualDensity(horizontal: -2, vertical: 0),
+                    visualDensity: const VisualDensity(
+                      horizontal: -2,
+                      vertical: 0,
+                    ),
                     leading: Stack(
                       children: [
                         Icon(
                           isMaster ? Icons.star : Icons.assignment,
                           size: 22,
-                          color: isMaster ? Colors.white : (canAccess ? Colors.amber : Colors.grey),
+                          color: isMaster
+                              ? Colors.white
+                              : (canAccess ? Colors.amber : Colors.grey),
                         ),
                         if (!canAccess)
                           Positioned(
@@ -987,22 +1147,32 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
                         color: canAccess ? Colors.white : Colors.grey[500],
                         fontFamily: 'Poppins',
                         fontSize: 14,
-                        fontWeight: isMaster ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isMaster
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                     ),
-                    subtitle: template['description'] != null 
-                      ? Text(
-                          template['description'],
-                          style: TextStyle(
-                            color: isMaster ? Colors.white70 : (canAccess ? Colors.grey[400] : Colors.grey[600]),
-                            fontFamily: 'Poppins',
-                            fontSize: 12,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        )
-                      : null,
-                    trailing: _buildTrailingBadge(isMaster, isLocked, canAccess),
+                    subtitle: template['description'] != null
+                        ? Text(
+                            template['description'],
+                            style: TextStyle(
+                              color: isMaster
+                                  ? Colors.white70
+                                  : (canAccess
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600]),
+                              fontFamily: 'Poppins',
+                              fontSize: 12,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          )
+                        : null,
+                    trailing: _buildTrailingBadge(
+                      isMaster,
+                      isLocked,
+                      canAccess,
+                    ),
                     onTap: () {
                       if (canAccess) {
                         Navigator.of(context).pop(template);
@@ -1022,10 +1192,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
               onPressed: () => Navigator.of(context).pop(),
               child: const Text(
                 'Cancel',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontFamily: 'Poppins',
-                ),
+                style: TextStyle(color: Colors.grey, fontFamily: 'Poppins'),
               ),
             ),
           ],
@@ -1033,7 +1200,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
       },
     );
   }
-  
+
   Widget? _buildTrailingBadge(bool isMaster, bool isLocked, bool canAccess) {
     if (!canAccess) {
       return Container(
@@ -1047,7 +1214,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
           'PREMIUM',
           style: TextStyle(
             color: Colors.amber,
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: FontWeight.bold,
             fontFamily: 'Poppins',
           ),
@@ -1065,7 +1232,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
           'OFFICIAL',
           style: TextStyle(
             color: Colors.white,
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: FontWeight.bold,
             fontFamily: 'Poppins',
           ),
@@ -1074,7 +1241,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
     }
     return null;
   }
-  
+
   void _showUpgradePrompt() {
     showDialog(
       context: context,
@@ -1100,10 +1267,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
           children: [
             Text(
               'This assessment requires a premium subscription.',
-              style: TextStyle(
-                color: Colors.white,
-                fontFamily: 'Poppins',
-              ),
+              style: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
             ),
             SizedBox(height: 12),
             Text(
@@ -1125,10 +1289,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
             onPressed: () => Navigator.pop(context),
             child: const Text(
               'Maybe Later',
-              style: TextStyle(
-                color: Colors.grey,
-                fontFamily: 'Poppins',
-              ),
+              style: TextStyle(color: Colors.grey, fontFamily: 'Poppins'),
             ),
           ),
           ElevatedButton(
@@ -1171,20 +1332,14 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
         ),
         content: Text(
           message,
-          style: const TextStyle(
-            color: Colors.white,
-            fontFamily: 'Poppins',
-          ),
+          style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text(
               'OK',
-              style: TextStyle(
-                color: Colors.amber,
-                fontFamily: 'Poppins',
-              ),
+              style: TextStyle(color: Colors.amber, fontFamily: 'Poppins'),
             ),
           ),
         ],
@@ -1243,10 +1398,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text(
               'Cancel',
-              style: TextStyle(
-                color: Colors.grey,
-                fontFamily: 'Poppins',
-              ),
+              style: TextStyle(color: Colors.grey, fontFamily: 'Poppins'),
             ),
           ),
           ElevatedButton(
@@ -1282,19 +1434,21 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
     print('=== ASSESSMENT DEBUG ===');
     print('Full assessment data: $assessment');
     print('Keys: ${assessment.keys.toList()}');
-    
+
     final assessmentId = assessment['id'] as String?;
     final templateId = assessment['template_id'] as String?;
-    
+
     // Check multiple possible field names for submission status
     final isSubmittedRaw = assessment['is_submitted'];
     final submittedAt = assessment['submitted_at'];
     final status = assessment['status'];
-    
-    print('Raw is_submitted value: $isSubmittedRaw (type: ${isSubmittedRaw.runtimeType})');
+
+    print(
+      'Raw is_submitted value: $isSubmittedRaw (type: ${isSubmittedRaw.runtimeType})',
+    );
     print('submitted_at: $submittedAt');
     print('status: $status');
-    
+
     // Handle different possible formats for submission status
     bool isSubmitted = false;
     if (isSubmittedRaw is bool) {
@@ -1306,12 +1460,12 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
     } else if (submittedAt != null) {
       isSubmitted = true;
     }
-    
+
     print('Final isSubmitted: $isSubmitted');
     print('Assessment ID: $assessmentId');
     print('Template ID: $templateId');
     print('=== END DEBUG ===');
-    
+
     if (assessmentId == null || templateId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1321,26 +1475,26 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
       );
       return;
     }
-    
+
     if (isSubmitted) {
       // For submitted assessments, show the results
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('This assessment has already been submitted (is_submitted: $isSubmittedRaw)'),
+          content: Text(
+            'This assessment has already been submitted (is_submitted: $isSubmittedRaw)',
+          ),
           backgroundColor: Colors.orange,
         ),
       );
       return;
     }
-    
+
     // Navigate to AssessmentScreen for in-progress drafts
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AssessmentScreen(
-          templateId: templateId,
-          draftId: assessmentId,
-        ),
+        builder: (context) =>
+            AssessmentScreen(templateId: templateId, draftId: assessmentId),
       ),
     ).then((_) {
       // Refresh the assessments list when returning from AssessmentScreen
@@ -1383,9 +1537,9 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew> with Ap
 class _FeatureRow extends StatelessWidget {
   final IconData icon;
   final String text;
-  
+
   const _FeatureRow({required this.icon, required this.text});
-  
+
   @override
   Widget build(BuildContext context) {
     return Padding(

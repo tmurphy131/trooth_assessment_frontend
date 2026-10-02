@@ -80,7 +80,7 @@ class _AddEditNoteDialogState extends State<AddEditNoteDialog> {
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
                     hintText: 'Write your note here...',
-                    hintStyle: TextStyle(color: Colors.grey[600]),
+                    hintStyle: TextStyle(color: Colors.grey[500]),
                     filled: true,
                     fillColor: Colors.black.withValues(alpha: 0.3),
                     border: OutlineInputBorder(
@@ -153,7 +153,7 @@ class _AddEditNoteDialogState extends State<AddEditNoteDialog> {
                                   ? 'Apprentice can see this note'
                                   : 'Only you can see this note',
                               style: TextStyle(
-                                color: Colors.grey[600],
+                                color: Colors.grey[500],
                                 fontSize: 12,
                               ),
                             ),

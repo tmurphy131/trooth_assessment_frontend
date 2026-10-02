@@ -446,7 +446,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                     ),
                     child: Text(
                       _activeNotificationCount > 99 ? '99+' : _activeNotificationCount.toString(),
-                      style: const TextStyle(color: Colors.white, fontSize: 9, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
+                      style: const TextStyle(color: Colors.white, fontSize: 11, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
@@ -520,7 +520,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                   backgroundColor: Colors.redAccent,
                   label: Text(
                     _triviaPendingCount > 9 ? '9+' : '$_triviaPendingCount',
-                    style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                   ),
                   child: const Icon(Icons.quiz),
                 ),
@@ -544,7 +544,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Flexible(child: const Text(
                 'My Apprentices',
                 style: TextStyle(
                   color: Colors.white,
@@ -552,7 +552,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                   fontWeight: FontWeight.bold,
                   fontFamily: 'Poppins',
                 ),
-              ),
+              )),
               Row(
                 children: [
                   IconButton(
@@ -736,7 +736,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
               title,
               style: TextStyle(
                 color: Colors.grey[400],
-                fontSize: 10,
+                fontSize: 11,
                 fontFamily: 'Poppins',
                 height: 1.2,
               ),
@@ -1384,12 +1384,10 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                 child: const Text('Continue', style: TextStyle(color: Colors.lightBlueAccent, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 12)),
               ),
               const SizedBox(width: 4),
-              GestureDetector(
-                onTap: () => _confirmDeleteMentorDraft(draftId),
-                child: const Padding(
-                  padding: EdgeInsets.all(4),
-                  child: Icon(Icons.delete_outline, color: Colors.redAccent, size: 18),
-                ),
+              IconButton(
+                tooltip: 'Delete draft',
+                onPressed: () => _confirmDeleteMentorDraft(draftId),
+                icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 18),
               ),
             ],
           ),
@@ -1458,7 +1456,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                   ),
                 )
               else
-                const Text('Processing...', style: TextStyle(color: Colors.white38, fontFamily: 'Poppins', fontSize: 12)),
+                const Text('Processing...', style: TextStyle(color: Colors.white60, fontFamily: 'Poppins', fontSize: 12)),
               const SizedBox(width: 4),
               const Icon(Icons.chevron_right, color: Colors.white38, size: 18),
             ],
@@ -1486,7 +1484,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Flexible(child: const Text(
                 'MY ASSESSMENTS',
                 style: TextStyle(
                   color: Colors.white70,
@@ -1495,7 +1493,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                   letterSpacing: 1.2,
                   fontFamily: 'Poppins',
                 ),
-              ),
+              )),
               ElevatedButton.icon(
                 onPressed: _startSelfAssessment,
                 icon: const Icon(Icons.add, size: 16),

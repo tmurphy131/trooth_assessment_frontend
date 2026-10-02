@@ -231,7 +231,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           ),
         ),
         centerTitle: true,
-        leading: IconButton(
+        leading: IconButton(tooltip: 'Back', 
           icon: const Icon(Icons.arrow_back, color: Colors.amber),
           onPressed: () => Navigator.pop(context),
         ),
@@ -351,7 +351,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               ),
               Text(
                 '  •  ',
-                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                style: TextStyle(color: Colors.grey[500], fontSize: 12),
               ),
               GestureDetector(
                 onTap: () => _openUrl('https://onlyblv.com/privacy.html'),
@@ -372,9 +372,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             'Payment will be charged to your App Store account.\nSubscription automatically renews unless cancelled.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.grey[600],
+              color: Colors.grey[500],
               fontFamily: 'Poppins',
-              fontSize: 10,
+              fontSize: 11,
             ),
           ),
         ],
@@ -472,13 +472,13 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Flexible(child: const Text(
                   'Gift Seats',
                   style: TextStyle(
                     color: Colors.white,
                     fontFamily: 'Poppins',
                   ),
-                ),
+                )),
                 Text(
                   '${status.usedSeats ?? 0} / ${status.availableSeats} used',
                   style: const TextStyle(
@@ -658,7 +658,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   'SAVE 17%',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -968,7 +968,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   child: SingleChildScrollView(
                     child: Text(
                       _detailedDebug,
-                      style: const TextStyle(color: Colors.white60, fontSize: 9, fontFamily: 'monospace'),
+                      style: const TextStyle(color: Colors.white60, fontSize: 11, fontFamily: 'monospace'),
                     ),
                   ),
                 ),
@@ -1088,7 +1088,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                             'BEST VALUE',
                             style: TextStyle(
                               color: Colors.black,
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -1173,7 +1173,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                             'BEST VALUE',
                             style: TextStyle(
                               color: Colors.black,
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

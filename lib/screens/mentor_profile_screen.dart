@@ -146,7 +146,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
         backgroundColor: Colors.grey[850],
         title: const Text('My Profile', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh, color: Colors.amber)),
+          IconButton(tooltip: 'Refresh', onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh, color: Colors.amber)),
           TextButton(
             onPressed: _loading ? null : _save,
             child: const Text('Save', style: TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
@@ -559,7 +559,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                             style: TextStyle(
                               color: Colors.amber,
                               fontFamily: 'Poppins',
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

@@ -83,7 +83,7 @@ class _AssessmentPreviewScreenState extends State<AssessmentPreviewScreen> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
-        leading: IconButton(
+        leading: IconButton(tooltip: 'Back', 
           icon: const Icon(Icons.arrow_back, color: Colors.amber),
           onPressed: () => Navigator.of(context).pop(),
         ),

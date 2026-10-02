@@ -82,7 +82,7 @@ class _TriviaChallengeListScreenState extends State<TriviaChallengeListScreen> {
           style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 18),
         ),
         actions: [
-          IconButton(
+          IconButton(tooltip: 'Refresh', 
             icon: const Icon(Icons.refresh, color: Color(0xFFFFD700)),
             onPressed: _load,
           ),

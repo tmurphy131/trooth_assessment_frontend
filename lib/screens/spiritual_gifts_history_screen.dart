@@ -152,7 +152,7 @@ class _SpiritualGiftsHistoryScreenState extends State<SpiritualGiftsHistoryScree
             SizedBox(height: 160),
             Center(child: Text('No submissions yet.', style: TextStyle(color: Colors.white70, fontFamily: 'Poppins'))),
             SizedBox(height: 40),
-            Center(child: Text('If you recently completed an assessment, pull to refresh.', style: TextStyle(color: Colors.white38, fontFamily: 'Poppins', fontSize: 12))),
+            Center(child: Text('If you recently completed an assessment, pull to refresh.', style: TextStyle(color: Colors.white60, fontFamily: 'Poppins', fontSize: 12))),
           ],
         ),
       );

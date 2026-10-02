@@ -490,7 +490,10 @@ Also replace `widget_test.dart` and add `flutter analyze && flutter test` as the
 | 8.3 privacy manifest | **Fixed:** `ios/Runner/PrivacyInfo.xcprivacy` (no tracking; name, email, user ID, purchase history, user content, device ID, crash data, all for app functionality) is bundled in Runner. Keep it in sync with the App Store Connect privacy label. |
 | 8.5 notification permission | **Fixed:** push setup never shows the system prompt cold. `NotificationPrimer` explains role-specific benefits first: after the first-run tutorial, or 2 s after the dashboard opens for returning users. "Turn on" asks; "Not now" waits 7 days. Covered by the iOS device test. |
 | iOS crash symbols | **Fixed:** fastlane (and `scripts/build_ios.sh`) upload dSYMs with Crashlytics' `upload-symbols`. Verified upload of the App, Runner and Flutter dSYMs. Android Crashlytics confirmed receiving crashes. |
-| 4.1, 7.1-7.3, 7.5 | **In progress.** |
+| 7.1 screen-reader labels | **Fixed:** all 24 `IconButton`s without labels got tooltips (Flutter reads them aloud; the password toggles say Show/Hide). Two icon-only `GestureDetector`s (delete draft, quit game) became labeled `IconButton`s with 48 px tap targets. |
+| 7.2 contrast and small text | **Fixed, finding corrected:** the app is entirely dark (146 dark screen backgrounds, none light), so the "gold on white" concern didn't apply; gold on black is about 9:1. Real issues fixed: 36 font sizes under 11 raised to 11 (Apple's minimum), and 33 dim text colors (`grey[600-800]`, `white24/30/38`) changed to `grey[500]`/`white60` (about 7:1). Only text styles were changed; borders and fills keep their colors. |
+| 7.3 text scaling | **Fixed:** system text size is honored up to 1.5× (`MediaQuery.withClampedTextScaling`). At the largest iOS size the device test found 5 overflows: the apprentice dashboard (fixed-height grid in a non-scrolling column; it now scrolls and sizes to content) and 9 header rows across 8 screens (titles can now shrink). The device test now passes at the largest accessibility text size with no overflows. |
+| 4.1, 7.5 | **In progress.** |
 
 **Release note:** Associated Domains is already enabled on the App ID. If the match provisioning profiles predate that, regenerate them before the next tag so they include the `applinks:links.onlyblv.com` entitlement.
 

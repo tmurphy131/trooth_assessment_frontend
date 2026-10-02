@@ -298,7 +298,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
           title,
           style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
         ),
-        leading: IconButton(
+        leading: IconButton(tooltip: 'Back', 
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
@@ -308,7 +308,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
             onPressed: _showExportOptions,
             tooltip: 'Export Report',
           ),
-          IconButton(
+          IconButton(tooltip: 'Refresh', 
             icon: const Icon(Icons.refresh, color: Colors.amber),
             onPressed: () {
               _loadReport();
@@ -890,7 +890,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
                     child: Text(
                       severity,
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 11,
                         color: severity == 'high' ? Colors.red.shade300 :
                                severity == 'moderate' ? Colors.orange.shade300 : Colors.yellow.shade300,
                       ),
@@ -1122,7 +1122,7 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
                                     child: Text(
                                       level,
                                       style: TextStyle(
-                                        fontSize: 10,
+                                        fontSize: 11,
                                         color: level == 'Strong' ? Colors.green.shade300 :
                                                level == 'Weak' ? Colors.red.shade300 : Colors.orange.shade300,
                                       ),

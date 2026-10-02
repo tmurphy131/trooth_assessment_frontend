@@ -219,7 +219,7 @@ class _MentorNotificationsScreenState extends State<MentorNotificationsScreen> {
                       style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'),
                       decoration: const InputDecoration(
                         hintText: 'e.g., 2025-01-03 16:00 PT',
-                        hintStyle: TextStyle(color: Colors.white38),
+                        hintStyle: TextStyle(color: Colors.white60),
                         enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.amber)),
                         focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.amber, width: 2)),
                       ),

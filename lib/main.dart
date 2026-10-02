@@ -248,6 +248,12 @@ class MyApp extends StatelessWidget {
         theme: buildAppTheme(),
         debugShowCheckedModeBanner: false,
         navigatorKey: navigatorKey,
+        // Honor larger system text, but cap it so fixed layouts don't clip at
+        // the extreme accessibility sizes (iOS goes past 3x).
+        builder: (context, child) => MediaQuery.withClampedTextScaling(
+          maxScaleFactor: 1.5,
+          child: child!,
+        ),
         home: const AuthGate(), // Check auth state and route to appropriate screen
       onGenerateRoute: (settings) {
         final args = settings.arguments is Map ? settings.arguments as Map : const {};

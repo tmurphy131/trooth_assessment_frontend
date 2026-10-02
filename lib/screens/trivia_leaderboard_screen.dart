@@ -83,7 +83,7 @@ class _TriviaLeaderboardScreenState extends State<TriviaLeaderboardScreen>
           style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 18),
         ),
         actions: [
-          IconButton(
+          IconButton(tooltip: 'Refresh', 
             icon: const Icon(Icons.refresh, color: Color(0xFFFFD700)),
             onPressed: _load,
           ),
@@ -236,7 +236,7 @@ class _TriviaLeaderboardScreenState extends State<TriviaLeaderboardScreen>
               ),
               Text(
                 'streak: $streak',
-                style: const TextStyle(color: Colors.white38, fontFamily: 'Poppins', fontSize: 11),
+                style: const TextStyle(color: Colors.white60, fontFamily: 'Poppins', fontSize: 11),
               ),
             ],
           ),

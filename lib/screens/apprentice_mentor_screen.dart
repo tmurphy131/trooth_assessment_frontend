@@ -253,7 +253,7 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
         backgroundColor: Colors.grey[850],
         title: const Text('Mentor', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(onPressed: _loading ? null : _fetch, icon: const Icon(Icons.refresh, color: Colors.amber))
+          IconButton(tooltip: 'Refresh', onPressed: _loading ? null : _fetch, icon: const Icon(Icons.refresh, color: Colors.amber))
         ],
       ),
       body: _loading
@@ -666,7 +666,7 @@ class _ApprenticeMentorScreenState extends State<ApprenticeMentorScreen> {
                     style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'),
                     decoration: const InputDecoration(
                       hintText: 'e.g., Tue 5pm PST',
-                      hintStyle: TextStyle(color: Colors.white38),
+                      hintStyle: TextStyle(color: Colors.white60),
                       enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.amber)),
                       focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.amber, width: 2)),
                     ),
