@@ -58,6 +58,7 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Future<void> _signUp() async {
+    FocusManager.instance.primaryFocus?.unfocus(); // keyboard shouldn't follow to the dashboard
     if (!_formKey.currentState!.validate()) return;
     if (_role == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a role')));

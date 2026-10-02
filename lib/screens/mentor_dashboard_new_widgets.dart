@@ -13,21 +13,25 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Flexible(child: const Text(
-                'My Apprentices',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Poppins',
+              Flexible(
+                child: const Text(
+                  'My Apprentices',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Poppins',
+                  ),
                 ),
-              )),
+              ),
               Row(
                 children: [
                   IconButton(
                     onPressed: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const MentorSpiritualGiftsScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const MentorSpiritualGiftsScreen(),
+                        ),
                       );
                     },
                     icon: const Icon(Icons.auto_awesome, color: Colors.amber),
@@ -37,7 +41,10 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
                   IconButton(
                     key: inviteButtonKey,
                     onPressed: _navigateToInviteApprentices,
-                    icon: const Icon(Icons.person_add_alt_1, color: Colors.amber),
+                    icon: const Icon(
+                      Icons.person_add_alt_1,
+                      color: Colors.amber,
+                    ),
                     tooltip: 'Invite Apprentice',
                   ),
                   IconButton(
@@ -45,11 +52,15 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => TemplateManagementScreen(user: user),
+                          builder: (context) =>
+                              TemplateManagementScreen(user: user),
                         ),
                       );
                     },
-                    icon: const Icon(Icons.assignment_outlined, color: Colors.amber),
+                    icon: const Icon(
+                      Icons.assignment_outlined,
+                      color: Colors.amber,
+                    ),
                     tooltip: 'Manage Templates',
                   ),
                   IconButton(
@@ -68,42 +79,42 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
                     child: CircularProgressIndicator(color: Colors.amber),
                   )
                 : _error != null
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              _error!,
-                              style: TextStyle(
-                                color: Colors.grey[400],
-                                fontFamily: 'Poppins',
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: _loadApprentices,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.amber,
-                                foregroundColor: Colors.black,
-                              ),
-                              child: const Text('Retry'),
-                            ),
-                          ],
-                        ),
-                      )
-                    : _apprentices.isEmpty
-                        ? _buildEmptyApprenticesState()
-                        : ListView.builder(
-                            itemCount: _apprentices.length,
-                            itemBuilder: (context, index) {
-                              // Bounds check to prevent RangeError during list updates
-                              if (index >= _apprentices.length) {
-                                return const SizedBox.shrink();
-                              }
-                              return _buildApprenticeCard(_apprentices[index], index);
-                            },
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _error!,
+                          style: TextStyle(
+                            color: Colors.grey[400],
+                            fontFamily: 'Poppins',
                           ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _loadApprentices,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber,
+                            foregroundColor: Colors.black,
+                          ),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  )
+                : _apprentices.isEmpty
+                ? _buildEmptyApprenticesState()
+                : ListView.builder(
+                    itemCount: _apprentices.length,
+                    itemBuilder: (context, index) {
+                      // Bounds check to prevent RangeError during list updates
+                      if (index >= _apprentices.length) {
+                        return const SizedBox.shrink();
+                      }
+                      return _buildApprenticeCard(_apprentices[index], index);
+                    },
+                  ),
           ),
         ],
       ),
@@ -112,7 +123,9 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
 
   Widget _buildStatsRow() {
     final totalApprentices = _apprentices.length;
-    final allAssessments = _completedAssessmentsByApprentice.values.expand((x) => x).toList();
+    final allAssessments = _completedAssessmentsByApprentice.values
+        .expand((x) => x)
+        .toList();
     final totalCompletedAssessments = allAssessments.length;
     // Calculate average score
     double averageScore = 0.0;
@@ -123,8 +136,10 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
         double v;
         if (raw is num) {
           v = raw.toDouble();
-        } else if (raw is String) v = double.tryParse(raw) ?? 0.0;
-        else v = 0.0;
+        } else if (raw is String)
+          v = double.tryParse(raw) ?? 0.0;
+        else
+          v = 0.0;
         if (v.isFinite) scores.add(v);
       }
       if (scores.isNotEmpty) {
@@ -219,60 +234,62 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
   }
 
   Widget _buildEmptyApprenticesState() {
-    return Center(
-      child: Card(
-        elevation: 2,
-        color: Colors.grey[900],
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.people_outline,
-                size: 64,
-                color: Colors.grey[600],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'No apprentices yet',
-                style: TextStyle(
-                  color: Colors.grey[400],
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Poppins',
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Start mentoring by inviting apprentices to your program',
-                style: TextStyle(
-                  color: Colors.grey[500],
-                  fontSize: 14,
-                  fontFamily: 'Poppins',
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () => _navigateToInviteApprentices(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber,
-                  foregroundColor: Colors.black,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text(
-                  'Invite Apprentices',
+    // Scrolls inside the space left under the stats row, so it can't overflow
+    // when the user's text size makes the cards taller.
+    return SingleChildScrollView(
+      child: Center(
+        child: Card(
+          elevation: 2,
+          color: Colors.grey[900],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.people_outline, size: 64, color: Colors.grey[600]),
+                const SizedBox(height: 16),
+                Text(
+                  'No apprentices yet',
                   style: TextStyle(
-                    fontFamily: 'Poppins',
+                    color: Colors.grey[400],
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
+                    fontFamily: 'Poppins',
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  'Start mentoring by inviting apprentices to your program',
+                  style: TextStyle(
+                    color: Colors.grey[500],
+                    fontSize: 14,
+                    fontFamily: 'Poppins',
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () => _navigateToInviteApprentices(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.amber,
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Invite Apprentices',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -283,15 +300,15 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
     final name = apprentice['name'] ?? 'Unknown';
     final email = apprentice['email'] ?? '';
     final apprenticeId = apprentice['id'] as String;
-    
+
     // Check if this apprentice is accessible based on subscription
     final isAccessible = _subscriptionService.status.canAccessApprentice(index);
-    
+
     // If not accessible, show locked card
     if (!isAccessible) {
       return _buildLockedApprenticeCard(name, email, index);
     }
-    
+
     return Card(
       elevation: 2,
       color: Colors.grey[850],
@@ -305,10 +322,7 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
             color: Colors.amber.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(24),
           ),
-          child: const Icon(
-            Icons.person,
-            color: Colors.amber,
-          ),
+          child: const Icon(Icons.person, color: Colors.amber),
         ),
         title: Text(
           name,
@@ -344,12 +358,16 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
                 break;
               case 'agreement':
                 await Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const MentorAgreementsScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const MentorAgreementsScreen(),
+                  ),
                 );
                 break;
               case 'gift_premium':
                 final result = await Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const MentorGiftSeatsScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const MentorGiftSeatsScreen(),
+                  ),
                 );
                 if (result == true) {
                   _loadSubscriptionData();
@@ -377,7 +395,10 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
                 children: [
                   Icon(Icons.assignment, color: Colors.amber),
                   SizedBox(width: 8),
-                  Text('View Assessments', style: TextStyle(color: Colors.white)),
+                  Text(
+                    'View Assessments',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ],
               ),
             ),
@@ -397,7 +418,10 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
                 children: [
                   Icon(Icons.description, color: Colors.amber),
                   SizedBox(width: 8),
-                  Text('Manage Agreement', style: TextStyle(color: Colors.white)),
+                  Text(
+                    'Manage Agreement',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ],
               ),
             ),
@@ -462,7 +486,11 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
                 ),
                 subtitle: Text(
                   email,
-                  style: TextStyle(color: Colors.grey[400], fontFamily: 'Poppins', fontSize: 12),
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -474,7 +502,10 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   gradient: LinearGradient(
-                    colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.7),
+                    ],
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                   ),
@@ -483,7 +514,10 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       margin: const EdgeInsets.only(right: 12),
                       decoration: BoxDecoration(
                         color: Colors.amber.withValues(alpha: 0.9),
@@ -523,7 +557,16 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
         children: [
           Icon(icon, color: Colors.green, size: 18),
           const SizedBox(width: 8),
-          Expanded(child: Text(text, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontSize: 13))),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontFamily: 'Poppins',
+                fontSize: 13,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -534,7 +577,9 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
     if (loading) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 12),
-        child: Center(child: CircularProgressIndicator(color: Colors.amber, strokeWidth: 2)),
+        child: Center(
+          child: CircularProgressIndicator(color: Colors.amber, strokeWidth: 2),
+        ),
       );
     }
     if (_mentorOwnDrafts.isEmpty && _mentorOwnAssessments.isEmpty) {
@@ -542,7 +587,11 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
         padding: EdgeInsets.symmetric(vertical: 8),
         child: Text(
           'No assessments yet — tap "Take One" to start.',
-          style: TextStyle(color: Colors.white54, fontFamily: 'Poppins', fontSize: 13),
+          style: TextStyle(
+            color: Colors.white54,
+            fontFamily: 'Poppins',
+            fontSize: 13,
+          ),
         ),
       );
     }
@@ -575,16 +624,34 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
           ),
           child: Row(
             children: [
-              const Icon(Icons.edit_note, color: Colors.lightBlueAccent, size: 20),
+              const Icon(
+                Icons.edit_note,
+                color: Colors.lightBlueAccent,
+                size: 20,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('In Progress', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 14)),
+                    const Text(
+                      'In Progress',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
                     Text(
-                      totalCount > 0 ? '$answeredCount of $totalCount answered' : '$answeredCount answered',
-                      style: const TextStyle(color: Colors.white54, fontFamily: 'Poppins', fontSize: 12),
+                      totalCount > 0
+                          ? '$answeredCount of $totalCount answered'
+                          : '$answeredCount answered',
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -594,15 +661,29 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
                 decoration: BoxDecoration(
                   color: Colors.lightBlueAccent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.lightBlueAccent.withValues(alpha: 0.4)),
+                  border: Border.all(
+                    color: Colors.lightBlueAccent.withValues(alpha: 0.4),
+                  ),
                 ),
-                child: const Text('Continue', style: TextStyle(color: Colors.lightBlueAccent, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 12)),
+                child: const Text(
+                  'Continue',
+                  style: TextStyle(
+                    color: Colors.lightBlueAccent,
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
               ),
               const SizedBox(width: 4),
               IconButton(
                 tooltip: 'Delete draft',
                 onPressed: () => _confirmDeleteMentorDraft(draftId),
-                icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 18),
+                icon: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.redAccent,
+                  size: 18,
+                ),
               ),
             ],
           ),
@@ -625,15 +706,17 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
       }
       final assessmentId = assessment['id']?.toString() ?? '';
       return InkWell(
-        onTap: assessmentId.isEmpty ? null : () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ApprenticeReportScreen(
-              assessmentId: assessmentId,
-              title: 'My Assessment Report',
-            ),
-          ),
-        ),
+        onTap: assessmentId.isEmpty
+            ? null
+            : () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ApprenticeReportScreen(
+                    assessmentId: assessmentId,
+                    title: 'My Assessment Report',
+                  ),
+                ),
+              ),
         borderRadius: BorderRadius.circular(8),
         child: Container(
           margin: const EdgeInsets.only(bottom: 8),
@@ -645,33 +728,69 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
           ),
           child: Row(
             children: [
-              const Icon(Icons.assignment_turned_in, color: Colors.amber, size: 20),
+              const Icon(
+                Icons.assignment_turned_in,
+                color: Colors.amber,
+                size: 20,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(assessment['template_name'] as String? ?? 'Assessment', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 14)),
+                    Text(
+                      assessment['template_name'] as String? ?? 'Assessment',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
                     if (dateLabel.isNotEmpty)
-                      Text(dateLabel, style: const TextStyle(color: Colors.white54, fontFamily: 'Poppins', fontSize: 12)),
+                      Text(
+                        dateLabel,
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontFamily: 'Poppins',
+                          fontSize: 12,
+                        ),
+                      ),
                   ],
                 ),
               ),
               if (overallScore != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.amber.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                    border: Border.all(
+                      color: Colors.amber.withValues(alpha: 0.4),
+                    ),
                   ),
                   child: Text(
                     '$overallScore%',
-                    style: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 13),
+                    style: const TextStyle(
+                      color: Colors.amber,
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
                   ),
                 )
               else
-                const Text('Processing...', style: TextStyle(color: Colors.white60, fontFamily: 'Poppins', fontSize: 12)),
+                const Text(
+                  'Processing...',
+                  style: TextStyle(
+                    color: Colors.white60,
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                  ),
+                ),
               const SizedBox(width: 4),
               const Icon(Icons.chevron_right, color: Colors.white38, size: 18),
             ],
@@ -687,9 +806,11 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
     // For free mentors, only show assessments for the first apprentice
     final status = _subscriptionService.status;
     final accessibleApprentices = (!status.isPremium && !status.isGrandfathered)
-        ? (_apprentices.isNotEmpty ? [_apprentices.first] : <Map<String, dynamic>>[])
+        ? (_apprentices.isNotEmpty
+              ? [_apprentices.first]
+              : <Map<String, dynamic>>[])
         : _apprentices;
-    
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -699,24 +820,32 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Flexible(child: const Text(
-                'MY ASSESSMENTS',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1.2,
-                  fontFamily: 'Poppins',
+              Flexible(
+                child: const Text(
+                  'MY ASSESSMENTS',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.2,
+                    fontFamily: 'Poppins',
+                  ),
                 ),
-              )),
+              ),
               ElevatedButton.icon(
                 onPressed: _startSelfAssessment,
                 icon: const Icon(Icons.add, size: 16),
-                label: const Text('Take One', style: TextStyle(fontFamily: 'Poppins', fontSize: 13)),
+                label: const Text(
+                  'Take One',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.amber,
                   foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
@@ -740,15 +869,17 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
             ),
           ),
           const SizedBox(height: 12),
-          Row(children: [
-            Expanded(child: _buildApprenticeFilter()),
-            const SizedBox(width: 8),
-            IconButton(
-              onPressed: _reloadAssessments,
-              icon: const Icon(Icons.refresh, color: Colors.amber),
-              tooltip: 'Refresh',
-            ),
-          ]),
+          Row(
+            children: [
+              Expanded(child: _buildApprenticeFilter()),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: _reloadAssessments,
+                icon: const Icon(Icons.refresh, color: Colors.amber),
+                tooltip: 'Refresh',
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
           Expanded(
             child: _isLoadingAssessments
@@ -756,35 +887,51 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
                     child: CircularProgressIndicator(color: Colors.amber),
                   )
                 : _completedAssessmentsByApprentice.isEmpty
-                    ? _buildEmptyAssessmentsState()
-                    : ListView(
-                        children: (_selectedApprenticeId == '_all'
+                ? _buildEmptyAssessmentsState()
+                : ListView(
+                    children:
+                        (_selectedApprenticeId == '_all'
                                 ? accessibleApprentices
-                                : accessibleApprentices.where((a) => a['id'] == _selectedApprenticeId).toList())
+                                : accessibleApprentices
+                                      .where(
+                                        (a) => a['id'] == _selectedApprenticeId,
+                                      )
+                                      .toList())
                             .map((apprentice) {
-                          final apprenticeId = apprentice['id'] as String;
-                          final assessments = _completedAssessmentsByApprentice[apprenticeId] ?? [];
-                          if (assessments.isEmpty) return const SizedBox.shrink();
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                                child: Text(
-                                  '${apprentice['name'] ?? 'Unknown'} (${apprentice['email'] ?? ''})',
-                                  style: const TextStyle(
-                                    color: Colors.amber,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'Poppins',
+                              final apprenticeId = apprentice['id'] as String;
+                              final assessments =
+                                  _completedAssessmentsByApprentice[apprenticeId] ??
+                                  [];
+                              if (assessments.isEmpty)
+                                return const SizedBox.shrink();
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8.0,
+                                    ),
+                                    child: Text(
+                                      '${apprentice['name'] ?? 'Unknown'} (${apprentice['email'] ?? ''})',
+                                      style: const TextStyle(
+                                        color: Colors.amber,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'Poppins',
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                              ...assessments.map((assessment) => _buildCompletedAssessmentCard(assessment)),
-                            ],
-                          );
-                        }).toList(),
-                      ),
+                                  ...assessments.map(
+                                    (assessment) =>
+                                        _buildCompletedAssessmentCard(
+                                          assessment,
+                                        ),
+                                  ),
+                                ],
+                              );
+                            })
+                            .toList(),
+                  ),
           ),
         ],
       ),
@@ -853,11 +1000,22 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
     if (!overall10.isFinite) overall10 = 0.0;
     final overallPct = (overall10 * 10).clamp(0, 100).round();
     final createdAt = assessment['created_at'] as String?;
-    final apprenticeName = assessment['apprentice_name'] ?? assessment['apprentice']?['name'] ?? 'Unknown Apprentice';
-    final apprenticeId = assessment['apprentice_id'] ?? assessment['apprentice']?['id'] ?? '';
-    final assessmentId = assessment['id']?.toString() ?? assessment['assessment_id']?.toString() ?? '';
-    final templateName = assessment['template_name'] ?? assessment['template']?['name'] ?? assessment['category'] ?? 'Assessment';
-    
+    final apprenticeName =
+        assessment['apprentice_name'] ??
+        assessment['apprentice']?['name'] ??
+        'Unknown Apprentice';
+    final apprenticeId =
+        assessment['apprentice_id'] ?? assessment['apprentice']?['id'] ?? '';
+    final assessmentId =
+        assessment['id']?.toString() ??
+        assessment['assessment_id']?.toString() ??
+        '';
+    final templateName =
+        assessment['template_name'] ??
+        assessment['template']?['name'] ??
+        assessment['category'] ??
+        'Assessment';
+
     return Card(
       elevation: 2,
       color: Colors.grey[850],
@@ -868,13 +1026,12 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: _getScoreColor(overallPct).withValues(alpha: 0.2), // Percent 0..100
+            color: _getScoreColor(
+              overallPct,
+            ).withValues(alpha: 0.2), // Percent 0..100
             borderRadius: BorderRadius.circular(24),
           ),
-          child: Icon(
-            Icons.analytics,
-            color: _getScoreColor(overallPct),
-          ),
+          child: Icon(Icons.analytics, color: _getScoreColor(overallPct)),
         ),
         title: Text(
           templateName.toString(),
@@ -905,7 +1062,9 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
             ),
             if (scores.containsKey('category_scores'))
               Text(
-                _buildCategoryScoresSummary(scores['category_scores'] as Map<String, dynamic>),
+                _buildCategoryScoresSummary(
+                  scores['category_scores'] as Map<String, dynamic>,
+                ),
                 style: TextStyle(
                   color: Colors.grey[400],
                   fontSize: 12,
@@ -934,7 +1093,9 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => MentorSpiritualGiftsScreen(
-                  initialApprenticeId: apprenticeId?.toString().isEmpty == false ? apprenticeId.toString() : null,
+                  initialApprenticeId: apprenticeId?.toString().isEmpty == false
+                      ? apprenticeId.toString()
+                      : null,
                   initialApprenticeName: apprenticeName?.toString(),
                 ),
               ),

@@ -38,6 +38,9 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
   }
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
+    // Close the keyboard before the app switches screens; otherwise it can
+    // stay up over the dashboard.
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _isLoading = true);
     try {
       final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
@@ -186,6 +189,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
 
   /// Google Sign-In
   Future<void> _signInWithGoogle() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _isLoading = true);
     try {
       await _initGoogleSignIn();
@@ -242,6 +246,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
 
   /// Apple Sign-In
   Future<void> _signInWithApple() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _isLoading = true);
     try {
       // Nonce binds Apple's identity token to this sign-in attempt so it
