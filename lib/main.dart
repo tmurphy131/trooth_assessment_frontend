@@ -242,10 +242,18 @@ class MyApp extends StatelessWidget {
         scaffoldMessengerKey: scaffoldMessengerKey,
         // Honor larger system text, but cap it so fixed layouts don't clip at
         // the extreme accessibility sizes (iOS goes past 3x).
-        builder: (context, child) => MediaQuery.withClampedTextScaling(
-          maxScaleFactor: 1.5,
-          child: child!,
-        ),
+        builder: (context, child) {
+          // AuthGate (at /) removes the native splash once it knows where to
+          // go. Any other first route (login when signed out, a public
+          // agreement link) is ready immediately, so release the splash here.
+          if (appRouter.routerDelegate.currentConfiguration.uri.path != '/') {
+            FlutterNativeSplash.remove();
+          }
+          return MediaQuery.withClampedTextScaling(
+            maxScaleFactor: 1.5,
+            child: child!,
+          );
+        },
       ),
     );
   }

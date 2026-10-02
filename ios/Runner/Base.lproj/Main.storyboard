@@ -9,7 +9,7 @@
         <!-- Flutter View Controller -->
         <scene sceneID="main-scene">
             <objects>
-                <viewController id="FlutterViewController" customClass="FlutterViewController" customModuleProvider="target" sceneMemberID="viewController">
+                <viewController id="FlutterViewController" customClass="FlutterViewController" sceneMemberID="viewController">
                     <view key="view" contentMode="scaleToFill" id="main-view">
                         <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
