@@ -1,19 +1,12 @@
 #!/bin/bash
-# Build iOS app with RevenueCat API key from Google Secret Manager
+# Build a store IPA against the production backend (same as the release
+# workflow). Prefer pushing a v* tag; use this for a manual upload.
 
 set -e
 
 cd "$(dirname "$0")/.."
 
-echo "🔑 Fetching RevenueCat API key from Secret Manager..."
-REVENUECAT_KEY=$(gcloud secrets versions access latest --secret=REVENUECAT_APPLE_KEY --project=trooth-prod)
-
-if [ -z "$REVENUECAT_KEY" ]; then
-    echo "❌ Failed to fetch RevenueCat API key"
-    exit 1
-fi
-
-echo "✅ API key retrieved (${REVENUECAT_KEY:0:10}...)"
+API_BASE_URL="https://trooth-discipleship-api.onlyblv.com/"
 
 echo "🧹 Cleaning..."
 flutter clean
@@ -21,8 +14,8 @@ flutter clean
 echo "📦 Getting packages..."
 flutter pub get
 
-echo "🔨 Building IPA..."
-flutter build ipa --release --dart-define=REVENUECAT_APPLE_KEY=$REVENUECAT_KEY
+echo "🔨 Building IPA (backend: $API_BASE_URL)..."
+flutter build ipa --release --dart-define=API_BASE_URL=$API_BASE_URL
 
 echo ""
 echo "✅ Build complete!"

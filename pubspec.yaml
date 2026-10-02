@@ -49,7 +49,7 @@ dependencies:
   path_provider: ^2.1.4
   share_plus: ^10.1.3
   google_sign_in: ^7.2.0
-  sign_in_with_apple: ^6.1.3
+  sign_in_with_apple: ^8.2.0
   crypto: ^3.0.6
   tutorial_coach_mark: ^1.2.11
   firebase_messaging: ^16.7.0
@@ -76,11 +76,11 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
-  # Build iOS plugins with CocoaPods, not Swift Package Manager. Several
-  # plugins (flutter_local_notifications, sign_in_with_apple) lack SPM
-  # support, and mixing the two fails with "No such module 'Flutter'".
+  # Build iOS plugins with Swift Package Manager. Every plugin supports it, so
+  # CocoaPods is gone (Firebase stops publishing pods after October 2026).
+  # Set here so local and CI builds agree regardless of global flutter config.
   config:
-    enable-swift-package-manager: false
+    enable-swift-package-manager: true
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
