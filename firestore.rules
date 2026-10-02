@@ -1,0 +1,32 @@
+rules_version = '2';
+
+// Rules for the (default) database of the only-blv project. Deploy with:
+//   firebase deploy --only firestore:rules
+// Tests: test/firestore_rules (run against the emulator).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function hasValidRole() {
+      return request.resource.data.role in ['mentor', 'apprentice'];
+    }
+
+    // users/{uid}: profile written at signup (signup_screen, role_selection_screen).
+    // The app routes on `role`, so it's chosen once: a client can't switch
+    // between mentor and apprentice afterwards. The backend (Admin SDK) is
+    // not subject to these rules and handles account deletion.
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && hasValidRole();
+      allow update: if isOwner(userId) && (
+        ('role' in resource.data && request.resource.data.role == resource.data.role)
+        // Legacy profiles created before roles existed may set one, once.
+        || (!('role' in resource.data) && hasValidRole())
+      );
+      allow delete: if false;
+    }
+  }
+}
