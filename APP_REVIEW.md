@@ -481,6 +481,7 @@ Also replace `widget_test.dart` and add `flutter analyze && flutter test` as the
 Three linked test accounts (a free mentor and two apprentices) on the dev backend, revision `trooth-backend-dev-00071-9rx`:
 
 - **API, as real users:** a free mentor gets 200 for apprentice 1 and 403 for apprentice 2 (assessments and draft). A mentor calling set-tier gets 403. A restore with a forged premium claim stays free. A seat confirm with a made-up ID gets 409.
+- **Verified purchase path:** after a one-day promotional `premium` entitlement was granted in RevenueCat, restore (sending no client claims) made the mentor premium, and apprentice 2 became visible (200). The grant was then revoked.
 - **iOS simulator** (`integration_test/session_flows_test.dart`): sign-in through the UI. RevenueCat identity follows when switching from the mentor to the apprentice. An offline launch with an empty Firestore cache opens the dashboard from the cached role. With no cached role either, the retry screen appears, and "Try again" recovers.
 - **Android emulator:** `trooth://agreements/sign/...` opens the signing screen. `trooth://assessment/draft/<id>` opens the real draft.
 
