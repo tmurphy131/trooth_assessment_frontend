@@ -4,9 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:trooth_assessment/services/api_service.dart';
+import 'package:trooth_assessment/utils/errors.dart';
 
 void main() {
   final api = ApiService();
+
+  setUp(() => api.setAuthForTesting(authorization: ({bool force = false}) async => null, canRetryAuth: () => false));
 
   void respondWith(http.Response Function(http.Request) handler) {
     api.httpClient = MockClient((req) async => handler(req));
@@ -27,16 +30,55 @@ void main() {
     expect(api.ping(), throwsA(isA<NetworkException>()));
   });
 
-  test('sends the bearer token when set', () async {
+  test('adds the Authorization header from the token provider', () async {
     String? auth;
     respondWith((req) {
       auth = req.headers['Authorization'];
       return http.Response(jsonEncode({'message': 'ok'}), 200);
     });
-    api.bearerToken = 'abc';
+    api.setAuthForTesting(authorization: ({bool force = false}) async => 'Bearer abc');
     await api.ping();
     expect(auth, 'Bearer abc');
-    api.bearerToken = null;
+  });
+
+  test('retries once on 401 with a force-refreshed token', () async {
+    final seen = <String?>[];
+    respondWith((req) {
+      seen.add(req.headers['Authorization']);
+      return seen.length == 1
+          ? http.Response('expired', 401)
+          : http.Response(jsonEncode({'message': 'ok'}), 200);
+    });
+    api.setAuthForTesting(
+      authorization: ({bool force = false}) async => force ? 'Bearer fresh' : 'Bearer stale',
+    );
+    expect(await api.ping(), 'ok');
+    expect(seen, ['Bearer stale', 'Bearer fresh']);
+  });
+
+  test('does not retry a second 401, and surfaces it as ApiException', () async {
+    var calls = 0;
+    respondWith((_) {
+      calls++;
+      return http.Response('nope', 401);
+    });
+    api.setAuthForTesting(authorization: ({bool force = false}) async => 'Bearer x');
+    await expectLater(
+      api.fetchOwnFullReport(assessmentId: 'a1'),
+      throwsA(isA<ApiException>().having((e) => e.statusCode, 'statusCode', 401)),
+    );
+    expect(calls, 2);
+  });
+
+  test('error statuses become ApiException with the status code', () async {
+    respondWith((_) => http.Response('boom', 500));
+    await expectLater(api.ping(), throwsA(isA<ApiException>().having((e) => e.isServerError, 'isServerError', true)));
+  });
+
+  test('friendlyError maps API and network failures to plain messages', () {
+    expect(friendlyError(ApiException(503, 'x failed (503)')), startsWith('The server had a problem'));
+    expect(friendlyError(ApiException(404, 'x failed (404)')), startsWith("We couldn't find that"));
+    expect(friendlyError(NetworkException('Could not reach the server.')), startsWith('Could not reach the server.'));
   });
 
   test('plus-addressed emails survive the invites query', () async {

@@ -477,7 +477,7 @@ Also replace `widget_test.dart` and add `flutter analyze && flutter test` as the
 | 2.8 hardcoded RevenueCat keys | **Fixed:** misleading TODO replaced with a note that these are public SDK keys. |
 | 3.6 response caching | **Open (low).** |
 | 3.8 Google Fonts runtime fetch | **Fixed:** `google_fonts` removed. Poppins is fully bundled (Medium and SemiBold added from google/fonts, OFL), so there are no runtime font downloads. |
-| 4.2 HTTP boilerplate | **Partly fixed:** one wrapper for timeouts and network errors. The full `_send()` (401 refresh, typed errors) is still open. |
+| 4.2 HTTP boilerplate | **Fixed:** every request goes through `_ApiClient`, which owns token refresh and the Authorization header, one retry on 401 with a force-refreshed token, the timeout, `NetworkException`, and debug-only logging. Error statuses throw `ApiException(statusCode, message)`, which `friendlyError()` maps to plain messages. About 640 lines of per-call boilerplate removed (`api_service.dart` went from 2,891 to about 2,290 lines). |
 | 5.6 crash reporting | **Fixed:** Firebase Crashlytics records Flutter, platform and zone errors in release builds. iOS dSYM upload isn't configured, so native iOS crashes won't be symbolicated (Dart traces are). |
 | 8.6 Android build settings | **Fixed:** release builds fail without `key.properties` instead of silently debug-signing. R8 shrinking is on. Verified on a release build (Pixel 8 emulator, Android 16) against dev: sign-in, Firestore role, API calls, subscription status and FCM device registration all work. |
 | 8.7 16 KB pages | **Verified:** every 64-bit `.so` is zip-aligned and has LOAD segments of 2^14 or larger. |

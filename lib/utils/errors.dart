@@ -13,6 +13,16 @@ String friendlyError(Object error) {
     message = error.message;
   } else if (error is PremiumRequiredException) {
     message = error.message;
+  } else if (error is ApiException) {
+    message = switch (error.statusCode) {
+      401 => 'Your session has expired. Please sign in again.',
+      403 => "You don't have access to this.",
+      404 => "We couldn't find that. It may have been removed.",
+      409 => 'That conflicts with a recent change. Please refresh and try again.',
+      429 => 'Too many requests. Please wait a moment and try again.',
+      >= 500 => 'The server had a problem. Please try again shortly.',
+      _ => 'Something went wrong. Please try again.',
+    };
   } else if (error is FirebaseAuthException) {
     message = error.message ?? 'Sign-in failed. Please try again.';
   } else if (error is TimeoutException) {
