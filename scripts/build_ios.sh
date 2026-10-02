@@ -17,6 +17,11 @@ flutter pub get
 echo "🔨 Building IPA (backend: $API_BASE_URL)..."
 flutter build ipa --release --dart-define=API_BASE_URL=$API_BASE_URL
 
+echo "📤 Uploading dSYMs to Crashlytics..."
+./build/ios/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/upload-symbols \
+  -gsp ios/Runner/GoogleService-Info.plist -p ios build/ios/archive/Runner.xcarchive/dSYMs \
+  || echo "⚠️  dSYM upload failed; native iOS crashes won't be symbolicated for this build"
+
 echo ""
 echo "✅ Build complete!"
 echo "📁 IPA location: build/ios/ipa/"

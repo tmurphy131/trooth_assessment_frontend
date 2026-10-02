@@ -13,6 +13,18 @@ platform :ios do
     sh("cd #{repo_root} && flutter build ipa --release " \
        "--export-options-plist=ios/ExportOptions.plist " \
        "--dart-define=API_BASE_URL=#{ENV['API_BASE_URL']}")
+    # Crashlytics needs the dSYMs to symbolicate native iOS crashes. The SPM
+    # build checks out firebase-ios-sdk, which ships the upload tool. A failed
+    # upload shouldn't block the release.
+    begin
+      upload_symbols_to_crashlytics(
+        dsym_paths: Dir[File.join(repo_root, "build/ios/archive/Runner.xcarchive/dSYMs/*.dSYM")],
+        gsp_path: File.join(repo_root, "ios/Runner/GoogleService-Info.plist"),
+        binary_path: File.join(repo_root, "build/ios/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/upload-symbols")
+      )
+    rescue => e
+      UI.important("Crashlytics dSYM upload failed: #{e.message}")
+    end
     upload_to_testflight(
       api_key: api_key,
       ipa: Dir[File.join(repo_root, "build/ios/ipa/*.ipa")].first,
