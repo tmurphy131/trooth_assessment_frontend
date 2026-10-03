@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../features/assessments/screens/mentor_submission_detail_screen.dart';
 import 'package:trooth_assessment/utils/assessments.dart';
 import 'package:trooth_assessment/screens/mentor_spiritual_gifts_screen.dart';
+import 'package:trooth_assessment/screens/mentor_apprentice_prayers_screen.dart';
 import '../services/api_service.dart';
 import '../utils/errors.dart';
 
@@ -48,6 +49,18 @@ class _MentorAssessmentResultsScreenState extends State<MentorAssessmentResultsS
         title: Text('${widget.apprenticeName} · Assessments', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          IconButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => MentorApprenticePrayersScreen(
+                  apprenticeId: widget.apprenticeId,
+                  apprenticeName: widget.apprenticeName,
+                ),
+              ),
+            ),
+            icon: const Icon(Icons.volunteer_activism_outlined, color: Colors.amber),
+            tooltip: 'Prayer requests',
+          ),
           IconButton(
             onPressed: _load,
             icon: const Icon(Icons.refresh, color: Colors.amber),

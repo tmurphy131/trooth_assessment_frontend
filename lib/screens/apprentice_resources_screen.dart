@@ -4,6 +4,7 @@ import '../data/apprentice_guides_data.dart';
 import 'package:trooth_assessment/theme.dart';
 import 'apprentice_weekly_tip_detail_screen.dart';
 import 'apprentice_guides_list_screen.dart';
+import 'prayer_journal_screen.dart';
 
 class ApprenticeResourcesScreen extends StatefulWidget {
   const ApprenticeResourcesScreen({super.key});
@@ -326,6 +327,9 @@ class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
         'subtitle': 'Track your prayers',
         'icon': Icons.edit_note,
         'color': Colors.purple,
+        'onTap': () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const PrayerJournalScreen()),
+            ),
       },
       {
         'title': 'Worship Music',
@@ -380,14 +384,15 @@ class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
                 Icons.chevron_right,
                 color: kMutedText,
               ),
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${link['title']} - Coming soon!'),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              },
+              onTap: link['onTap'] as VoidCallback? ??
+                  () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${link['title']} - Coming soon!'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
             ),
           ),
         );

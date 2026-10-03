@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:trooth_assessment/models/prayer_entry.dart';
 import 'package:trooth_assessment/services/api_service.dart';
 import 'package:trooth_assessment/utils/errors.dart';
 
@@ -151,6 +152,88 @@ void main() {
       });
       await expectLater(api.getSubscriptionStatus(), throwsA(isA<ApiException>()));
       expect((await api.getSubscriptionStatus())['has_premium'], true);
+    });
+  });
+
+  group('prayer journal', () {
+    Map<String, dynamic> entryJson({String id = 'p1', String? answeredAt}) => {
+          'id': id,
+          'apprentice_id': 'u1',
+          'title': 'Job search',
+          'body': null,
+          'category': 'intercession',
+          'praying_for': 'Marcus',
+          'scripture_ref': null,
+          'shared_with_mentor': true,
+          'answered_at': answeredAt,
+          'answer_note': null,
+          'created_at': '2026-10-01T12:00:00',
+          'updated_at': null,
+        };
+
+    test('lists entries with status and category filters', () async {
+      late Uri seen;
+      respondWith((req) {
+        seen = req.url;
+        return http.Response(jsonEncode([entryJson()]), 200);
+      });
+      final entries = await api.getPrayerEntries(status: 'active', category: 'intercession');
+      expect(seen.path, endsWith('/prayer-journal/entries'));
+      expect(seen.queryParameters, {'status': 'active', 'category': 'intercession'});
+      expect(entries.single.category, PrayerCategory.intercession);
+      expect(entries.single.sharedWithMentor, isTrue);
+    });
+
+    test('create sends trimmed fields and nulls for blanks', () async {
+      late Map<String, dynamic> body;
+      respondWith((req) {
+        body = jsonDecode(req.body) as Map<String, dynamic>;
+        return http.Response(jsonEncode(entryJson()), 200);
+      });
+      await api.createPrayerEntry(PrayerEntry(
+        id: '',
+        title: 'Job search',
+        body: '   ',
+        category: PrayerCategory.intercession,
+        prayingFor: ' Marcus ',
+        createdAt: DateTime.now(),
+      ));
+      expect(body['body'], isNull);
+      expect(body['praying_for'], 'Marcus');
+      expect(body['category'], 'intercession');
+      expect(body['shared_with_mentor'], isFalse);
+    });
+
+    test('mark answered posts the note and parses answered_at', () async {
+      late http.Request seen;
+      respondWith((req) {
+        seen = req;
+        return http.Response(jsonEncode(entryJson(answeredAt: '2026-10-02T09:30:00')), 200);
+      });
+      final entry = await api.markPrayerAnswered('p1', answerNote: '  Got the job  ');
+      expect(seen.method, 'POST');
+      expect(seen.url.path, endsWith('/prayer-journal/entries/p1/answered'));
+      expect(jsonDecode(seen.body), {'answer_note': 'Got the job'});
+      expect(entry.isAnswered, isTrue);
+      expect(entry.answeredAt, DateTime.utc(2026, 10, 2, 9, 30).toLocal());
+    });
+
+    test('delete accepts 204', () async {
+      respondWith((_) => http.Response('', 204));
+      await api.deletePrayerEntry('p1');
+    });
+
+    test('mentor view surfaces 403 as ApiException', () async {
+      respondWith((_) => http.Response('{"detail":"Not authorized"}', 403));
+      await expectLater(
+        api.mentorGetSharedPrayerEntries('u1'),
+        throwsA(isA<ApiException>().having((e) => e.isForbidden, 'isForbidden', true)),
+      );
+    });
+
+    test('unknown category falls back to request', () {
+      final entry = PrayerEntry.fromJson({...entryJson(), 'category': 'something_new'});
+      expect(entry.category, PrayerCategory.request);
     });
   });
 }

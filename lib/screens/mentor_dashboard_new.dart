@@ -13,6 +13,7 @@ import 'apprentice_report_screen.dart';
 import 'mentor_agreements_screen.dart';
 import 'mentor_notifications_screen.dart';
 import 'mentor_assessment_results_screen.dart';
+import 'mentor_apprentice_prayers_screen.dart';
 import 'mentor_gift_seats_screen.dart';
 import 'subscription_screen.dart';
 import 'mentor_profile_screen.dart';
@@ -915,6 +916,12 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
     } catch (e) {
       _showMessage('Unable to open assessments: ${friendlyError(e)}', isError: true);
     }
+  }
+
+  void _showApprenticePrayers(String apprenticeId, String name) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => MentorApprenticePrayersScreen(apprenticeId: apprenticeId, apprenticeName: name),
+    ));
   }
 
   Future<void> _showTerminateDialog(String apprenticeId, String displayName) async {
