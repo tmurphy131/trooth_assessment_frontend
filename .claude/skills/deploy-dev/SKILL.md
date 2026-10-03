@@ -27,6 +27,18 @@ Do not proceed until the user decides.
 
 ---
 
+## Step 1b — Run Database Migrations
+
+The deploy does not migrate. Run the dev migration job (it uses the `trooth-backend-dev:latest` image just built) **before** deploying:
+
+```
+gcloud run jobs execute migrate-and-populate-dev --region us-east4 --wait
+```
+
+If the execution fails, **pause and ask the user** before deploying.
+
+---
+
 ## Step 2 — Deploy to Cloud Run Dev
 
 Run:
@@ -111,6 +123,7 @@ After all steps complete, print a summary:
 ## deploy-dev complete
 
 - [x] Backend image built
+- [x] Migrations run (migrate-and-populate-dev)
 - [x] Deployed to Cloud Run (trooth-backend-dev, us-east4)
 - [x] Frontend API URL default confirmed → dev
 - [x] DerivedData: [cleaned / skipped — X GB free]

@@ -27,7 +27,24 @@ Do not proceed until the user decides.
 
 ---
 
+## Step 1b — Run Database Migrations
+
+The deploy does not migrate. Tag the image with the commit and run the migration job against it **before** deploying, so new code never starts against an old schema:
+
+```
+cd "/Users/tmoney/Developer/trooth_assessment_backend" && SHA=$(git rev-parse --short HEAD) && \
+  gcloud container images add-tag gcr.io/trooth-prod/trooth-backend:latest gcr.io/trooth-prod/trooth-backend:$SHA --quiet && \
+  gcloud run jobs update migrate-and-populate --region us-east4 --image gcr.io/trooth-prod/trooth-backend:$SHA && \
+  gcloud run jobs execute migrate-and-populate --region us-east4 --wait
+```
+
+If the execution fails, **pause and ask the user** before deploying.
+
+---
+
 ## Step 2 — Deploy to Cloud Run Production
+
+`--set-env-vars` and `--set-secrets` **replace** everything on the service. Keep the lists below complete: dropping `SHOPIFY_CLIENT_ID`/`SHOPIFY_CLIENT_SECRET` stops trivia prize codes from being created, and dropping `TRIVIA_COMPETITION_EXCLUDED_EMAILS` lets staff/owner accounts win.
 
 Run:
 
@@ -37,8 +54,8 @@ cd "/Users/tmoney/Developer/trooth_assessment_backend" && gcloud run deploy troo
   --region us-east4 \
   --platform managed \
   --service-account trooth-run-sa@trooth-prod.iam.gserviceaccount.com \
-  --set-env-vars "^||^ENV=production||SHOW_DOCS=true||EMAIL_FROM_ADDRESS=admin@onlyblv.com||BACKEND_API_URL=https://trooth-discipleship-api.onlyblv.com/||API_URL=https://trooth-discipleship-api.onlyblv.com/||IOS_APP_STORE_URL=https://apps.apple.com/app/t-root-h-discipleship/id6757311543||METRICS_REPORT_RECIPIENTS=admin@onlyblv.com,tay.murphy88@gmail.com" \
-  --set-secrets "DATABASE_URL=DB_URL:latest,PRINTFUL_API_TOKEN=PRINTFUL_API_TOKEN:latest,FIREBASE_CERT_JSON=FIREBASE_CERT_JSON:latest,SENDGRID_API_KEY=SENDGRID_API_KEY:latest,REVENUECAT_WEBHOOK_SECRET=REVENUECAT_WEBHOOK_SECRET:latest,REVENUECAT_SECRET_API_KEY=REVENUECAT_SECRET_API_KEY:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,CRON_SECRET=CRON_SECRET:latest" \
+  --set-env-vars "^||^ENV=production||SHOW_DOCS=true||EMAIL_FROM_ADDRESS=admin@onlyblv.com||BACKEND_API_URL=https://trooth-discipleship-api.onlyblv.com/||API_URL=https://trooth-discipleship-api.onlyblv.com/||IOS_APP_STORE_URL=https://apps.apple.com/app/t-root-h-discipleship/id6757311543||METRICS_REPORT_RECIPIENTS=admin@onlyblv.com,tay.murphy88@gmail.com||TRIVIA_COMPETITION_EXCLUDED_EMAILS=@onlyblv.com,tay.murphy88@gmail.com,tay.murphy88@yahoo.com,tay.murphy88+trooth-mentor-a@gmail.com,tay.murphy88+trooth-mentor-b@gmail.com,tay.murphy88+trooth-apprentice-1@gmail.com,tay.murphy88+trooth-apprentice-2@gmail.com" \
+  --set-secrets "DATABASE_URL=DB_URL:latest,PRINTFUL_API_TOKEN=PRINTFUL_API_TOKEN:latest,FIREBASE_CERT_JSON=FIREBASE_CERT_JSON:latest,SENDGRID_API_KEY=SENDGRID_API_KEY:latest,REVENUECAT_WEBHOOK_SECRET=REVENUECAT_WEBHOOK_SECRET:latest,REVENUECAT_SECRET_API_KEY=REVENUECAT_SECRET_API_KEY:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,CRON_SECRET=CRON_SECRET:latest,SHOPIFY_CLIENT_ID=SHOPIFY_CLIENT_ID:latest,SHOPIFY_CLIENT_SECRET=SHOPIFY_CLIENT_SECRET:latest" \
   --add-cloudsql-instances trooth-prod:us-east4:app-pg \
   --allow-unauthenticated 2>&1 | tail -15
 ```
@@ -110,6 +127,7 @@ After all steps complete, print a summary:
 ## deploy-prod complete
 
 - [x] Backend image built
+- [x] Migrations run (migrate-and-populate @ <sha>)
 - [x] Deployed to Cloud Run (trooth-backend, us-east4)
 - [x] Frontend API URL: prod via --dart-define (no edit)
 - [x] DerivedData: [cleaned / skipped — X GB free]
