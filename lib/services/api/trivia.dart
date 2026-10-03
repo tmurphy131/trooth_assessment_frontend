@@ -39,6 +39,14 @@ extension TriviaApi on ApiService {
     throw ApiException(r.statusCode, 'triviaGetLeaderboard failed (${r.statusCode}) ${r.body}');
   }
 
+  /// Current (else upcoming, else most recent) leaderboard competition, or null.
+  Future<Map<String, dynamic>?> triviaGetCompetition() async {
+    const path = '/trivia/competition';
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
+    if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>?;
+    throw ApiException(r.statusCode, 'triviaGetCompetition failed (${r.statusCode}) ${r.body}');
+  }
+
   Future<Map<String, dynamic>> triviaCreateChallenge(Map<String, dynamic> payload) async {
     const path = '/trivia/challenges';
     final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));

@@ -615,6 +615,11 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
       final answeredCount = answers.length;
       final totalCount = questions.length;
       final draftId = draft['id']?.toString();
+      final templateName = (draft['template_name'] as String?)?.trim() ?? '';
+      final hasName = templateName.isNotEmpty;
+      final progress = totalCount > 0
+          ? '$answeredCount of $totalCount answered'
+          : '$answeredCount answered';
       return InkWell(
         onTap: () async {
           await Navigator.push(
@@ -647,9 +652,9 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'In Progress',
-                      style: TextStyle(
+                    Text(
+                      hasName ? templateName : 'In Progress',
+                      style: const TextStyle(
                         color: Colors.white,
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.w600,
@@ -657,9 +662,7 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
                       ),
                     ),
                     Text(
-                      totalCount > 0
-                          ? '$answeredCount of $totalCount answered'
-                          : '$answeredCount answered',
+                      hasName ? 'In progress · $progress' : progress,
                       style: const TextStyle(
                         color: Colors.white54,
                         fontFamily: 'Poppins',
