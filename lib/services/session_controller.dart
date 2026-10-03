@@ -11,6 +11,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import 'api_service.dart';
+import 'prayer_reminder_service.dart';
 import 'push_notification_service.dart';
 import 'subscription_service.dart';
 
@@ -46,6 +47,7 @@ class SessionController {
     _enqueue(() async {
       try {
         await _try('push unregister', () => PushNotificationService().onLogout());
+        await _try('prayer reminder off', () => PrayerReminderService().disable());
         await _try('subscription sign-out', () => SubscriptionService().signOut());
         ApiService().clearCache();
         await FirebaseAuth.instance.signOut();

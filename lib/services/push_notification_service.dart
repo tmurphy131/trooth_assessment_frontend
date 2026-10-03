@@ -33,6 +33,7 @@ class PushNotificationService {
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
   
   bool _isInitialized = false;
+  bool _localNotificationsReady = false;
   String? _fcmToken;
   StreamSubscription<String>? _tokenRefreshSubscription;
   StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
@@ -122,8 +123,14 @@ class PushNotificationService {
     }
   }
 
+  /// Set up the local notifications plugin without asking for permission.
+  /// Safe to call repeatedly; other features (e.g. prayer reminders) use this
+  /// so they don't re-initialize the plugin and replace the tap handler.
+  Future<void> ensureLocalNotifications() => _initializeLocalNotifications();
+
   /// Initialize local notifications for foreground display
   Future<void> _initializeLocalNotifications() async {
+    if (_localNotificationsReady) return;
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: false, // We request via FCM
@@ -154,6 +161,7 @@ class PushNotificationService {
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
           ?.createNotificationChannel(androidChannel);
     }
+    _localNotificationsReady = true;
   }
 
   /* ── APNs Token (iOS) ───────────────────────────────────────────────── */

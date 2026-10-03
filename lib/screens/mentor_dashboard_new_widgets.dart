@@ -353,6 +353,9 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
               case 'assessments':
                 await _showApprenticeAssessments(apprenticeId);
                 break;
+              case 'prayers':
+                _showApprenticePrayers(apprenticeId, name);
+                break;
               case 'meeting':
                 await _showMeetingInfo(apprenticeId, email, name);
                 break;
@@ -399,6 +402,16 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
                     'View Assessments',
                     style: TextStyle(color: Colors.white),
                   ),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'prayers',
+              child: Row(
+                children: [
+                  Icon(Icons.volunteer_activism_outlined, color: Colors.amber),
+                  SizedBox(width: 8),
+                  Text('Prayer Requests', style: TextStyle(color: Colors.white)),
                 ],
               ),
             ),
@@ -1105,12 +1118,11 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
 
           // Navigate to mentor submission detail screen with real IDs
           if (assessmentId.isNotEmpty) {
-            Navigator.of(context).pushNamed(
-              '/mentor/submissions/$assessmentId',
-              arguments: {
-                'apprenticeName': apprenticeName,
-                'apprenticeId': apprenticeId,
-              },
+            openMentorSubmission(
+              context,
+              assessmentId: assessmentId,
+              apprenticeId: apprenticeId,
+              apprenticeName: apprenticeName,
             );
           } else {
             _showAssessmentResults(assessment); // fallback to legacy view
