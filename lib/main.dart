@@ -14,6 +14,7 @@ import 'screens/apprentice_weekly_tip_detail_screen.dart';
 import 'data/weekly_tips_data.dart';
 import 'data/apprentice_weekly_tips_data.dart';
 import 'screens/trivia_challenge_detail_screen.dart';
+import 'screens/trivia_home_screen.dart';
 import 'utils/deep_links.dart';
 import 'router.dart';
 import 'services/api_service.dart';
@@ -213,6 +214,12 @@ void _handleNotificationTap(Map<String, dynamic> data) {
           ),
         );
       }
+      break;
+
+    case 'trivia_competition_won':
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(builder: (_) => const TriviaHomeScreen()),
+      );
       break;
 
     default:

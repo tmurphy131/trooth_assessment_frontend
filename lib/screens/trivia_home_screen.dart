@@ -4,6 +4,7 @@ import '../services/api_service.dart';
 import 'trivia_setup_screen.dart';
 import 'trivia_challenge_list_screen.dart';
 import 'trivia_leaderboard_screen.dart';
+import '../widgets/trivia_competition_banner.dart';
 
 class TriviaHomeScreen extends StatefulWidget {
   const TriviaHomeScreen({super.key});
@@ -16,12 +17,21 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
   final _api = ApiService();
   int _activeChallengeCount = 0;
   Map<String, dynamic>? _topBadge;
+  Map<String, dynamic>? _competition;
 
   @override
   void initState() {
     super.initState();
     _loadChallengeCount();
     _loadTopBadge();
+    _loadCompetition();
+  }
+
+  Future<void> _loadCompetition() async {
+    try {
+      final competition = await _api.triviaGetCompetition();
+      if (mounted) setState(() => _competition = competition);
+    } catch (_) {}
   }
 
   Future<void> _loadChallengeCount() async {
@@ -79,12 +89,18 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildLaunchBanner(),
-            if (_topBadge != null) ...[
+            if (_competition != null) ...[
+              TriviaCompetitionBanner(
+                competition: _competition!,
+                onPhaseChanged: _loadCompetition,
+              ),
               const SizedBox(height: 16),
-              _buildTopBadgeBanner(_topBadge!),
             ],
-            const SizedBox(height: 24),
+            if (_topBadge != null) ...[
+              _buildTopBadgeBanner(_topBadge!),
+              const SizedBox(height: 8),
+            ],
+            const SizedBox(height: 16),
             const Text(
               'Choose a Mode',
               style: TextStyle(
@@ -108,6 +124,7 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
               ).then((_) {
               _loadChallengeCount();
               _loadTopBadge();
+              _loadCompetition();
             }),
             ),
             const SizedBox(height: 14),
@@ -195,100 +212,6 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildLaunchBanner() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1A1A00), Color(0xFF2A2000)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.4)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.emoji_events, color: Color(0xFFFFD700), size: 22),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  '60-Day Launch Competition',
-                  style: TextStyle(
-                    color: Color(0xFFFFD700),
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Top 3 players on the Challenger leaderboard win merch prizes — see the leaderboard for live standings.',
-            style: TextStyle(
-              color: Colors.white70,
-              fontFamily: 'Poppins',
-              fontSize: 12,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              _prizeChip('🥇', '1st', '100% off merch'),
-              const SizedBox(width: 8),
-              _prizeChip('🥈', '2nd', '50% off merch'),
-              const SizedBox(width: 8),
-              _prizeChip('🥉', '3rd', '25% off merch'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _prizeChip(String emoji, String place, String prize) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.2)),
-        ),
-        child: Column(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 16)),
-            Text(
-              place,
-              style: const TextStyle(
-                color: Color(0xFFFFD700),
-                fontFamily: 'Poppins',
-                fontWeight: FontWeight.bold,
-                fontSize: 11,
-              ),
-            ),
-            Text(
-              prize,
-              style: const TextStyle(
-                color: Colors.white54,
-                fontFamily: 'Poppins',
-                fontSize: 11,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -537,6 +460,6 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
     'All questions are multiple choice — some are True/False.',
     'Questions are designed to challenge you — even plausible-sounding wrong answers are intentionally tricky.',
     'Scores and badges are permanent and visible on your profile.',
-    'The 60-Day Launch Competition: top 3 players on the Challenger difficulty leaderboard (all categories, best score per player) win merch prizes.',
+    'The 60-Day Launch Competition runs Nov 1 – Dec 30: the top 3 players on the Challenger difficulty leaderboard (all categories, best score per player during the competition) win ONLY BLV merch: 1st gets \$59 off (any item free), 2nd \$30 off, 3rd \$15 off. Ties share the prize. Winners are emailed a one-time code when it ends.',
   ];
 }
