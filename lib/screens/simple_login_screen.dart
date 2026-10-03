@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -227,10 +228,18 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
         displayName: displayName,
         email: email,
       );
-    } catch (e) {
+    } catch (e, st) {
+      // Report the real cause; the user only sees a friendly message.
+      FirebaseCrashlytics.instance.recordError(e, st, reason: 'Google sign-in failed');
+      // Plugin errors carry a short code that's safe to show and helps support.
+      final code = switch (e) {
+        GoogleSignInException(:final code) => ' (${code.name})',
+        FirebaseException(:final code) => ' ($code)',
+        _ => '',
+      };
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google sign-in failed: ${friendlyError(e)}')),
+          SnackBar(content: Text('Google sign-in failed: ${friendlyError(e)}$code')),
         );
       }
     } finally {
