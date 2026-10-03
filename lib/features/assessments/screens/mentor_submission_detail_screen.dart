@@ -22,6 +22,24 @@ import '../../../utils/errors.dart';
 part 'mentor_submission_detail_screen_widgets.dart';
 part 'mentor_submission_premium_report.dart';
 
+/// Opens a submission from inside the app. These screens are pushed on the
+/// Navigator directly; the `/mentor/submissions/:id` go_router route is only
+/// for notification taps.
+Future<void> openMentorSubmission(
+  BuildContext context, {
+  required String assessmentId,
+  Object? apprenticeId,
+  Object? apprenticeName,
+}) {
+  return Navigator.of(context).push(MaterialPageRoute(
+    builder: (_) => MentorSubmissionDetailScreen(
+      assessmentId: assessmentId,
+      apprenticeId: apprenticeId?.toString() ?? '',
+      apprenticeName: apprenticeName?.toString() ?? 'Apprentice',
+    ),
+  ));
+}
+
 class MentorSubmissionDetailScreen extends StatefulWidget {
   final String assessmentId;
   final String apprenticeName;

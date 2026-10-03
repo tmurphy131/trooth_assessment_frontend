@@ -1105,12 +1105,11 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
 
           // Navigate to mentor submission detail screen with real IDs
           if (assessmentId.isNotEmpty) {
-            Navigator.of(context).pushNamed(
-              '/mentor/submissions/$assessmentId',
-              arguments: {
-                'apprenticeName': apprenticeName,
-                'apprenticeId': apprenticeId,
-              },
+            openMentorSubmission(
+              context,
+              assessmentId: assessmentId,
+              apprenticeId: apprenticeId,
+              apprenticeName: apprenticeName,
             );
           } else {
             _showAssessmentResults(assessment); // fallback to legacy view

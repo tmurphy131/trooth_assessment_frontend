@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../features/assessments/screens/mentor_submission_detail_screen.dart';
 import 'package:trooth_assessment/utils/assessments.dart';
 import 'package:trooth_assessment/screens/mentor_spiritual_gifts_screen.dart';
 import '../services/api_service.dart';
@@ -103,12 +104,11 @@ class _MentorAssessmentResultsScreenState extends State<MentorAssessmentResultsS
             return;
           }
           // Otherwise go to the mentor submission detail route
-          Navigator.of(context).pushNamed(
-            '/mentor/submissions/$id',
-            arguments: {
-              'apprenticeName': widget.apprenticeName,
-              'apprenticeId': widget.apprenticeId,
-            },
+          openMentorSubmission(
+            context,
+            assessmentId: id,
+            apprenticeId: widget.apprenticeId,
+            apprenticeName: widget.apprenticeName,
           );
         },
       ),

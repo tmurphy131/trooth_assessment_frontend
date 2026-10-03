@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'mentor_submission_detail_screen.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/errors.dart';
 
@@ -78,12 +79,11 @@ class _MentorAssessmentResultsListState extends State<MentorAssessmentResultsLis
       ]),
       trailing: const Icon(Icons.chevron_right),
       onTap: () {
-        Navigator.of(context).pushNamed(
-          '/mentor/submissions/$id',
-          arguments: {
-            'apprenticeName': widget.apprenticeName,
-            'apprenticeId': widget.apprenticeId,
-          },
+        openMentorSubmission(
+          context,
+          assessmentId: id,
+          apprenticeId: widget.apprenticeId,
+          apprenticeName: widget.apprenticeName,
         );
       },
     );

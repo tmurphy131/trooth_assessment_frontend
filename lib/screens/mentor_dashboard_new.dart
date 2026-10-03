@@ -21,6 +21,7 @@ import 'mentor_spiritual_gifts_screen.dart';
 import '../utils/assessments.dart';
 import '../mixins/mentor_dashboard_tutorial.dart';
 import 'trivia_home_screen.dart';
+import '../features/assessments/screens/mentor_submission_detail_screen.dart';
 import '../utils/errors.dart';
 
 part 'mentor_dashboard_new_widgets.dart';
