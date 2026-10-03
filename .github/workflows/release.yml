@@ -10,9 +10,15 @@ on:
         type: choice
         options: [both, ios, android]
         default: both
+      backend:
+        description: Backend the build talks to (dev builds are for testing only)
+        type: choice
+        options: [prod, dev]
+        default: prod
 
 env:
-  API_BASE_URL: https://trooth-discipleship-api.onlyblv.com/
+  # Tag pushes have no inputs, so they always build against prod.
+  API_BASE_URL: ${{ inputs.backend == 'dev' && 'https://trooth-discipleship-api-dev.onlyblv.com/' || 'https://trooth-discipleship-api.onlyblv.com/' }}
 
 jobs:
   # Don't ship a build that fails analysis or tests.

@@ -16,6 +16,7 @@ import 'data/apprentice_weekly_tips_data.dart';
 import 'screens/trivia_challenge_detail_screen.dart';
 import 'utils/deep_links.dart';
 import 'router.dart';
+import 'services/api_service.dart';
 import 'services/tutorial_service.dart';
 import 'screens/apprentice_invites_screen.dart';
 import 'screens/mentor_agreements_screen.dart';
@@ -252,10 +253,14 @@ class MyApp extends StatelessWidget {
             _splashReleased = true;
             FlutterNativeSplash.remove();
           }
-          return MediaQuery.withClampedTextScaling(
+          final app = MediaQuery.withClampedTextScaling(
             maxScaleFactor: 1.5,
             child: child!,
           );
+          // Make dev-backend builds (local runs, dev TestFlight) unmistakable.
+          return ApiService().baseUrl.contains('-dev.')
+              ? Banner(message: 'DEV', location: BannerLocation.topStart, child: app)
+              : app;
         },
       ),
     );
