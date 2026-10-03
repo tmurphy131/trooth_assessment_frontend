@@ -134,12 +134,24 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
         _loadingFullReport = false;
       });
       dev.log('[MentorSubmissionDetail] Full report loaded, cached: $cached');
+    } on PremiumRequiredException {
+      // Premium lapsed since the screen opened; switch to the upgrade path.
+      if (!mounted) return;
+      setState(() {
+        _isPremium = false;
+        _loadingFullReport = false;
+      });
     } catch (e) {
       dev.log('[MentorSubmissionDetail] Error loading full report: $e');
       if (!mounted) return;
       setState(() => _loadingFullReport = false);
+      _fullReportError = e;
     }
   }
+
+  /// Set when the last full-report load failed for a reason other than
+  /// premium, so a tap can say so instead of doing nothing.
+  Object? _fullReportError;
 
   Future<void> _loadNotes() async {
     setState(() => _notesLoading = true);
@@ -576,9 +588,19 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
         _showPremiumReportScreen();
       } else {
         // Load and then show
+        _fullReportError = null;
         _loadFullReport().then((_) {
-          if (_fullReport != null && mounted) {
+          if (!mounted) return;
+          if (_fullReport != null) {
             _showPremiumReportScreen();
+          } else if (!_isPremium) {
+            _showPremiumGate();
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(_fullReportError != null
+                  ? "Couldn't load the premium report: ${friendlyError(_fullReportError!)}"
+                  : "The premium report isn't available yet. Please try again shortly."),
+            ));
           }
         });
       }

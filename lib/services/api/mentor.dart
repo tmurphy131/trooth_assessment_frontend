@@ -96,19 +96,14 @@ extension MentorApi on ApiService {
   /// Check if the current user has premium subscription
   /// Parses subscription_tier from /users/me endpoint
   /// Premium tiers: mentor_premium, apprentice_premium, mentor_gifted
+  /// Whether the signed-in user has premium right now. Uses the backend's
+  /// subscription status, which accounts for expiry; the profile's
+  /// `subscription_tier` keeps its old value after premium lapses.
   Future<bool> isPremiumUser() async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        dev.log('isPremiumUser: No Firebase user');
-        return false;
-      }
-      final profile = await getUserProfile(user.uid);
-      final tier = profile['subscription_tier'] as String? ?? 'free';
-      // Check for any premium tier (not just "premium")
-      const premiumTiers = ['mentor_premium', 'apprentice_premium', 'mentor_gifted'];
-      final isPremium = premiumTiers.contains(tier);
-      dev.log('isPremiumUser: tier=$tier, isPremium=$isPremium');
+      final status = await getSubscriptionStatus();
+      final isPremium = status['has_premium'] == true || status['is_premium'] == true;
+      dev.log('isPremiumUser: tier=${status['subscription_tier']}, isPremium=$isPremium');
       return isPremium;
     } catch (e) {
       dev.log('Error checking premium status: $e');
