@@ -11,26 +11,9 @@ Each step is tagged:
 
 ---
 
-## Part 1 — Stop hand-editing API URLs 🤖
+## Part 1 — API URL from a build define ✅ Done
 
-Today the prod/dev URL lives in two files (`lib/services/api_service.dart` ~line 22, `lib/main.dart` ~line 129). Replace with a build-time define:
-
-```dart
-// lib/services/api_service.dart
-const String _devBaseUrl = String.fromEnvironment(
-  'API_BASE_URL',
-  defaultValue: 'https://trooth-discipleship-api-dev.onlyblv.com/',
-);
-```
-
-…and delete the `baseUrlOverride` line in `main.dart`. Builds then choose the backend explicitly:
-
-```bash
-flutter build ipa       --release --dart-define=API_BASE_URL=https://trooth-discipleship-api.onlyblv.com/
-flutter build appbundle --release --dart-define=API_BASE_URL=https://trooth-discipleship-api.onlyblv.com/
-```
-
-Local `flutter run` defaults to dev. Update the `/deploy-dev` and `/deploy-prod` skills to drop their "fix frontend URLs" step.
+The backend URL comes only from `--dart-define=API_BASE_URL` (read in `lib/services/api_service.dart`), defaulting to **dev** so local `flutter run` never hits prod. The release workflow passes the prod URL; a manual run can choose dev for a TestFlight test build.
 
 > RevenueCat keys in `subscription_service.dart` are public SDK keys — fine to leave hardcoded.
 
@@ -189,63 +172,15 @@ Frontend repo → **Settings → Secrets and variables → Actions → New repos
 
 ---
 
-## Part 5 — The workflow 🤖
+## Part 5 — The workflow ✅ Done
 
-`.github/workflows/release.yml`
+The source of truth is [`.github/workflows/release.yml`](../.github/workflows/release.yml); read it rather than a copy here. In short:
 
-```yaml
-name: Release
-
-on:
-  push:
-    tags: ['v*']
-
-env:
-  API_BASE_URL: https://trooth-discipleship-api.onlyblv.com/
-
-jobs:
-  android:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: '17' }
-      - uses: subosito/flutter-action@v2
-        with: { channel: stable, cache: true }
-      - name: Write signing config
-        run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/upload-keystore.jks
-          printf "storeFile=../upload-keystore.jks\nstorePassword=%s\nkeyPassword=%s\nkeyAlias=%s\n" \
-            "${{ secrets.ANDROID_STORE_PASSWORD }}" \
-            "${{ secrets.ANDROID_KEY_PASSWORD }}" \
-            "${{ secrets.ANDROID_KEY_ALIAS }}" > android/key.properties
-      - run: flutter build appbundle --release --dart-define=API_BASE_URL=$API_BASE_URL
-      - uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: com.trooth.flutterTroothAssessment
-          releaseFiles: build/app/outputs/bundle/release/app-release.aab
-          track: internal
-          status: completed
-
-  ios:
-    runs-on: macos-15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with: { channel: stable, cache: true }
-      - uses: ruby/setup-ruby@v1
-        with: { ruby-version: '3.3', bundler-cache: true, working-directory: ios }
-      - run: flutter pub get   # iOS plugins build with Swift Package Manager; no pod install
-      - run: bundle exec fastlane beta
-        working-directory: ios
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-```
+- **Triggers**: a `v*` tag (always builds against prod), or a manual run choosing `platform` (both / ios / android) and `backend` (prod / dev).
+- **`test` job first**: `flutter analyze --no-fatal-infos` and `flutter test`; the store jobs only run if it passes.
+- **android**: writes the signing config from secrets, builds the app bundle, uploads to the Play **internal** track.
+- **ios**: `macos-26` with Xcode 26.6, then `bundle exec fastlane beta` (match signing, upload to TestFlight).
+- Flutter is pinned to one version in all jobs; change it in its own commit.
 
 Paths match `android/app/build.gradle.kts`: it reads `android/key.properties`, and `storeFile` resolves from `android/app/`, so `../upload-keystore.jks` → `android/upload-keystore.jks`. Note Gradle silently falls back to **debug** signing if `key.properties` is missing — Play will reject that upload, so a failed secret shows up there.
 
@@ -255,7 +190,8 @@ Paths match `android/app/build.gradle.kts`: it reads `android/key.properties`, a
 
 ```bash
 /bump-version 1.0.39            # Claude skill: pubspec + Info.plist, commits
-git checkout main && git merge <release-branch> && git push
+# merge the release branch into main through a pull request (see CONTRIBUTING.md)
+git checkout main && git pull
 git tag v1.0.39 && git push origin v1.0.39
 ```
 
@@ -274,8 +210,5 @@ Version numbers must strictly increase — if a tag fails after uploading to one
 The old backend `ci.yml` was removed (it was broken and its deploy config had drifted from prod). When rebuilding backend CI:
 
 - Use the exact `--set-env-vars` / `--set-secrets` from the `/deploy-prod` skill — `--set-secrets` **replaces** the whole set, so any omission strips that secret from prod.
-- Tag images with the commit SHA (`gcr.io/trooth-prod/trooth-backend:$SHA`) in addition to `:latest`. Rollback becomes `gcloud run services update-traffic trooth-backend --to-revisions=<rev>=100`.
-- Before running migrations, point the job at the same image:
-  `gcloud run jobs update migrate-and-populate --image gcr.io/trooth-prod/trooth-backend:$SHA --region us-east4`
-  (the job was pinned to an August 2025 image, so it never saw new migrations).
+- ✅ The `/deploy-prod` skill now tags the image with the commit SHA and points the `migrate-and-populate` job at it before deploying. Rollback: `gcloud run services update-traffic trooth-backend --to-revisions=<rev>=100`.
 - Auto-deploy a `develop` branch to `trooth-backend-dev`; deploy prod only from `main`.
