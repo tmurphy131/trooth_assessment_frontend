@@ -106,3 +106,6 @@ ios/Flutter/DartDefines.xcconfig
 # Local backups and signing logs
 *.tgz
 ios/build_signing_log*.txt
+
+# Xcode Cloud (releases go through GitHub Actions)
+ios/Runner.xcodeproj/xcshareddata/xcodecloud/
