@@ -1,26 +1,19 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
 import 'trivia_setup_screen.dart';
 import 'trivia_leaderboard_screen.dart';
 
 class TriviaResultScreen extends StatefulWidget {
-  final int score;
-  final int streakLength;
-  final int correctCount;
+  /// The server's final result (score, correct_count, streak_length,
+  /// is_new_high_score, previous_best, leaderboard_rank, badges_earned).
+  final Map<String, dynamic> result;
   final String category;
   final String difficulty;
-  final List<Map<String, dynamic>> answers;
-  final int graceTokensUsed;
 
   const TriviaResultScreen({
     super.key,
-    required this.score,
-    required this.streakLength,
-    required this.correctCount,
+    required this.result,
     required this.category,
     required this.difficulty,
-    required this.answers,
-    required this.graceTokensUsed,
   });
 
   @override
@@ -29,10 +22,9 @@ class TriviaResultScreen extends StatefulWidget {
 
 class _TriviaResultScreenState extends State<TriviaResultScreen>
     with SingleTickerProviderStateMixin {
-  Map<String, dynamic>? _result;
-  bool _isSubmitting = true;
-  String? _error;
   late AnimationController _celebrationController;
+
+  Map<String, dynamic> get _result => widget.result;
 
   @override
   void initState() {
@@ -41,7 +33,7 @@ class _TriviaResultScreenState extends State<TriviaResultScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
-    _submit();
+    if (_result['is_new_high_score'] == true) _celebrationController.forward();
   }
 
   @override
@@ -50,53 +42,18 @@ class _TriviaResultScreenState extends State<TriviaResultScreen>
     super.dispose();
   }
 
-  Future<void> _submit() async {
-    try {
-      final result = await ApiService().triviaSubmitSingleGame({
-        'category': widget.category,
-        'difficulty': widget.difficulty,
-        'answers': widget.answers,
-        'grace_tokens_used': widget.graceTokensUsed,
-      });
-      if (mounted) {
-        setState(() {
-          _result = result;
-          _isSubmitting = false;
-        });
-        if (result['is_new_high_score'] == true) {
-          _celebrationController.forward();
-        }
-      }
-    } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _isSubmitting = false; });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: SafeArea(
-        child: _isSubmitting
-            ? const Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(color: Color(0xFFFFD700)),
-                    SizedBox(height: 16),
-                    Text('Saving your score...', style: TextStyle(color: Colors.white70, fontFamily: 'Poppins')),
-                  ],
-                ),
-              )
-            : _buildResults(),
-      ),
+      body: SafeArea(child: _buildResults()),
     );
   }
 
   Widget _buildResults() {
-    final isHighScore = _result?['is_new_high_score'] == true;
-    final rank = _result?['leaderboard_rank'] as int?;
-    final badges = (_result?['badges_earned'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final isHighScore = _result['is_new_high_score'] == true;
+    final rank = _result['leaderboard_rank'] as int?;
+    final badges = (_result['badges_earned'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -129,17 +86,11 @@ class _TriviaResultScreenState extends State<TriviaResultScreen>
             ),
           ],
           const SizedBox(height: 28),
-          _statRow('Score', widget.score.toString()),
-          _statRow('Correct Answers', widget.correctCount.toString()),
-          _statRow('Best Streak', '${widget.streakLength} in a row'),
-          if (widget.graceTokensUsed > 0)
-            _statRow('Grace Tokens Used', widget.graceTokensUsed.toString()),
+          _statRow('Score', '${_result['score'] ?? 0}'),
+          _statRow('Correct Answers', '${_result['correct_count'] ?? 0}'),
+          _statRow('Best Streak', '${_result['streak_length'] ?? 0} in a row'),
           if (rank != null)
             _statRow('Leaderboard Rank', '#$rank'),
-          if (_error != null) ...[
-            const SizedBox(height: 12),
-            Text('Note: Score may not have saved (${{_error}})', style: const TextStyle(color: Colors.redAccent, fontFamily: 'Poppins', fontSize: 12)),
-          ],
           if (badges.isNotEmpty) ...[
             const SizedBox(height: 24),
             const Text(

@@ -6,22 +6,46 @@ extension TriviaApi on ApiService {
   /*  🎮  Trivia                                                          */
   /* ─────────────────────────────────────────────────────────────────── */
 
-  Future<List<Map<String, dynamic>>> triviaDrawQuestions({
+  // Single player runs as a server session: one question at a time, no answers
+  // up front, graded and timed by the server (backend spec 001).
+
+  Future<TriviaSessionState> triviaStartSingle({
     required String category,
     required String difficulty,
-    int count = 20,
   }) async {
-    final path = '/trivia/questions/draw?category=${Uri.encodeQueryComponent(category)}&difficulty=$difficulty&count=$count';
-    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
-    if (r.statusCode == 200) return List<Map<String, dynamic>>.from(jsonDecode(r.body));
-    throw ApiException(r.statusCode, 'triviaDrawQuestions failed (${r.statusCode}) ${r.body}');
+    const path = '/trivia/single/start';
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(),
+        body: jsonEncode({'category': category, 'difficulty': difficulty}));
+    if (r.statusCode == 200) return TriviaSessionState.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+    throw ApiException(r.statusCode, 'triviaStartSingle failed (${r.statusCode}) ${r.body}');
   }
 
-  Future<Map<String, dynamic>> triviaSubmitSingleGame(Map<String, dynamic> payload) async {
-    const path = '/trivia/single/submit';
-    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
+  /// [selected] is null when the player's timer ran out.
+  Future<TriviaSessionState> triviaAnswerSingle(
+    String sessionId, {
+    required int questionId,
+    String? selected,
+  }) async {
+    final path = '/trivia/single/$sessionId/answer';
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(),
+        body: jsonEncode({'question_id': questionId, 'selected': selected}));
+    if (r.statusCode == 200) return TriviaSessionState.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+    throw ApiException(r.statusCode, 'triviaAnswerSingle failed (${r.statusCode}) ${r.body}');
+  }
+
+  Future<TriviaSessionState> triviaGraceSingle(String sessionId, {required bool use}) async {
+    final path = '/trivia/single/$sessionId/grace';
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode({'use': use}));
+    if (r.statusCode == 200) return TriviaSessionState.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+    throw ApiException(r.statusCode, 'triviaGraceSingle failed (${r.statusCode}) ${r.body}');
+  }
+
+  /// Ends the game (idempotent) and returns its result.
+  Future<Map<String, dynamic>> triviaFinishSingle(String sessionId) async {
+    final path = '/trivia/single/$sessionId/finish';
+    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers());
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
-    throw ApiException(r.statusCode, 'triviaSubmitSingleGame failed (${r.statusCode}) ${r.body}');
+    throw ApiException(r.statusCode, 'triviaFinishSingle failed (${r.statusCode}) ${r.body}');
   }
 
   Future<List<Map<String, dynamic>>> triviaGetLeaderboard({
@@ -51,6 +75,7 @@ extension TriviaApi on ApiService {
     const path = '/trivia/challenges';
     final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    if (r.statusCode == 403) throw PremiumRequiredException('Creating challenges is a premium feature.');
     throw ApiException(r.statusCode, 'triviaCreateChallenge failed (${r.statusCode}) ${r.body}');
   }
 
