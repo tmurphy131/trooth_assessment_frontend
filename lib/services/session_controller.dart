@@ -9,6 +9,7 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 
 import 'api_service.dart';
 import 'prayer_reminder_service.dart';
@@ -65,6 +66,8 @@ class SessionController {
     // Not awaited: on iOS this waits for the user to answer the notification
     // prompt, and later sign-in/sign-out steps must not queue behind that.
     unawaited(_try('push init', () => PushNotificationService().initialize()));
+    // Daily trivia "today" and its 9am reminder follow the device clock (spec 002)
+    unawaited(_try('timezone sync', () async => ApiService().setMyTimezone(await FlutterTimezone.getLocalTimezone())));
   }
 
   Future<void> _onSignedOut() async {

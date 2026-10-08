@@ -24,6 +24,7 @@ import '../mixins/mentor_dashboard_tutorial.dart';
 import 'trivia_home_screen.dart';
 import '../features/assessments/screens/mentor_submission_detail_screen.dart';
 import '../utils/errors.dart';
+import '../widgets/daily_trivia_pill.dart';
 
 part 'mentor_dashboard_new_widgets.dart';
 
@@ -473,6 +474,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
           ),
         ],
       ),
+      floatingActionButton: const DailyTriviaPill(),
       body: TabBarView(
         controller: _tabController,
         children: [

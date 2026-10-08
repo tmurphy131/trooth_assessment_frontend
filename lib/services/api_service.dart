@@ -16,6 +16,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/mentor_note.dart';
 import '../models/prayer_entry.dart';
 import '../models/trivia_session.dart';
+import '../models/daily_trivia.dart';
 
 part 'api/users_mentorship.dart';
 part 'api/mentor.dart';
@@ -25,6 +26,7 @@ part 'api/spiritual_gifts.dart';
 part 'api/account_support.dart';
 part 'api/subscriptions.dart';
 part 'api/trivia.dart';
+part 'api/daily_trivia.dart';
 part 'api/prayer_journal.dart';
 
 /// Exception thrown when a premium-only feature is accessed without subscription

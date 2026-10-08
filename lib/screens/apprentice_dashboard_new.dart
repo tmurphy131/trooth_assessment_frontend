@@ -18,6 +18,7 @@ import 'apprentice_profile_screen.dart';
 import 'subscription_screen.dart';
 import 'trivia_home_screen.dart';
 import '../utils/errors.dart';
+import '../widgets/daily_trivia_pill.dart';
 
 part 'apprentice_dashboard_new_widgets.dart';
 
@@ -316,9 +317,11 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew>
   @override
   Widget build(BuildContext context) {
     return BaseDashboard(
+      floatingActionButton: const DailyTriviaPill(),
       // One scrolling list so nothing clips when the user enlarges text.
       body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        // Bottom room so the daily question pill never covers the last card
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
         children: [
           _buildWelcomeCard(),
           const SizedBox(height: 12),

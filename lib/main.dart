@@ -15,6 +15,7 @@ import 'data/weekly_tips_data.dart';
 import 'data/apprentice_weekly_tips_data.dart';
 import 'screens/trivia_challenge_detail_screen.dart';
 import 'screens/trivia_home_screen.dart';
+import 'widgets/daily_trivia_modal.dart';
 import 'utils/deep_links.dart';
 import 'router.dart';
 import 'services/api_service.dart';
@@ -214,6 +215,12 @@ void _handleNotificationTap(Map<String, dynamic> data) {
           ),
         );
       }
+      break;
+
+    case 'daily_trivia':
+    case 'daily_trivia_reward':
+      final context = navigatorKey.currentContext;
+      if (context != null) DailyTriviaPrompt.open(context);
       break;
 
     case 'trivia_competition_won':

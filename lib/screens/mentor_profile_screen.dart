@@ -6,6 +6,7 @@ import '../services/subscription_service.dart';
 import 'support_screen.dart';
 import 'subscription_screen.dart';
 import '../utils/errors.dart';
+import '../widgets/daily_trivia_profile_card.dart';
 
 class MentorProfileScreen extends StatefulWidget {
   const MentorProfileScreen({super.key});
@@ -259,6 +260,10 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                     _buildSubscriptionCard(),
                     const SizedBox(height: 16),
                     
+                    // Daily trivia: today's question, your answer and streak
+                    const DailyTriviaProfileCard(),
+                    const SizedBox(height: 16),
+
                     // Support Section
                     _buildSupportCard(),
                     const SizedBox(height: 24),
