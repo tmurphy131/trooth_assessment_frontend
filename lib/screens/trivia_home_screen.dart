@@ -5,6 +5,8 @@ import 'trivia_setup_screen.dart';
 import 'trivia_challenge_list_screen.dart';
 import 'trivia_leaderboard_screen.dart';
 import '../widgets/trivia_competition_banner.dart';
+import '../widgets/daily_trivia_modal.dart';
+import '../models/daily_trivia.dart';
 
 class TriviaHomeScreen extends StatefulWidget {
   const TriviaHomeScreen({super.key});
@@ -18,6 +20,7 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
   int _activeChallengeCount = 0;
   Map<String, dynamic>? _topBadge;
   Map<String, dynamic>? _competition;
+  DailyStreak? _dailyStreak;
 
   @override
   void initState() {
@@ -25,6 +28,19 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
     _loadChallengeCount();
     _loadTopBadge();
     _loadCompetition();
+    _loadDailyStreak();
+  }
+
+  Future<void> _loadDailyStreak() async {
+    try {
+      final streak = await _api.dailyTriviaStreak();
+      if (mounted) setState(() => _dailyStreak = streak);
+    } catch (_) {}
+  }
+
+  Future<void> _openDaily() async {
+    await DailyTriviaPrompt.open(context);
+    _loadDailyStreak();
   }
 
   Future<void> _loadCompetition() async {
@@ -100,6 +116,13 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
               _buildTopBadgeBanner(_topBadge!),
               const SizedBox(height: 8),
             ],
+            _buildModeCard(
+              title: 'Daily Question',
+              subtitle: _dailySubtitle(),
+              icon: Icons.local_fire_department,
+              accentColor: Colors.orangeAccent,
+              onTap: _openDaily,
+            ),
             const SizedBox(height: 16),
             const Text(
               'Choose a Mode',
@@ -145,6 +168,16 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
         ),
       ),
     );
+  }
+
+  String _dailySubtitle() {
+    final s = _dailyStreak;
+    if (s == null) return 'One question a day for everyone. Build a streak to earn merch discounts.';
+    final streak = s.current > 0 ? '🔥 ${s.current}-day streak. ' : '';
+    final today = s.answeredToday ? "You've answered today's question." : "Today's question is waiting.";
+    final next = s.nextMilestone;
+    final reward = next == null ? '' : ' ${next.daysRemaining} more days to ${next.percent}% off merch.';
+    return '$streak$today$reward';
   }
 
   String _badgeEmoji(String badgeType) {

@@ -18,6 +18,7 @@ import 'apprentice_profile_screen.dart';
 import 'subscription_screen.dart';
 import 'trivia_home_screen.dart';
 import '../utils/errors.dart';
+import '../widgets/daily_trivia_modal.dart';
 
 part 'apprentice_dashboard_new_widgets.dart';
 
@@ -172,7 +173,7 @@ class _SpiritualGiftsQuickActionsSheet extends StatelessWidget {
 }
 
 class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew>
-    with ApprenticeDashboardTutorial {
+    with ApprenticeDashboardTutorial, WidgetsBindingObserver {
   final user = FirebaseAuth.instance.currentUser;
   final _apiService = ApiService();
   late Future<Map<String, dynamic>> _giftsLatestFuture = _apiService
@@ -189,8 +190,20 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializeAndLoadData();
     initApprenticeTutorial();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) DailyTriviaPrompt.maybeShow(context);
   }
 
   Future<void> _initializeAndLoadData() async {

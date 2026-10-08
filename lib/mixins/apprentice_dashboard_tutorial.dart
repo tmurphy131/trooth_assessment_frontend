@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/notification_primer.dart';
+import '../widgets/daily_trivia_modal.dart';
 import '../services/tutorial_service.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
@@ -175,11 +176,14 @@ mixin ApprenticeDashboardTutorial<T extends StatefulWidget> on State<T> {
     await TutorialService.resetTutorial(tutorialId);
   }
 
-  void _afterTutorial() {
+  // Overlays run one after another: tutorial → notification primer → daily question.
+  Future<void> _afterTutorial() async {
     if (!mounted) return;
-    NotificationPrimer.maybeShow(
+    await NotificationPrimer.maybeShow(
       context,
       reason: 'Hear from your mentor: new invitations, agreements to sign, weekly tips and trivia challenges.',
     );
+    if (!mounted) return;
+    await DailyTriviaPrompt.maybeShow(context);
   }
 }

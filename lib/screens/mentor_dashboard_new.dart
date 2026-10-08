@@ -24,6 +24,7 @@ import '../mixins/mentor_dashboard_tutorial.dart';
 import 'trivia_home_screen.dart';
 import '../features/assessments/screens/mentor_submission_detail_screen.dart';
 import '../utils/errors.dart';
+import '../widgets/daily_trivia_modal.dart';
 
 part 'mentor_dashboard_new_widgets.dart';
 
@@ -156,6 +157,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
       _refreshNotificationCount();
       _refreshTriviaPendingCount();
       _startNotificationPolling();
+      DailyTriviaPrompt.maybeShow(context);
     } else if (state == AppLifecycleState.paused) {
       _notifTimer?.cancel();
     }
