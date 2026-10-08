@@ -33,7 +33,12 @@ description: "Tasks for Daily Trivia Question & Streak Rewards (app)"
 
 - [x] T006 [US4] In `lib/main.dart` `_handleNotificationTap`, add `daily_trivia` and `daily_trivia_reward` cases that call `DailyTriviaPrompt.open`.
 - [x] T007 [US5] Daily Question card in `lib/screens/trivia_home_screen.dart`.
+- [x] T007b [US5b] `DailyTriviaProfileCard` in `lib/widgets/daily_trivia_profile_card.dart`, added to `mentor_profile_screen.dart` and `apprentice_profile_screen.dart` above "Need Help?". Tests in `test/daily_trivia_test.dart`.
 - [x] T008 [US6] In `SessionController._onSignedIn`, send `FlutterTimezone.getLocalTimezone()` to `setMyTimezone`, best-effort.
+
+## Phase 3b: Feedback from dev testing (2026-10-08)
+
+- [x] T012 [US1] Replace the auto-opening modal with `DailyTriviaPill` (`lib/widgets/daily_trivia_pill.dart`) in both dashboards' floating action button slot. The pill has a once-per-day fading nudge and hides when answered, through `DailyTriviaPrompt.answered`. Remove `DailyTriviaPrompt.maybeShow` and the tutorial-mixin and resume hooks. Tests in `test/daily_trivia_test.dart`.
 
 ## Phase 4: Tests & polish
 

@@ -8,6 +8,9 @@ import 'package:trooth_assessment/models/daily_trivia.dart';
 import 'package:trooth_assessment/services/api_service.dart';
 import 'package:trooth_assessment/widgets/daily_streak_view.dart';
 import 'package:trooth_assessment/widgets/daily_trivia_modal.dart';
+import 'package:trooth_assessment/widgets/daily_trivia_profile_card.dart';
+import 'package:trooth_assessment/widgets/daily_trivia_pill.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final today = DateTime(2026, 11, 5); // a Thursday
 
@@ -291,11 +294,155 @@ void main() {
       expect(requests.length, before);
     });
 
+    testWidgets('reopening after answering shows the question, the answer and the streak', (tester) async {
+      api.httpClient = MockClient((req) async => http.Response(
+          jsonEncode({
+            'question': mcQuestion,
+            'answer': answerJson,
+            'streak': streakJson(current: 3, answeredToday: true),
+          }),
+          200));
+      await pumpModal(tester);
+      expect(find.text('Who built the ark?'), findsOneWidget);
+      expect(find.bySemanticsLabel('A: Moses, your answer, incorrect'), findsOneWidget);
+      expect(find.bySemanticsLabel('B: Noah, correct answer'), findsOneWidget);
+      expect(find.text('3 days in a row'), findsOneWidget);
+    });
+
     testWidgets('fits at 1.5x text scale', (tester) async {
       await pumpModal(tester, textScale: 1.5);
       await tester.tap(find.text('Moses'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('DailyTriviaProfileCard', () {
+    final api = ApiService();
+
+    setUp(() {
+      api.setAuthForTesting(authorization: ({bool force = false}) async => null, canRetryAuth: () => false);
+    });
+
+    testWidgets('shows the streak and whether today is answered', (tester) async {
+      api.httpClient = MockClient((req) async => http.Response(
+          jsonEncode(streakJson(current: 12, answeredToday: true)), 200));
+      await tester.pumpWidget(host(const DailyTriviaProfileCard()));
+      await tester.pumpAndSettle();
+      expect(find.text('Daily Question & Streak'), findsOneWidget);
+      expect(find.text('🔥 12 days in a row · answered today'), findsOneWidget);
+    });
+
+    testWidgets('tapping opens the daily question', (tester) async {
+      api.httpClient = MockClient((req) async => http.Response(
+          jsonEncode(req.url.path.endsWith('/streak')
+              ? streakJson(current: 3, answeredToday: true)
+              : {'question': mcQuestion, 'answer': answerJson, 'streak': streakJson(current: 3, answeredToday: true)}),
+          200));
+      await tester.pumpWidget(host(const DailyTriviaProfileCard()));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Daily Question & Streak'));
+      await tester.pumpAndSettle();
+      expect(find.text('Daily Question'), findsOneWidget);
+      expect(find.text('Who built the ark?'), findsOneWidget);
+      // Close it so the next test can open one (only one modal at a time)
+      await tester.tap(find.byTooltip('Close'));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('a failed load still shows the entry', (tester) async {
+      api.httpClient = MockClient((_) async => http.Response('{}', 500));
+      await tester.pumpWidget(host(const DailyTriviaProfileCard()));
+      await tester.pumpAndSettle();
+      expect(find.text("See today's question and your streak"), findsOneWidget);
+    });
+  });
+
+  group('DailyTriviaPill', () {
+    final api = ApiService();
+    var answered = false;
+
+    setUp(() {
+      answered = false;
+      SharedPreferences.setMockInitialValues({});
+      api.setAuthForTesting(authorization: ({bool force = false}) async => null, canRetryAuth: () => false);
+      api.httpClient = MockClient((req) async {
+        if (req.url.path.endsWith('/answer')) {
+          answered = true;
+          return http.Response(
+              jsonEncode({
+                'question': mcQuestion,
+                'answer': answerJson,
+                'streak': streakJson(current: 13, answeredToday: true),
+                'freezes_used': 0,
+                'streak_reset': false,
+                'freeze_earned': false,
+                'new_reward': null,
+              }),
+              200);
+        }
+        return http.Response(
+            jsonEncode({
+              'question': mcQuestion,
+              'answer': answered ? answerJson : null,
+              'streak': streakJson(current: answered ? 13 : 12, answeredToday: answered),
+            }),
+            200);
+      });
+    });
+
+    Widget dashboard() => MaterialApp(
+          home: Scaffold(
+            backgroundColor: Colors.black,
+            body: const SizedBox.expand(),
+            floatingActionButton: const DailyTriviaPill(nudgeFor: Duration(seconds: 1)),
+          ),
+        );
+
+    testWidgets('shows the streak, nudges once, then the nudge fades', (tester) async {
+      await tester.pumpWidget(dashboard());
+      await tester.pumpAndSettle();
+      expect(find.text('🔥 12 · Daily question'), findsOneWidget);
+      expect(find.byTooltip("Answer today's daily question"), findsOneWidget);
+      // No modal opens on its own
+      expect(find.text('Who built the ark?'), findsNothing);
+
+      final bubble = find.text("Today's question is ready!");
+      double opacity() => tester.widget<AnimatedOpacity>(
+          find.ancestor(of: bubble, matching: find.byType(AnimatedOpacity))).opacity;
+      expect(opacity(), 1);
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+      expect(opacity(), 0);
+
+      // Same day again: no second nudge
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(dashboard());
+      await tester.pumpAndSettle();
+      expect(opacity(), 0);
+    });
+
+    testWidgets('hidden once today is answered', (tester) async {
+      answered = true;
+      await tester.pumpWidget(dashboard());
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Daily question'), findsNothing);
+    });
+
+    testWidgets('tap opens the question; answering makes the pill go away', (tester) async {
+      await tester.pumpWidget(dashboard());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('🔥 12 · Daily question'));
+      await tester.pumpAndSettle();
+      expect(find.text('Who built the ark?'), findsOneWidget);
+
+      await tester.tap(find.text('Moses'));
+      await tester.pumpAndSettle();
+      expect(find.text('13 days in a row'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Close'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Daily question'), findsNothing);
     });
   });
 }

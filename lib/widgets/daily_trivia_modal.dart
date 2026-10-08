@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/daily_trivia.dart';
 import '../services/api_service.dart';
@@ -7,50 +6,17 @@ import '../theme.dart';
 import '../utils/errors.dart';
 import 'daily_streak_view.dart';
 
-/// Decides when the daily question modal opens (backend/app spec 002).
+/// Opens the daily question modal (backend/app spec 002). It never opens on
+/// its own: the dashboard pill, notification taps, the profile card and the
+/// Trivia card call [open].
 class DailyTriviaPrompt {
-  static const _prefPrefix = 'daily_trivia_prompted_';
   static bool _showing = false;
 
-  /// Launch/resume: opens at most once per local day, only while today is
-  /// unanswered and [context]'s route is on top. Failures stay silent.
-  static Future<void> maybeShow(BuildContext context) async {
+  /// Bumped whenever today's question is answered, so the pill and cards refresh.
+  static final answered = ValueNotifier<int>(0);
+
+  static Future<void> open(BuildContext context, {DailyToday? initial}) async {
     if (_showing) return;
-    try {
-      final key = '$_prefPrefix${isoDate(DateTime.now())}';
-      final prefs = await SharedPreferences.getInstance();
-      if (prefs.getBool(key) == true) return;
-
-      final today = await ApiService().dailyTriviaToday();
-      if (!context.mounted || _showing) return;
-      if (today.answer != null) {
-        await _markPrompted(prefs, key);
-        return;
-      }
-      if (ModalRoute.of(context)?.isCurrent == false) return;
-
-      await _markPrompted(prefs, key);
-      if (!context.mounted) return;
-      await _present(context, initial: today);
-    } catch (e) {
-      debugPrint('⚠️ Daily trivia prompt skipped: $e');
-    }
-  }
-
-  /// Notification taps and the Trivia card: always opens.
-  static Future<void> open(BuildContext context) async {
-    if (_showing) return;
-    await _present(context);
-  }
-
-  static Future<void> _markPrompted(SharedPreferences prefs, String key) async {
-    for (final old in prefs.getKeys().where((k) => k.startsWith(_prefPrefix) && k != key).toList()) {
-      await prefs.remove(old);
-    }
-    await prefs.setBool(key, true);
-  }
-
-  static Future<void> _present(BuildContext context, {DailyToday? initial}) async {
     _showing = true;
     try {
       await showDialog<void>(
@@ -67,7 +33,7 @@ class DailyTriviaPrompt {
 class DailyTriviaModal extends StatefulWidget {
   const DailyTriviaModal({super.key, this.initial, this.today});
 
-  /// Already-loaded data (from [DailyTriviaPrompt.maybeShow]); otherwise it loads.
+  /// Already-loaded data (e.g. from the dashboard pill); otherwise it loads.
   final DailyToday? initial;
 
   /// Passed to the streak view; injectable for tests.
@@ -130,6 +96,7 @@ class _DailyTriviaModalState extends State<DailyTriviaModal> {
         _outcome = outcome;
         _submitting = null;
       });
+      DailyTriviaPrompt.answered.value++;
     } on DailyQuestionExpiredException catch (e) {
       if (!mounted) return;
       setState(() {

@@ -12,21 +12,23 @@ Backend contract (source of truth): [`trooth_assessment_backend/specs/002-daily-
 
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story 1 - Daily question modal on open (Priority: P1)
+### User Story 1 - Daily question pill and modal (Priority: P1)
 
-When a signed-in user reaches their dashboard and hasn't answered today, a modal shows today's question. It shows the category and level as chips, then the question and its options (four, or two for true/false). The user taps an option and sees right or wrong, the correct answer and their updated streak. They can close the modal without answering.
+While today is unanswered, both dashboards show a small floating "🔥 12 · Daily question" pill in the bottom-right corner. Nothing opens on its own. On the first view of the day, a small "Today's question is ready!" bubble appears next to the pill and fades after a few seconds. Tapping the pill or the bubble opens the modal. The modal shows the category and level as chips, then the question and its options (four, or two for true/false). The user taps an option and sees right or wrong, the correct answer and their updated streak. Once today is answered, from anywhere, the pill disappears.
 
-**Why this priority**: This is the daily touchpoint the feature exists for.
+**Why this priority**: This is the daily touchpoint the feature exists for. Dev testing (2026-10-08) found an auto-opening modal too intrusive, so the prompt has to be opt-in.
 
-**Independent Test**: With an unanswered day on dev, open the app. The modal appears once with the category, level and options. Answer it and see the result. Reopen the app the same day and the modal doesn't appear.
+**Independent Test**: With an unanswered day on dev, open the app. The pill shows, the bubble shows once and fades, and no modal opens. Tap the pill, answer, close the modal, and the pill is gone. Reopen the app the same day: no pill, no bubble.
 
 **Acceptance Scenarios**:
 
-1. **Given** a user who hasn't answered today, **When** their dashboard finishes loading (after the first-run tutorial and notification prompt, if those show), **Then** the daily question modal opens.
-2. **Given** the modal is open, **When** the user taps an option, **Then** the options lock, the correct one is marked, the chosen wrong one (if any) is marked, and the streak view appears below.
-3. **Given** a user who already answered today, or who closed today's modal, **When** they open or resume the app the same local day, **Then** the modal doesn't open on its own.
-4. **Given** the modal is open across midnight, **When** the user answers, **Then** they're told the question has changed and the new day's question loads.
-5. **Given** the question can't load (offline, server error, no questions), **When** the dashboard opens, **Then** no modal and no error dialog appear.
+1. **Given** a user who hasn't answered today, **When** their dashboard loads, **Then** the pill shows their streak, and no modal opens by itself.
+2. **Given** it's the first dashboard view of the local day, **Then** the "question is ready" bubble shows next to the pill and fades within a few seconds. It doesn't show again that day.
+3. **Given** the modal is open, **When** the user taps an option, **Then** the options lock, the correct one is marked, the chosen wrong one (if any) is marked, and the streak view appears below.
+4. **Given** the user answers from the pill, the profile card, the Trivia card or a notification, **Then** the pill disappears.
+5. **Given** the modal is open across midnight, **When** the user answers, **Then** they're told the question has changed and the new day's question loads.
+6. **Given** the question can't load (offline, server error, no questions), **Then** the pill is hidden and no error appears.
+7. **Given** the app returns from the background on a new day, **Then** the pill reappears for the new question.
 
 ---
 
@@ -74,14 +76,21 @@ The Trivia home screen has a "Daily Question" card showing the streak and whethe
 
 ---
 
+### User Story 5b - Revisit today's question and streak from the profile (Priority: P2)
+
+Both the mentor and apprentice profile screens have a "Daily Question & Streak" card. It shows the current streak and whether today is answered. Tapping it opens the modal, which shows today's question, what the user answered (and the correct answer), and the streak view. If today is still unanswered, the modal shows the question so they can answer it.
+
+**Why this priority**: Once answered, users had no way back to their result or streak outside the Trivia screen (feedback from dev testing, 2026-10-08).
+
+**Independent Test**: Answer today's question, close the modal, open Profile, and tap the card. The question, your answer and your streak appear.
+
 ### User Story 6 - The app reports the device timezone (Priority: P2)
 
 After sign-in, the app sends the device's IANA timezone so the user's "today" and 9am reminder follow their clock.
 
 ### Edge Cases
 
-- **First launch**: the onboarding tutorial and notification primer show first, and the modal opens after them.
-- **Navigation**: if a notification or deep link has pushed another screen, the modal doesn't open on top of it.
+- **First launch**: the onboarding tutorial and notification primer work as before. The pill doesn't interrupt them.
 - **Text scaling**: at 1.5× text, the modal scrolls instead of overflowing.
 - **Timezone failure**: if the timezone can't be read, nothing is sent and the backend default applies.
 
@@ -89,7 +98,7 @@ After sign-in, the app sends the device's IANA timezone so the user's "today" an
 
 ### Functional Requirements
 
-- **FR-001**: The app MUST open the daily question modal automatically at most once per local day per device, only when today is unanswered, and only when the dashboard is the top screen.
+- **FR-001**: The app MUST NOT open the daily question modal on its own. While today is unanswered, the dashboards MUST show a floating pill that opens it, with a one-time-per-day fading nudge, and the pill MUST hide once today is answered.
 - **FR-002**: The modal MUST show the category label and level label from the backend, the question, and only the options the question has.
 - **FR-003**: The app MUST NOT know or show the correct option before the server returns it.
 - **FR-004**: After answering, the app MUST show correct or wrong, the correct option, the updated streak, and any freeze used, freeze earned, reset or new reward.
@@ -97,6 +106,7 @@ After sign-in, the app sends the device's IANA timezone so the user's "today" an
 - **FR-006**: The streak view MUST show the active or pending reward as described in US3.
 - **FR-007**: Tapping `daily_trivia` and `daily_trivia_reward` notifications MUST open the modal.
 - **FR-008**: The Trivia home MUST offer a Daily Question entry point.
+- **FR-008b**: The mentor and apprentice profile screens MUST offer a "Daily Question & Streak" entry that opens the modal showing today's question, the user's answer and their streak.
 - **FR-009**: After sign-in, the app MUST send the device's IANA timezone through `PUT /users/me/timezone`, best-effort.
 - **FR-010**: Errors MUST be shown with `friendlyError()`, with one exception: when the daily question can't load on launch, the app MUST say nothing.
 

@@ -9,6 +9,7 @@ class BaseDashboard extends StatelessWidget {
   final double logoHeight;
   /// Optional explicit width for the logo (if wider than tall). If null, uses height * 3.2 (logo aspect ratio).
   final double? logoWidth;
+  final Widget? floatingActionButton;
 
   const BaseDashboard({
     super.key,
@@ -17,6 +18,7 @@ class BaseDashboard extends StatelessWidget {
     this.additionalActions,
     this.logoHeight = 32,
     this.logoWidth,
+    this.floatingActionButton,
   });
 
   @override
@@ -49,6 +51,7 @@ class BaseDashboard extends StatelessWidget {
         bottom: bottom,
       ),
       body: body,
+      floatingActionButton: floatingActionButton,
     );
   }
 }
