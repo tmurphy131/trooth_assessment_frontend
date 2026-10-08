@@ -15,6 +15,7 @@ import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/mentor_note.dart';
 import '../models/prayer_entry.dart';
+import '../models/trivia_session.dart';
 
 part 'api/users_mentorship.dart';
 part 'api/mentor.dart';

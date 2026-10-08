@@ -3,18 +3,31 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'trivia_result_screen.dart';
+import '../models/trivia_session.dart';
 import '../services/api_service.dart';
+import '../utils/errors.dart';
 
+/// Single-player game driven by a server session (backend spec 001).
+///
+/// The server grades and times every answer. This screen only renders the
+/// latest [TriviaSessionState] and sends one answer per question. Both
+/// countdowns are deadlines on the real clock, so leaving the app doesn't
+/// pause them; they're re-checked as soon as the app returns.
 class TriviaGameScreen extends StatefulWidget {
-  final List<Map<String, dynamic>> questions;
+  final TriviaSessionState initialState;
   final String category;
   final String difficulty;
 
+  /// Clock override for widget tests.
+  @visibleForTesting
+  final DateTime Function()? now;
+
   const TriviaGameScreen({
     super.key,
-    required this.questions,
+    required this.initialState,
     required this.category,
     required this.difficulty,
+    this.now,
   });
 
   @override
@@ -22,24 +35,20 @@ class TriviaGameScreen extends StatefulWidget {
 }
 
 class _TriviaGameScreenState extends State<TriviaGameScreen>
-    with TickerProviderStateMixin {
-  // Game state
-  int _currentIndex = 0;
-  int _score = 0;
-  int _streak = 0;
-  int _correctCount = 0;
-  int _graceTokens = 0;
-  int _graceTokensUsed = 0;
-  final List<Map<String, dynamic>> _answers = [];
-  late List<Map<String, dynamic>> _questions;
-  bool _isFetchingMore = false;
-  final Set<int> _seenIds = {};
+    with TickerProviderStateMixin, WidgetsBindingObserver {
+  final _api = ApiService();
 
-  // Timer
-  static const _questionSeconds = 30;
-  int _timeLeft = _questionSeconds;
-  Timer? _timer;
-  int _questionStartMs = 0;
+  late TriviaSessionState _state;
+  TriviaSessionQuestion? _question;     // the question on screen (kept while feedback shows)
+  TriviaLastAnswer? _feedback;          // grading of the answer just sent
+  String? _picked;
+  ({int questionId, String? selected})? _lastSent;
+  DateTime? _questionDeadline;
+  DateTime? _graceDeadline;
+  int _frozenSecondsLeft = 0;           // shown once the player has answered
+  bool _busy = false;
+  bool _done = false;
+  Timer? _ticker;
 
   // Animation controllers
   late AnimationController _shakeController;
@@ -49,17 +58,12 @@ class _TriviaGameScreenState extends State<TriviaGameScreen>
   late Animation<double> _pulseAnim;
   late Animation<double> _fadeInAnim;
 
-  // Grace token state
-  bool _showGracePrompt = false;
-  Timer? _graceTimer;
-  int _graceCountdown = 10;
-
-  String? _selectedOption;
-  bool _answered = false;
+  DateTime _now() => (widget.now ?? DateTime.now)();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     _shakeController = AnimationController(
       vsync: this,
@@ -81,286 +85,339 @@ class _TriviaGameScreenState extends State<TriviaGameScreen>
     );
     _fadeInAnim = CurvedAnimation(parent: _fadeInController, curve: Curves.easeIn);
 
-    _questions = List.from(widget.questions);
-    for (final q in _questions) {
-      _seenIds.add(q['id'] as int);
-    }
-    _startQuestion();
-  }
-
-  Future<void> _fetchMoreQuestions() async {
-    if (_isFetchingMore) return;
-    _isFetchingMore = true;
-    try {
-      final more = await ApiService().triviaDrawQuestions(
-        category: widget.category,
-        difficulty: widget.difficulty,
-        count: 50,
-      );
-      final fresh = more.where((q) => !_seenIds.contains(q['id'] as int)).toList();
-      if (mounted && fresh.isNotEmpty) {
-        setState(() {
-          for (final q in fresh) {
-            _seenIds.add(q['id'] as int);
-          }
-          _questions.addAll(fresh);
-        });
-      }
-    } catch (_) {
-      // Silently fail — game ends naturally if pool is exhausted
-    } finally {
-      _isFetchingMore = false;
-    }
+    _apply(widget.initialState);
+    _ticker = Timer.periodic(const Duration(milliseconds: 250), (_) => _tick());
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
-    _graceTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _ticker?.cancel();
     _shakeController.dispose();
     _pulseController.dispose();
     _fadeInController.dispose();
     super.dispose();
   }
 
-  void _startQuestion() {
-    _selectedOption = null;
-    _answered = false;
-    _showGracePrompt = false;
-    _timeLeft = _questionSeconds;
-    _questionStartMs = DateTime.now().millisecondsSinceEpoch;
-    _fadeInController.forward(from: 0);
-
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) { t.cancel(); return; }
-      setState(() {
-        _timeLeft--;
-        if (_timeLeft <= 0) {
-          t.cancel();
-          _handleTimeUp();
-        }
-      });
-    });
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Time kept running while we were away: act on any deadline that passed
+    if (state == AppLifecycleState.resumed) _tick();
   }
 
-  void _handleTimeUp() {
-    if (_answered) return;
-    _onAnswer(null); // treat as wrong
-  }
+  // ---------- State ----------
 
-  int get _multiplier {
-    if (_streak < 5) return 1;
-    if (_streak < 10) return 2;
-    if (_streak < 15) return 3;
-    if (_streak < 20) return 4;
-    return 5;
-  }
-
-  void _onAnswer(String? option) {
-    if (_answered) return;
-    _timer?.cancel();
-
-    final q = _questions[_currentIndex];
-    final correct = q['correct_option'] as String? ?? q['correct'] as String?;
-    final isCorrect = option != null && option == correct;
-    final timeUsedMs = DateTime.now().millisecondsSinceEpoch - _questionStartMs;
-
-    _answers.add({
-      'question_id': q['id'],
-      'selected': option ?? '',
-      'time_used_ms': timeUsedMs,
-    });
-
-    setState(() {
-      _answered = true;
-      _selectedOption = option;
-    });
-
-    if (isCorrect) {
-      _streak++;
-      _correctCount++;
-      _score += 100 * _multiplier;
-      // Grant a grace token every 10 correct answers
-      if (_correctCount % 10 == 0) _graceTokens++;
-
-      // Brief pause to show result, then advance
-      Future.delayed(const Duration(milliseconds: 800), () {
-        if (!mounted) return;
-        _nextQuestion();
-      });
-    } else {
-      HapticFeedback.heavyImpact();
-      _shakeController.forward(from: 0);
-
-      if (_graceTokens > 0) {
-        setState(() { _showGracePrompt = true; _graceCountdown = 10; });
-        _graceTimer = Timer.periodic(const Duration(seconds: 1), (t) {
-          if (!mounted) { t.cancel(); return; }
-          setState(() => _graceCountdown--);
-          if (_graceCountdown <= 0) {
-            t.cancel();
-            if (_showGracePrompt) _endGame();
+  /// Show [s]: next question, grace prompt, or results. Call inside setState.
+  void _apply(TriviaSessionState s) {
+    _state = s;
+    switch (s.status) {
+      case TriviaSessionStatus.active:
+        _question = s.question;
+        _feedback = null;
+        _picked = null;
+        _graceDeadline = null;
+        _questionDeadline = _now().add(Duration(milliseconds: s.timeLimitMs));
+        _fadeInController.forward(from: 0);
+      case TriviaSessionStatus.awaitingGrace:
+        _questionDeadline = null;
+        _graceDeadline = _now().add(Duration(milliseconds: s.graceExpiresInMs ?? 10000));
+      case TriviaSessionStatus.finished:
+        _questionDeadline = null;
+        _graceDeadline = null;
+        final result = s.result;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          if (result != null) {
+            _showResults(result);
+          } else {
+            _finishAndShowResults();
           }
         });
-      } else {
-        Future.delayed(const Duration(milliseconds: 800), () {
-          if (mounted) _endGame();
-        });
-      }
     }
   }
 
-  void _useGraceToken() {
-    _graceTimer?.cancel();
-    // Remove the wrong answer that triggered this grace prompt so the backend
-    // doesn't see it when computing the final score — streak must be preserved.
-    if (_answers.isNotEmpty) _answers.removeLast();
-    setState(() {
-      _showGracePrompt = false;
-      _graceTokens--;
-      _graceTokensUsed++;
-      _answered = false;
-      _selectedOption = null;
-    });
-    // Restart the timer on the same question
-    _startQuestion();
+  int _secondsLeft(DateTime? deadline) {
+    if (deadline == null) return 0;
+    final ms = deadline.difference(_now()).inMilliseconds;
+    return ms <= 0 ? 0 : (ms / 1000).ceil();
   }
 
-  void _nextQuestion() {
-    final nextIndex = _currentIndex + 1;
+  bool get _awaitingAnswer =>
+      _state.status == TriviaSessionStatus.active && _feedback == null && !_busy && !_done;
 
-    // Pre-fetch more questions when 10 remain
-    if (_questions.length - nextIndex <= 10) {
-      _fetchMoreQuestions();
-    }
-
-    if (nextIndex >= _questions.length) {
-      // Pool temporarily exhausted — wait briefly for fetch then retry
-      if (_isFetchingMore) {
-        Future.delayed(const Duration(milliseconds: 600), () {
-          if (mounted) _nextQuestion();
-        });
-      } else {
-        _endGame();
-      }
+  void _tick() {
+    if (!mounted || _done || _busy) return;
+    final now = _now();
+    if (_awaitingAnswer && _questionDeadline != null && !now.isBefore(_questionDeadline!)) {
+      _submit(null); // time's up (also when we come back from the background)
       return;
     }
-
-    setState(() => _currentIndex = nextIndex);
-    _startQuestion();
+    if (_state.status == TriviaSessionStatus.awaitingGrace &&
+        _graceDeadline != null &&
+        !now.isBefore(_graceDeadline!)) {
+      _decideGrace(false);
+      return;
+    }
+    setState(() {}); // repaint countdowns
   }
 
-  void _endGame() {
-    _timer?.cancel();
-    _graceTimer?.cancel();
+  // ---------- Actions ----------
+
+  Future<void> _submit(String? letter) async {
+    final q = _question;
+    if (q == null || !_awaitingAnswer) return;
+    setState(() {
+      _busy = true;
+      _picked = letter;
+      _frozenSecondsLeft = _secondsLeft(_questionDeadline);
+      _questionDeadline = null;
+    });
+    _lastSent = (questionId: q.id, selected: letter);
+
+    final res = await _call(() => _api.triviaAnswerSingle(_state.sessionId, questionId: q.id, selected: letter));
+    if (!mounted || res == null) return;
+
+    final answer = res.lastAnswer;
+    setState(() {
+      _busy = false;
+      _feedback = answer;
+      _state = res;
+      if (res.status == TriviaSessionStatus.awaitingGrace) _apply(res); // grace countdown starts now
+    });
+    if (answer != null && !answer.correct) {
+      HapticFeedback.heavyImpact();
+      _shakeController.forward(from: 0);
+    }
+    if (res.status == TriviaSessionStatus.awaitingGrace) return;
+
+    // Brief pause to show the result, then move on
+    await Future.delayed(const Duration(milliseconds: 800));
+    if (!mounted || _done) return;
+    setState(() => _apply(res));
+  }
+
+  Future<void> _decideGrace(bool use) async {
+    if (_busy || _done || _state.status != TriviaSessionStatus.awaitingGrace) return;
+    setState(() {
+      _busy = true;
+      _graceDeadline = null;
+    });
+    final res = await _call(() => _api.triviaGraceSingle(_state.sessionId, use: use));
+    if (!mounted || res == null) return;
+    setState(() {
+      _busy = false;
+      _apply(res);
+    });
+  }
+
+  /// Runs a session request: one automatic retry, then Retry/Leave.
+  /// 409 (our view is stale) re-syncs; 404 leaves.
+  Future<TriviaSessionState?> _call(Future<TriviaSessionState> Function() request) async {
+    try {
+      return await _withRetry(request);
+    } on ApiException catch (e) {
+      if (e.statusCode == 409) return _resync();
+      if (e.statusCode == 404) {
+        _exitWithMessage(e);
+        return null;
+      }
+      return _connectionProblem(e, request);
+    } catch (e) {
+      return _connectionProblem(e, request);
+    }
+  }
+
+  Future<T> _withRetry<T>(Future<T> Function() request) async {
+    try {
+      return await request();
+    } on NetworkException {
+      return await request();
+    } on ApiException catch (e) {
+      if (e.isServerError) return await request();
+      rethrow;
+    }
+  }
+
+  /// Our view is out of date (game over or grace pending). Re-sending the last
+  /// answer makes the server replay its current state, whatever it is.
+  Future<TriviaSessionState?> _resync() async {
+    final last = _lastSent;
+    if (last != null) {
+      try {
+        return await _withRetry(() => _api.triviaAnswerSingle(
+              _state.sessionId,
+              questionId: last.questionId,
+              selected: last.selected,
+            ));
+      } catch (_) {
+        // Fall through: end the game and show what was saved
+      }
+    }
+    await _finishAndShowResults();
+    return null;
+  }
+
+  Future<TriviaSessionState?> _connectionProblem(
+    Object error,
+    Future<TriviaSessionState> Function() request,
+  ) async {
+    if (!mounted) return null;
+    final retry = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Connection problem', style: TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+        content: Text(friendlyError(error), style: const TextStyle(color: Colors.white70, fontFamily: 'Poppins')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Leave', style: TextStyle(color: Colors.redAccent)),
+          ),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Retry')),
+        ],
+      ),
+    );
+    if (!mounted) return null;
+    if (retry == true) return _call(request);
+    await _finishAndShowResults();
+    return null;
+  }
+
+  void _exitWithMessage(Object error) {
+    if (!mounted) return;
+    _done = true;
+    _ticker?.cancel();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(error))));
+    Navigator.of(context).pop();
+  }
+
+  /// End the game on the server (idempotent) and show the saved result.
+  Future<void> _finishAndShowResults() async {
+    if (_done) return;
+    _done = true;
+    _ticker?.cancel();
+    try {
+      final result = await _withRetry(() => _api.triviaFinishSingle(_state.sessionId));
+      if (!mounted) return;
+      _showResults(result, force: true);
+    } catch (e) {
+      // The server closes the game on its own once the question expires
+      if (!mounted) return;
+      _exitWithMessage(e);
+    }
+  }
+
+  void _showResults(Map<String, dynamic> result, {bool force = false}) {
+    if (_done && !force) return;
+    _done = true;
+    _ticker?.cancel();
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (_) => TriviaResultScreen(
-          score: _score,
-          streakLength: _streak,
-          correctCount: _correctCount,
+          result: result,
           category: widget.category,
           difficulty: widget.difficulty,
-          answers: _answers,
-          graceTokensUsed: _graceTokensUsed,
         ),
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final q = _questions[_currentIndex];
-    final options = _buildOptions(q);
-    final isPulsing = _timeLeft <= 5;
-
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) async {
-        if (didPop) return;
-        final leave = await showDialog<bool>(
-          context: context,
-          builder: (_) => AlertDialog(
-            backgroundColor: Colors.grey[900],
-            title: const Text('Leave game?', style: TextStyle(color: Colors.white, fontFamily: 'Poppins')),
-            content: const Text(
-              'Your current game progress will be lost.',
-              style: TextStyle(color: Colors.white70, fontFamily: 'Poppins'),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Stay')),
-              TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Leave', style: TextStyle(color: Colors.redAccent))),
-            ],
-          ),
-        );
-        if (leave == true && context.mounted) Navigator.of(context).pop();
-      },
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: SafeArea(
-          child: FadeTransition(
-            opacity: _fadeInAnim,
-            child: Column(
-              children: [
-                _buildHeader(isPulsing),
-                Expanded(
-                  child: AnimatedBuilder(
-                    animation: _shakeAnim,
-                    builder: (context, child) {
-                      final shake = sin(_shakeAnim.value * pi * 6) * 12;
-                      return Transform.translate(
-                        offset: Offset(shake, 0),
-                        child: child,
-                      );
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Column(
-                        children: [
-                          const SizedBox(height: 20),
-                          _buildQuestionCard(q),
-                          const SizedBox(height: 20),
-                          ...options.map((o) => _buildOptionButton(o.$1, o.$2, q)),
-                          const Spacer(),
-                          if (_showGracePrompt) _buildGracePrompt(),
-                          const SizedBox(height: 20),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _confirmQuit() {
-    showDialog<bool>(
+  Future<void> _confirmQuit() async {
+    if (_done) return;
+    final leave = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: Colors.grey[900],
         title: const Text('Quit game?', style: TextStyle(color: Colors.white, fontFamily: 'Poppins')),
         content: const Text(
-          'Your score will be saved and you\'ll be taken to the results screen.',
+          'Your game will end and your score so far will be saved.',
           style: TextStyle(color: Colors.white70, fontFamily: 'Poppins'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep Playing')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Keep Playing')),
           TextButton(
-            onPressed: () { Navigator.pop(context, true); _endGame(); },
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Quit', style: TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),
     );
+    if (leave == true && mounted) await _finishAndShowResults();
   }
 
-  Widget _buildHeader(bool isPulsing) {
+  // ---------- UI ----------
+
+  @override
+  Widget build(BuildContext context) {
+    final q = _question;
+    final answered = _feedback != null || _busy;
+    final secondsLeft = answered ? _frozenSecondsLeft : _secondsLeft(_questionDeadline);
+    final isPulsing = !answered && _state.status == TriviaSessionStatus.active && secondsLeft <= 5;
+
+    return PopScope(
+      canPop: _done,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _confirmQuit();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: SafeArea(
+          child: q == null
+              ? const Center(child: CircularProgressIndicator(color: Color(0xFFFFD700)))
+              : FadeTransition(
+                  opacity: _fadeInAnim,
+                  child: Column(
+                    children: [
+                      _buildHeader(isPulsing, secondsLeft),
+                      Expanded(
+                        child: AnimatedBuilder(
+                          animation: _shakeAnim,
+                          builder: (context, child) {
+                            final shake = sin(_shakeAnim.value * pi * 6) * 12;
+                            return Transform.translate(
+                              offset: Offset(shake, 0),
+                              child: child,
+                            );
+                          },
+                          // Scrolls on short screens / large text so the grace prompt is
+                          // always reachable; otherwise it sits at the bottom as before.
+                          child: LayoutBuilder(
+                            builder: (context, constraints) => SingleChildScrollView(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                                child: IntrinsicHeight(
+                                  child: Column(
+                                    children: [
+                                      const SizedBox(height: 20),
+                                      _buildQuestionCard(q),
+                                      const SizedBox(height: 20),
+                                      ..._buildOptions(q).map((o) => _buildOptionButton(o.$1, o.$2)),
+                                      const Spacer(),
+                                      if (_state.status == TriviaSessionStatus.awaitingGrace) _buildGracePrompt(),
+                                      const SizedBox(height: 20),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(bool isPulsing, int secondsLeft) {
+    final multiplier = _state.multiplier;
+    final graceTokens = _state.graceTokens;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
       color: Colors.black,
@@ -385,7 +442,7 @@ class _TriviaGameScreenState extends State<TriviaGameScreen>
                 children: [
                   const Text('Score', style: TextStyle(color: Colors.white54, fontFamily: 'Poppins', fontSize: 11)),
                   Text(
-                    _score.toString(),
+                    _state.score.toString(),
                     style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 22),
                   ),
                 ],
@@ -398,7 +455,7 @@ class _TriviaGameScreenState extends State<TriviaGameScreen>
                     builder: (_, __) => Transform.scale(
                       scale: isPulsing ? _pulseAnim.value : 1.0,
                       child: Text(
-                        _timeLeft.toString(),
+                        secondsLeft.toString(),
                         style: TextStyle(
                           color: isPulsing ? Colors.redAccent : const Color(0xFFFFD700),
                           fontFamily: 'Poppins',
@@ -419,18 +476,18 @@ class _TriviaGameScreenState extends State<TriviaGameScreen>
                   Row(
                     children: [
                       Text(
-                        _streak.toString(),
+                        _state.streak.toString(),
                         style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 22),
                       ),
                       const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: _multiplierColor(_multiplier),
+                          color: _multiplierColor(multiplier),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          '${_multiplier}x',
+                          '${multiplier}x',
                           style: const TextStyle(
                             color: Colors.black,
                             fontFamily: 'Poppins',
@@ -451,16 +508,16 @@ class _TriviaGameScreenState extends State<TriviaGameScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Flexible(child: Text(
-                'Q${_currentIndex + 1}',
+                'Q${(_question?.index ?? 0) + 1}',
                 style: const TextStyle(color: Colors.white54, fontFamily: 'Poppins', fontSize: 11),
               )),
-              if (_graceTokens > 0)
+              if (graceTokens > 0)
                 Row(
                   children: [
                     const Icon(Icons.shield, color: Colors.greenAccent, size: 13),
                     const SizedBox(width: 3),
                     Text(
-                      '$_graceTokens grace token${_graceTokens > 1 ? 's' : ''}',
+                      '$graceTokens grace token${graceTokens > 1 ? 's' : ''}',
                       style: const TextStyle(color: Colors.greenAccent, fontFamily: 'Poppins', fontSize: 11),
                     ),
                   ],
@@ -472,7 +529,7 @@ class _TriviaGameScreenState extends State<TriviaGameScreen>
     );
   }
 
-  Widget _buildQuestionCard(Map<String, dynamic> q) {
+  Widget _buildQuestionCard(TriviaSessionQuestion q) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -482,7 +539,7 @@ class _TriviaGameScreenState extends State<TriviaGameScreen>
         border: Border.all(color: Colors.grey[800]!),
       ),
       child: Text(
-        q['question_text'] as String? ?? '',
+        q.text,
         style: const TextStyle(
           color: Colors.white,
           fontFamily: 'Poppins',
@@ -495,42 +552,35 @@ class _TriviaGameScreenState extends State<TriviaGameScreen>
     );
   }
 
-  List<(String, String)> _buildOptions(Map<String, dynamic> q) {
-    final opts = <(String, String)>[];
-    final labels = ['a', 'b', 'c', 'd'];
-    final names = ['A', 'B', 'C', 'D'];
-    for (var i = 0; i < labels.length; i++) {
-      final val = q['option_${labels[i]}'] as String?;
-      if (val != null && val.isNotEmpty) {
-        opts.add((labels[i], '${names[i]}. $val'));
-      }
-    }
-    return opts;
+  List<(String, String)> _buildOptions(TriviaSessionQuestion q) {
+    return [
+      for (final entry in q.options.entries) (entry.key, '${entry.key.toUpperCase()}. ${entry.value}'),
+    ];
   }
 
-  Widget _buildOptionButton(String key, String label, Map<String, dynamic> q) {
-    final correct = q['correct_option'] as String? ?? q['correct'] as String?;
+  Widget _buildOptionButton(String key, String label) {
+    final feedback = _feedback;
     Color bg = Colors.grey[900]!;
     Color border = Colors.grey[800]!;
     Color textColor = Colors.white;
 
-    if (_answered) {
-      if (key == correct) {
+    if (feedback != null) {
+      if (key == feedback.correctOption) {
         bg = Colors.green.withValues(alpha: 0.2);
         border = Colors.green;
         textColor = Colors.greenAccent;
-      } else if (key == _selectedOption) {
+      } else if (key == _picked) {
         bg = Colors.red.withValues(alpha: 0.2);
         border = Colors.redAccent;
         textColor = Colors.redAccent;
       }
-    } else if (key == _selectedOption) {
+    } else if (key == _picked) {
       bg = const Color(0xFFFFD700).withValues(alpha: 0.15);
       border = const Color(0xFFFFD700);
     }
 
     return GestureDetector(
-      onTap: _answered ? null : () => _onAnswer(key),
+      onTap: _awaitingAnswer ? () => _submit(key) : null,
       child: Container(
         width: double.infinity,
         margin: const EdgeInsets.only(bottom: 10),
@@ -554,6 +604,7 @@ class _TriviaGameScreenState extends State<TriviaGameScreen>
   }
 
   Widget _buildGracePrompt() {
+    final graceLeft = _secondsLeft(_graceDeadline);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -583,7 +634,7 @@ class _TriviaGameScreenState extends State<TriviaGameScreen>
           ),
           const SizedBox(height: 4),
           const Text(
-            'Survive this wrong answer — streak preserved!',
+            'Keep your streak and move on to the next question.',
             style: TextStyle(color: Colors.white70, fontFamily: 'Poppins', fontSize: 12),
             textAlign: TextAlign.center,
           ),
@@ -592,7 +643,7 @@ class _TriviaGameScreenState extends State<TriviaGameScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               ElevatedButton(
-                onPressed: _useGraceToken,
+                onPressed: _busy ? null : () => _decideGrace(true),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.greenAccent,
                   foregroundColor: Colors.black,
@@ -605,9 +656,9 @@ class _TriviaGameScreenState extends State<TriviaGameScreen>
               ),
               const SizedBox(width: 12),
               Text(
-                '$_graceCountdown',
+                '$graceLeft',
                 style: TextStyle(
-                  color: _graceCountdown <= 3 ? Colors.redAccent : Colors.white54,
+                  color: graceLeft <= 3 ? Colors.redAccent : Colors.white54,
                   fontFamily: 'Poppins',
                   fontWeight: FontWeight.bold,
                   fontSize: 20,

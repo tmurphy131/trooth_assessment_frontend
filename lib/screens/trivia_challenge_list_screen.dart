@@ -3,6 +3,8 @@ import '../services/api_service.dart';
 import 'trivia_setup_screen.dart';
 import 'trivia_challenge_detail_screen.dart';
 import '../utils/errors.dart';
+import '../services/subscription_service.dart';
+import '../widgets/premium_upgrade_dialog.dart';
 
 class TriviaChallengeListScreen extends StatefulWidget {
   const TriviaChallengeListScreen({super.key});
@@ -88,15 +90,29 @@ class _TriviaChallengeListScreenState extends State<TriviaChallengeListScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const TriviaSetupScreen(mode: TriviaMode.multiplayer)),
-        ).then((_) => _load()),
-        backgroundColor: const Color(0xFFFFD700),
-        foregroundColor: Colors.black,
-        icon: const Icon(Icons.add),
-        label: const Text('New Challenge', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+      // Starting a challenge is premium (backend enforces with 403); received
+      // challenges stay open to everyone.
+      floatingActionButton: ListenableBuilder(
+        listenable: SubscriptionService(),
+        builder: (context, _) {
+          final isPremium = SubscriptionService().isPremium;
+          return FloatingActionButton.extended(
+            onPressed: isPremium
+                ? () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const TriviaSetupScreen(mode: TriviaMode.multiplayer)),
+                    ).then((_) => _load())
+                : () => showPremiumUpgradeDialog(
+                      context,
+                      message: 'Starting a challenge is a premium feature. '
+                          'You can still accept and play challenges others send you.',
+                    ),
+            backgroundColor: const Color(0xFFFFD700),
+            foregroundColor: Colors.black,
+            icon: Icon(isPremium ? Icons.add : Icons.lock),
+            label: const Text('New Challenge', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+          );
+        },
       ),
       body: _buildBody(),
     );

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'trivia_game_screen.dart';
+import 'trivia_result_screen.dart';
+import '../models/trivia_session.dart';
 import 'trivia_challenge_create_screen.dart';
 import '../utils/errors.dart';
 
@@ -38,27 +40,31 @@ class _TriviaSetupScreenState extends State<TriviaSetupScreen> {
   Future<void> _startSinglePlayer() async {
     setState(() => _isLoading = true);
     try {
-      final questions = await ApiService().triviaDrawQuestions(
+      // The server runs the game: questions arrive one at a time, without answers
+      final state = await ApiService().triviaStartSingle(
         category: _selectedCategory,
         difficulty: _selectedDifficulty,
-        count: 50,
       );
       if (!mounted) return;
+      final result = state.result;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => TriviaGameScreen(
-            questions: questions,
-            category: _selectedCategory,
-            difficulty: _selectedDifficulty,
-          ),
+          builder: (_) => state.status == TriviaSessionStatus.finished && result != null
+              ? TriviaResultScreen(result: result, category: _selectedCategory, difficulty: _selectedDifficulty)
+              : TriviaGameScreen(
+                  initialState: state,
+                  category: _selectedCategory,
+                  difficulty: _selectedDifficulty,
+                ),
         ),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load questions: ${friendlyError(e)}')),
-      );
+      final message = e is ApiException && e.statusCode == 400
+          ? 'No questions are available for that category and difficulty yet.'
+          : 'Failed to start the game: ${friendlyError(e)}';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

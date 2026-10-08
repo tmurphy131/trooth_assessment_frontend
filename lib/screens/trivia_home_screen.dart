@@ -433,23 +433,25 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
   static const _singlePlayerRules = [
     'Choose a category and difficulty before each game.',
     'Answer as many questions as possible without getting one wrong — one wrong answer ends the game.',
-    'You have 30 seconds per question. The timer starts the moment the question appears and cannot be paused.',
+    'You have 30 seconds per question. The timer starts the moment the question appears and cannot be paused. It keeps running if you leave the app.',
     'At 5 seconds remaining, the countdown pulses to warn you.',
-    'A wrong answer triggers a screen shake. If you have a grace token, a "Use Grace Token?" prompt appears for 10 seconds — tap it to survive with your streak fully intact.',
+    'A wrong answer (or running out of time) triggers a screen shake. If you have a grace token, a "Use Grace Token?" prompt appears for 10 seconds — tap it to keep your streak and move on to the next question.',
     'Score = correct answers × your current streak multiplier (multiplier increases every 5 correct in a row, up to 5×).',
     'Earn 1 grace token every 10 correct answers. Tokens expire when the game ends and cannot be purchased or transferred.',
+    'Leaving a game ends it. Your score so far is saved.',
     'Only your personal best score appears on the leaderboard — not every game.',
     'Earn a badge for every 10 questions correct in a single game (10, 20, 30…).',
   ];
 
   static const _multiplayerRules = [
+    'Starting a challenge requires premium. Anyone can accept a challenge sent to them.',
     'Challenge any T[root]H user by their account email address.',
     'You choose the category, difficulty, and number of questions (20, 25, or 30).',
     'Existing mentors/apprentices appear at the top for a quick challenge — no email needed.',
     'The challenged player must accept or decline — they have 7 days before the challenge expires.',
     'Both players answer the same questions independently. After both answer a question, the result is revealed.',
     'The next question unlocks only once both players have answered the current one.',
-    'The player with the most points wins; ties are broken by total time used (faster wins).',
+    'The player with the most points wins. Equal points is a draw.',
     'You have 30 seconds per question — timer starts when you open each question.',
     'Grace tokens do not apply in multiplayer.',
     'You may nudge your opponent once per day if they have not taken their turn yet.',

@@ -19,6 +19,7 @@ String friendlyError(Object error) {
       403 => "You don't have access to this.",
       404 => "We couldn't find that. It may have been removed.",
       409 => 'That conflicts with a recent change. Please refresh and try again.',
+      426 => 'Please update the app to keep playing trivia.',
       429 => 'Too many requests. Please wait a moment and try again.',
       >= 500 => 'The server had a problem. Please try again shortly.',
       _ => 'Something went wrong. Please try again.',

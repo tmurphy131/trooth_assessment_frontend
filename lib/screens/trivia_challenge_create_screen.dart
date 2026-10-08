@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'trivia_challenge_detail_screen.dart';
 import '../utils/errors.dart';
+import '../widgets/premium_upgrade_dialog.dart';
 
 class TriviaChallengeCreateScreen extends StatefulWidget {
   final String category;
@@ -74,6 +75,10 @@ class _TriviaChallengeCreateScreenState extends State<TriviaChallengeCreateScree
           ),
         ),
       );
+    } on PremiumRequiredException {
+      if (!mounted) return;
+      setState(() => _isCreating = false);
+      showPremiumUpgradeDialog(context, message: 'Starting a challenge is a premium feature.');
     } catch (e) {
       if (!mounted) return;
       setState(() => _isCreating = false);
