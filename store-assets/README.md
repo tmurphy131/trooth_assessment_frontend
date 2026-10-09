@@ -9,6 +9,32 @@ Upload-ready art for App Store Connect. Folders starting with `_review-only` are
 
 All images are RGB PNGs with no alpha. Store art must not show prices or discount codes.
 
+## Custom product page: Bible Trivia Challenge
+
+**Screenshots connect across panels.** One set of gold roots and a gold thread runs through all six screenshots, so they read as one strip as people swipe. For the joins to line up:
+
+- Upload the six files in each device folder **in number order, 01 → 06**, and don't skip any.
+- Upload the iPhone set on the **iPhone** tab and the iPad set on the **iPad** tab. These go in the **App Previews and Screenshots** section, not the Header box, which only accepts 3840×1646 or 5244×2950.
+- Put the video from `app_preview_iphone_886x1920/` in the iPhone preview slot.
+- Click **Preview** in App Store Connect and swipe through the screenshots. They should match `_review-only/panorama_iphone.png`.
+
+**The panoramas are for review only.** The files in `_review-only/` show all six panels side by side, which is what someone swiping will see. Don't upload them.
+
+**Promotional text** (max 170 characters; changes on a custom product page need App Review, but no build):
+
+| When | Text |
+|---|---|
+| During the competition (159 chars) | New: a Bible question every day. Build your streak, challenge your mentor, and climb the 60-Day Launch Competition leaderboard (Nov 1–Dec 30) for merch prizes. |
+| After Dec 30 (124 chars) | Grow in God's Word one question at a time. Build a daily streak, challenge your mentor head-to-head, and see where you rank. |
+
+Keep dollar amounts out of store copy; prize details belong in emails and the in-app rules.
+
+**Keywords:** choose trivia-focused ones from the app's keyword list, such as bible trivia, bible quiz, scripture quiz, christian trivia, bible game.
+
+**After approval:** copy the page's unique URL for launch emails and social posts. Results show up under **Analytics → Acquisition**.
+
+**After the competition:** the art and copy mention the 60-Day Competition, so after Dec 30, switch to the timeless promotional text and recapture the screenshots (see below), or retire the page.
+
 ## Rebuilding
 
 The screenshots and video are real app screens captured from the iOS simulator by
