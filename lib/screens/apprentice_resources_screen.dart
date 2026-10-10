@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../data/apprentice_weekly_tips_data.dart';
 import '../data/apprentice_guides_data.dart';
 import 'package:trooth_assessment/theme.dart';
@@ -14,6 +17,42 @@ class ApprenticeResourcesScreen extends StatefulWidget {
 }
 
 class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
+  static const _youVersionAppUri = 'youversion://';
+  static const _youVersionIosStore = 'https://apps.apple.com/app/id282935706';
+  static const _youVersionAndroidStore =
+      'https://play.google.com/store/apps/details?id=com.sirma.mobile.bible.android';
+  static const _worshipPlaylist =
+      'https://open.spotify.com/playlist/0tjQUTi5cn2Py054SmYkEO';
+
+  Future<bool> _launchExternal(String url) async {
+    try {
+      return await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _showLaunchError(String name) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Couldn't open $name"),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  /// Opens the YouVersion Bible app, or its store listing if it isn't installed.
+  Future<void> _openBibleApp() async {
+    if (await _launchExternal(_youVersionAppUri)) return;
+    final storeUrl = Platform.isIOS ? _youVersionIosStore : _youVersionAndroidStore;
+    if (!await _launchExternal(storeUrl)) _showLaunchError('the Bible app');
+  }
+
+  Future<void> _openWorshipMusic() async {
+    if (!await _launchExternal(_worshipPlaylist)) _showLaunchError('the worship playlist');
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentTip = getApprenticeCurrentWeekTip();
@@ -321,6 +360,7 @@ class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
         'subtitle': 'Read Scripture daily',
         'icon': Icons.menu_book,
         'color': Colors.teal,
+        'onTap': _openBibleApp,
       },
       {
         'title': 'Prayer Journal',
@@ -336,6 +376,7 @@ class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
         'subtitle': 'Connect with God',
         'icon': Icons.music_note,
         'color': Colors.blue,
+        'onTap': _openWorshipMusic,
       },
     ];
 
@@ -384,15 +425,7 @@ class _ApprenticeResourcesScreenState extends State<ApprenticeResourcesScreen> {
                 Icons.chevron_right,
                 color: kMutedText,
               ),
-              onTap: link['onTap'] as VoidCallback? ??
-                  () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('${link['title']} - Coming soon!'),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  },
+              onTap: link['onTap'] as VoidCallback,
             ),
           ),
         );
