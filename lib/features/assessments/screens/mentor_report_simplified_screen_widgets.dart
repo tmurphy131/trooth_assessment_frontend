@@ -3,7 +3,7 @@ part of 'mentor_report_simplified_screen.dart';
 // Widget builders for _MentorReportSimplifiedScreenState. State and logic live in mentor_report_simplified_screen.dart.
 extension _MentorReportSimplifiedScreenStateWidgets on _MentorReportSimplifiedScreenState {
   Widget _buildHealthScoreCard(ColorScheme colorScheme) {
-    final overallPercent = widget.report.snapshot.overallMcPercent;
+    final overallPercent = widget.report.snapshot.healthScore;
     final band = widget.report.snapshot.knowledgeBand;
     
     Color bandColor = _getBandColor(band);

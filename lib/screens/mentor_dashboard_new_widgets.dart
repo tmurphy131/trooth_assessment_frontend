@@ -1014,7 +1014,13 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
       overall10 = 0.0;
     }
     if (!overall10.isFinite) overall10 = 0.0;
-    final overallPct = (overall10 * 10).clamp(0, 100).round();
+    // Health Score (0-100) is the headline number; older responses only have the 0-10 average.
+    final healthScore = assessment['health_score'] as num?;
+    final healthBand = assessment['health_band'] as String?;
+    final overallPct = healthScore?.round().clamp(0, 100) ?? (overall10 * 10).clamp(0, 100).round();
+    final scoreLabel = healthScore != null
+        ? 'Health Score: ${healthScore.round()}%${healthBand != null ? ' · $healthBand' : ''}'
+        : 'Overall Score: ${overall10.toStringAsFixed(1)}/10';
     final createdAt = assessment['created_at'] as String?;
     final apprenticeName =
         assessment['apprentice_name'] ??
@@ -1069,7 +1075,7 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
               ),
             ),
             Text(
-              'Overall Score: ${overall10.toStringAsFixed(1)}/10',
+              scoreLabel,
               style: TextStyle(
                 color: _getScoreColor(overallPct),
                 fontFamily: 'Poppins',
