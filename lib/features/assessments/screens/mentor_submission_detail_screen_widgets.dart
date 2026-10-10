@@ -284,7 +284,7 @@ extension _MentorSubmissionDetailScreenStateWidgets on _MentorSubmissionDetailSc
   }
 
   Widget _buildHealthScoreCard(MentorReportV2 r) {
-    final overallPercent = r.snapshot.overallMcPercent;
+    final overallPercent = r.snapshot.healthScore;
     final band = r.snapshot.knowledgeBand;
     final bandColor = _getBandColor(band);
     final bandIcon = _getBandIcon(band);
@@ -418,7 +418,10 @@ extension _MentorSubmissionDetailScreenStateWidgets on _MentorSubmissionDetailSc
                     children: [
                       Icon(Icons.thumb_up, color: Colors.green.shade300, size: 20),
                       const SizedBox(width: 8),
-                      Text('Strengths', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade300)),
+                      Flexible(
+                        child: Text('Strengths', overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade300)),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -452,7 +455,10 @@ extension _MentorSubmissionDetailScreenStateWidgets on _MentorSubmissionDetailSc
                     children: [
                       Icon(Icons.trending_up, color: Colors.orange.shade300, size: 20),
                       const SizedBox(width: 8),
-                      Text('Growth Areas', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange.shade300)),
+                      Flexible(
+                        child: Text('Growth Areas', overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange.shade300)),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
