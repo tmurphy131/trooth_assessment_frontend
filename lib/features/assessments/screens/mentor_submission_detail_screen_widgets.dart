@@ -419,7 +419,7 @@ extension _MentorSubmissionDetailScreenStateWidgets on _MentorSubmissionDetailSc
                       Icon(Icons.thumb_up, color: Colors.green.shade300, size: 20),
                       const SizedBox(width: 8),
                       Flexible(
-                        child: Text('Strengths', overflow: TextOverflow.ellipsis,
+                        child: Text('Strengths',
                             style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade300)),
                       ),
                     ],
@@ -456,7 +456,7 @@ extension _MentorSubmissionDetailScreenStateWidgets on _MentorSubmissionDetailSc
                       Icon(Icons.trending_up, color: Colors.orange.shade300, size: 20),
                       const SizedBox(width: 8),
                       Flexible(
-                        child: Text('Growth Areas', overflow: TextOverflow.ellipsis,
+                        child: Text('Growth Areas',
                             style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange.shade300)),
                       ),
                     ],
