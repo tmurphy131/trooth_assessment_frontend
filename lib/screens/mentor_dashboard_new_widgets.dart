@@ -1014,7 +1014,23 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
       overall10 = 0.0;
     }
     if (!overall10.isFinite) overall10 = 0.0;
-    final overallPct = (overall10 * 10).clamp(0, 100).round();
+    // Health Score (0-100) is the headline number; older responses only have the 0-10 average.
+    final healthScore = assessment['health_score'] as num?;
+    final healthBand = assessment['health_band'] as String?;
+    final overallPct = healthScore?.round().clamp(0, 100) ?? (overall10 * 10).clamp(0, 100).round();
+    // Spiritual Gifts results have no overall score; show the top gifts instead of "0.0/10".
+    final topGifts = (scores['top_gifts_truncated'] as List<dynamic>? ?? const [])
+        .map((g) => g is Map ? (g['gift'] ?? g['gift_name'])?.toString() : null)
+        .whereType<String>()
+        .take(3)
+        .toList();
+    final isGifts = healthScore == null && topGifts.isNotEmpty;
+    final scoreLabel = healthScore != null
+        ? 'Health Score: ${healthScore.round()}%${healthBand != null ? ' · $healthBand' : ''}'
+        : isGifts
+            ? 'Top gifts: ${topGifts.join(', ')}'
+            : 'Overall Score: ${overall10.toStringAsFixed(1)}/10';
+    final scoreColor = isGifts ? Colors.tealAccent.shade200 : _getScoreColor(overallPct);
     final createdAt = assessment['created_at'] as String?;
     final apprenticeName =
         assessment['apprentice_name'] ??
@@ -1042,12 +1058,10 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: _getScoreColor(
-              overallPct,
-            ).withValues(alpha: 0.2), // Percent 0..100
+            color: scoreColor.withValues(alpha: 0.2), // Percent 0..100
             borderRadius: BorderRadius.circular(24),
           ),
-          child: Icon(Icons.analytics, color: _getScoreColor(overallPct)),
+          child: Icon(isGifts ? Icons.auto_awesome : Icons.analytics, color: scoreColor),
         ),
         title: Text(
           templateName.toString(),
@@ -1069,9 +1083,9 @@ extension _MentorDashboardNewStateWidgets on _MentorDashboardNewState {
               ),
             ),
             Text(
-              'Overall Score: ${overall10.toStringAsFixed(1)}/10',
+              scoreLabel,
               style: TextStyle(
-                color: _getScoreColor(overallPct),
+                color: scoreColor,
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.w600,
               ),

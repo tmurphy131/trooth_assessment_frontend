@@ -33,6 +33,7 @@ class MentorReportV2 {
       // v2.1 format from ai_prompt_master_assessment_v2_optimized.txt
       snapshot = Snapshot(
         overallMcPercent: (json['biblical_knowledge']?['percent'] as num?) ?? (json['health_score'] as num? ?? 0),
+        healthScore: json['health_score'] as num? ?? 0,
         knowledgeBand: json['health_band'] as String? ?? '',
         topStrengths: (json['strengths'] as List<dynamic>? ?? []).map((e) => e.toString()).toList(growable: false),
         topGaps: (json['gaps'] as List<dynamic>? ?? []).map((e) => e.toString()).toList(growable: false),
@@ -115,17 +116,22 @@ class PriorityAction {
 }
 
 class Snapshot {
+  /// Biblical Knowledge: percent of multiple-choice questions answered correctly.
   final num overallMcPercent;
+
+  /// Health Score (0-100), the headline number; legacy reports used the MC percent for it.
+  final num healthScore;
   final String knowledgeBand;
   final List<String> topStrengths;
   final List<String> topGaps;
 
   Snapshot({
     required this.overallMcPercent,
+    num? healthScore,
     required this.knowledgeBand,
     required this.topStrengths,
     required this.topGaps,
-  });
+  }) : healthScore = healthScore ?? overallMcPercent;
 
   factory Snapshot.fromJson(Map<String, dynamic> json) {
     if (json['overall_mc_percent'] == null || json['knowledge_band'] == null) {

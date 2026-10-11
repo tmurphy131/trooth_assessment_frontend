@@ -156,9 +156,10 @@ class _ProgressScreenState extends State<ProgressScreen> {
       },
     );
     }
-    // Try multiple keys for the score: overall_score_display, overall_score, latest_score, score
+    // Health Score (0-100) is the headline; older responses only carry the 0-10 overall average.
+    final health = _master!['health_score'] as num?;
     final rawScore = _master!['overall_score_display'] ?? _master!['overall_score'] ?? _master!['latest_score'] ?? _master!['score'] ?? 0;
-    final badge = rawScore.toString();
+    final badge = health != null ? '${health.round()}%' : rawScore.toString();
     final top3 = (_master!['top3'] as List<dynamic>? ?? const []).cast<Map>();
     final chips = top3.map((m) => {'category': m['category']?.toString() ?? '', 'score': m['score']}).toList();
     final completedAt = _master!['completed_at']?.toString();
@@ -446,9 +447,11 @@ class _ProgressScreenState extends State<ProgressScreen> {
   Widget _summaryText(String type, Map<String, dynamic> summary) {
     if (type == 'master') {
       final overall = summary['overall_score'];
+      final health = summary['health_score'] as num?;
       final top3 = (summary['top3'] as List<dynamic>? ?? const []).cast<Map>();
       final cats = top3.map((m) => m['category']?.toString()).whereType<String>().toList();
-      final text = 'Overall ${overall ?? '-'} • ${cats.take(3).join(', ')}';
+      final headline = health != null ? 'Health ${health.round()}%' : 'Overall ${overall ?? '-'}';
+      final text = '$headline • ${cats.take(3).join(', ')}';
       return Text(text, style: const TextStyle(color: Colors.white70, fontFamily: 'Poppins', fontSize: 12));
     }
     if (type == 'spiritual_gifts') {
