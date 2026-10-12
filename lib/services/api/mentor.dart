@@ -77,7 +77,7 @@ extension MentorApi on ApiService {
       throw PremiumRequiredException('Premium subscription required for full reports');
     }
     if (r.statusCode == 404) {
-      throw Exception('Assessment not found');
+      throw ApiException(404, 'Assessment not found');
     }
     throw ApiException(r.statusCode, 'fetchMyFullReport failed (${r.statusCode})');
   }
@@ -89,8 +89,49 @@ extension MentorApi on ApiService {
     final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     if (r.statusCode == 403) throw PremiumRequiredException('Premium subscription required for full reports');
-    if (r.statusCode == 404) throw Exception('Assessment not found');
+    if (r.statusCode == 404) throw ApiException(404, 'Assessment not found');
     throw ApiException(r.statusCode, 'fetchOwnFullReport failed (${r.statusCode})');
+  }
+
+  /// Premium report for the current user's own assessment, as a [PremiumReportResult]
+  /// (ready / generating / unavailable / premiumRequired). Never throws [PremiumRequiredException].
+  Future<PremiumReportResult> fetchOwnPremiumReport({required String assessmentId}) =>
+      _fetchPremiumReport('/assessments/$assessmentId/my-full-report', 'fetchOwnPremiumReport');
+
+  /// Premium report for an apprentice's own assessment (apprentice route).
+  Future<PremiumReportResult> fetchMyPremiumReport({required String assessmentId}) =>
+      _fetchPremiumReport('/apprentice/my-assessments/$assessmentId/full-report', 'fetchMyPremiumReport');
+
+  /// Premium report for a mentor viewing an apprentice's submission.
+  Future<PremiumReportResult> fetchMentorPremiumReport({required String draftId}) =>
+      _fetchPremiumReport('/mentor/submitted-drafts/$draftId/full-report', 'fetchMentorPremiumReport');
+
+  Future<PremiumReportResult> _fetchPremiumReport(String path, String label) async {
+    final http.Response r;
+    try {
+      r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
+    } on RequestTimeoutException {
+      // The server holds the request (up to 90 s) while another caller generates the report,
+      // longer than the client timeout: treat it as still generating and ask again.
+      return const PremiumReportResult.generating();
+    }
+    switch (r.statusCode) {
+      case 200:
+        final body = jsonDecode(r.body);
+        final map = body is Map<String, dynamic> ? body : const <String, dynamic>{};
+        final report = map['report'];
+        if (report is Map<String, dynamic>) {
+          return PremiumReportResult.ready(report, cached: map['cached'] == true);
+        }
+        // {"status": "generating"}, or an older backend that returned no report yet
+        return const PremiumReportResult.generating();
+      case 403:
+        return const PremiumReportResult.premiumRequired();
+      case 503:
+        return const PremiumReportResult.unavailable();
+      default:
+        throw ApiException(r.statusCode, '$label failed (${r.statusCode})');
+    }
   }
 
   /// Check if the current user has premium subscription

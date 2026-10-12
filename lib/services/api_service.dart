@@ -17,6 +17,7 @@ import '../models/mentor_note.dart';
 import '../models/prayer_entry.dart';
 import '../models/trivia_session.dart';
 import '../models/daily_trivia.dart';
+import '../features/assessments/models/report_status.dart';
 
 part 'api/users_mentorship.dart';
 part 'api/mentor.dart';
@@ -43,6 +44,11 @@ class NetworkException implements Exception {
   NetworkException(this.message);
   @override
   String toString() => message;
+}
+
+/// The request timed out (a [NetworkException], so existing handlers still catch it).
+class RequestTimeoutException extends NetworkException {
+  RequestTimeoutException(super.message);
 }
 
 /// The backend answered with an error status.
@@ -100,7 +106,7 @@ class _ApiClient {
         };
         return await request.timeout(_timeout);
       } on TimeoutException {
-        throw NetworkException('The server took too long to respond. Please try again.');
+        throw RequestTimeoutException('The server took too long to respond. Please try again.');
       } on http.ClientException {
         throw NetworkException('Could not reach the server. Check your connection and try again.');
       }

@@ -9,6 +9,9 @@ import '../models/mentor_note.dart';
 import '../theme.dart';
 import 'subscription_screen.dart';
 import '../utils/errors.dart';
+import '../features/assessments/data/report_status_poller.dart';
+import '../features/assessments/models/report_status.dart';
+import '../features/assessments/widgets/report_status_views.dart';
 
 part 'apprentice_report_screen_widgets.dart';
 part 'apprentice_report_premium_widgets.dart';
@@ -36,98 +39,209 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
   Map<String, dynamic>? _report;
   List<MentorNote> _sharedNotes = [];
 
-  // Premium state — determined by whether the full report API succeeds (200) or rejects (403)
+  // Premium state — determined by the full report API (ready / generating / unavailable / 403)
   bool _isPremium = false;
-  bool _checkingPremium = true;
+  bool _checkingPremium = false;
   bool _showPremiumUpsell = false;
   Map<String, dynamic>? _fullReport;
   bool _fullReportCached = false;
+  PremiumReportKind? _premiumState; // generating or unavailable while the Premium report isn't ready
+  bool _premiumCapped = false;
+  bool _premiumHint = false; // subscription status, only used to show the loading card early
+  ReportStatusPoller<PremiumReportResult>? _premiumPoller;
+  Timer? _premiumWaitTimer;
 
-  // Processing/generating state
-  bool _isProcessing = false;
-  Timer? _pollTimer;
+  // Report status (specs/003-report-status-states): null until the first check returns
+  ReportStatus? _status;
+  ReportStatusPoller<ReportStatus>? _poller;
+  bool _checking = false;
+  late final AppLifecycleListener _lifecycle;
 
   @override
   void initState() {
     super.initState();
-    _checkStatusThenLoad();
+    _lifecycle = AppLifecycleListener(onResume: _onResume);
+    _checkStatus();
   }
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
+    _poller?.cancel();
+    _premiumPoller?.cancel();
+    _premiumWaitTimer?.cancel();
+    _lifecycle.dispose();
     super.dispose();
   }
 
-  Future<void> _checkStatusThenLoad() async {
-    try {
-      final status = await _api.getAssessmentStatus(widget.assessmentId);
-      final isProcessing = status['status'] == 'processing' || !( status['has_scores'] as bool? ?? false);
-      if (!mounted) return;
-      if (isProcessing) {
-        setState(() { _isProcessing = true; _loading = false; _checkingPremium = false; });
-        _startPolling();
-        return;
-      }
-    } catch (_) {
-      // If status check fails, proceed with normal load
-    }
-    _loadReport();
-    _checkPremiumAndLoadFullReport();
+  bool get _isDone => _status?.phase == ReportPhase.done;
+
+  void _onResume() {
+    if (!_isDone) _checkNow();
   }
 
-  // ~5 minutes at 10s intervals. Scoring that takes longer has likely failed.
-  static const _maxPollAttempts = 30;
+  /// First status check. A failure never falls back to the stored placeholder report: the
+  /// screen shows the preparing view and keeps checking.
+  Future<void> _checkStatus() async {
+    try {
+      final status = await _api.getReportStatus(widget.assessmentId);
+      if (!mounted) return;
+      _applyStatus(status);
+    } catch (e) {
+      if (!mounted) return;
+      _applyStatus(const ReportStatus(ReportPhase.preparing));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Couldn't check your report: ${friendlyError(e)}")),
+      );
+    }
+  }
 
-  void _startPolling() {
-    var attempts = 0;
-    _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
-      attempts++;
-      if (attempts > _maxPollAttempts) {
-        _pollTimer?.cancel();
-        if (!mounted) return;
-        // Fall through to a normal load so the screen shows its own error
-        // state (and retry) instead of spinning forever.
-        setState(() { _isProcessing = false; _loading = true; _checkingPremium = true; });
-        _loadReport();
-        _checkPremiumAndLoadFullReport();
-        return;
-      }
-      try {
-        final status = await _api.getAssessmentStatus(widget.assessmentId);
-        final done = status['status'] == 'done' || (status['has_scores'] as bool? ?? false);
-        if (done && mounted) {
-          _pollTimer?.cancel();
-          setState(() { _isProcessing = false; _loading = true; _checkingPremium = true; });
+  /// "Check again" and app resume: one immediate check.
+  Future<void> _checkNow() async {
+    if (_checking) return;
+    setState(() => _checking = true);
+    try {
+      final status = await _api.getReportStatus(widget.assessmentId);
+      if (!mounted) return;
+      _applyStatus(status);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Couldn't check your report: ${friendlyError(e)}")),
+      );
+    } finally {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
+
+  void _applyStatus(ReportStatus status) {
+    final wasDone = _isDone;
+    switch (status.phase) {
+      case ReportPhase.done:
+        _poller?.cancel();
+        setState(() => _status = status);
+        if (!wasDone) {
           _loadReport();
           _checkPremiumAndLoadFullReport();
         }
-      } catch (_) {}
-    });
+      case ReportPhase.preparing:
+        setState(() { _status = status; _loading = false; });
+        _startPolling();
+      case ReportPhase.delayed:
+        _poller?.cancel();
+        setState(() { _status = status; _loading = false; });
+    }
+  }
+
+  void _startPolling() {
+    if (_poller?.isRunning ?? false) return;
+    _poller = ReportStatusPoller<ReportStatus>(
+      check: () => _api.getReportStatus(widget.assessmentId),
+      onResult: (status) {
+        if (mounted) _applyStatus(status);
+      },
+      onError: (e) => dev.log('[ApprenticeReport] status check failed: $e'),
+      onCapped: () {
+        if (mounted) setState(() {});
+      },
+    )..start();
+  }
+
+  void _refresh() {
+    if (_isDone) {
+      _loadReport();
+      _checkPremiumAndLoadFullReport();
+    } else {
+      _checkNow();
+    }
   }
 
   Future<void> _checkPremiumAndLoadFullReport() async {
-    try {
-      final response = await _api.fetchOwnFullReport(assessmentId: widget.assessmentId);
-      if (!mounted) return;
+    _premiumPoller?.cancel();
+    setState(() { _checkingPremium = true; _premiumCapped = false; });
+    _api.isPremiumUser().then((value) => _premiumHint = value).catchError((_) => false);
+    // The server can hold a "generating" request for up to 90 s; don't keep the free report
+    // behind a spinner that long.
+    _premiumWaitTimer?.cancel();
+    _premiumWaitTimer = Timer(const Duration(seconds: 3), () {
+      if (!mounted || !_checkingPremium) return;
       setState(() {
-        _isPremium = true;
-        _showPremiumUpsell = false;
         _checkingPremium = false;
-        _fullReport = response['report'] as Map<String, dynamic>?;
-        _fullReportCached = response['cached'] as bool? ?? false;
+        if (_premiumHint) _premiumState = PremiumReportKind.generating;
       });
-      dev.log('[ApprenticeReport] Full report loaded');
+    });
+    try {
+      final result = await _api.fetchOwnPremiumReport(assessmentId: widget.assessmentId);
+      if (!mounted) return;
+      _applyPremium(result);
+      if (result.kind == PremiumReportKind.generating) _startPremiumPolling();
     } catch (e) {
       dev.log('[ApprenticeReport] Full report unavailable: $e');
       if (!mounted) return;
-      final is403 = e.toString().contains('403') || e.toString().toLowerCase().contains('premium');
       setState(() {
         _isPremium = false;
         _checkingPremium = false;
-        _showPremiumUpsell = is403;
+        _showPremiumUpsell = false;
+        _premiumState = null;
       });
     }
+  }
+
+  void _applyPremium(PremiumReportResult result) {
+    if (result.kind != PremiumReportKind.generating) _premiumPoller?.cancel();
+    setState(() {
+      _checkingPremium = false;
+      switch (result.kind) {
+        case PremiumReportKind.ready:
+          _isPremium = true;
+          _showPremiumUpsell = false;
+          _fullReport = result.report;
+          _fullReportCached = result.cached;
+          _premiumState = null;
+        case PremiumReportKind.generating:
+        case PremiumReportKind.unavailable:
+          _isPremium = true;
+          _showPremiumUpsell = false;
+          _premiumState = result.kind;
+        case PremiumReportKind.premiumRequired:
+          _isPremium = false;
+          _showPremiumUpsell = true;
+          _premiumState = null;
+      }
+    });
+  }
+
+  void _startPremiumPolling() {
+    if (_premiumPoller?.isRunning ?? false) return;
+    _premiumPoller = ReportStatusPoller<PremiumReportResult>.fixed(
+      every: const Duration(seconds: 10),
+      cap: const Duration(minutes: 5),
+      check: () => _api.fetchOwnPremiumReport(assessmentId: widget.assessmentId),
+      onResult: (result) {
+        if (mounted) _applyPremium(result);
+      },
+      onError: (e) => dev.log('[ApprenticeReport] Premium check failed: $e'),
+      onCapped: () {
+        if (mounted) setState(() => _premiumCapped = true);
+      },
+    )..start();
+  }
+
+  void _retryPremium() {
+    setState(() { _premiumState = PremiumReportKind.generating; _premiumCapped = false; });
+    _checkPremiumAndLoadFullReport();
+  }
+
+  /// Premium placeholder card for the free report view, or null when there's nothing to show.
+  Widget? _premiumStatusCard() {
+    if (_premiumState == PremiumReportKind.unavailable) {
+      return PremiumStatusCard.unavailable(onTryAgain: _retryPremium);
+    }
+    if (_premiumState == PremiumReportKind.generating) {
+      return _premiumCapped
+          ? PremiumStatusCard.stillPreparing(onTryAgain: _retryPremium)
+          : const PremiumStatusCard.generating();
+    }
+    return null;
   }
 
   Future<void> _loadReport() async {
@@ -313,22 +427,30 @@ class _ApprenticeReportScreenState extends State<ApprenticeReportScreen> {
           ),
           IconButton(tooltip: 'Refresh', 
             icon: const Icon(Icons.refresh, color: Colors.amber),
-            onPressed: () {
-              _loadReport();
-              _checkPremiumAndLoadFullReport();
-            },
+            onPressed: _refresh,
           ),
         ],
       ),
-      body: _isProcessing
-          ? _generatingView()
-          : _loading || _checkingPremium
-              ? const Center(child: CircularProgressIndicator(color: Colors.amber))
-              : _error != null
-                  ? _errorView()
-                  : _isPremium && _fullReport != null
-                      ? _premiumContentView()
-                      : _contentView(),
+      body: switch (_status?.phase) {
+        null => const Center(child: CircularProgressIndicator(color: Colors.amber)),
+        ReportPhase.preparing => ReportPreparingView(
+            slow: _poller?.isSlow ?? false,
+            onCheckAgain: _checkNow,
+            checking: _checking,
+          ),
+        ReportPhase.delayed => ReportDelayedView(
+            reason: _status!.reason,
+            onCheckAgain: _checkNow,
+            checking: _checking,
+          ),
+        ReportPhase.done => _loading || _checkingPremium
+            ? const Center(child: CircularProgressIndicator(color: Colors.amber))
+            : _error != null
+                ? _errorView()
+                : _isPremium && _fullReport != null
+                    ? _premiumContentView()
+                    : _contentView(),
+      },
     );
   }
 

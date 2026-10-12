@@ -5,6 +5,8 @@ import '../../../services/api_service.dart';
 import '../../../screens/subscription_screen.dart';
 import 'dart:developer' as dev;
 import '../../../utils/errors.dart';
+import '../data/report_status_poller.dart';
+import '../models/report_status.dart';
 
 part 'mentor_report_simplified_screen_widgets.dart';
 part 'mentor_report_premium_screen.dart';
@@ -36,10 +38,18 @@ class _MentorReportSimplifiedScreenState extends State<MentorReportSimplifiedScr
   bool _checkingPremium = true;
   bool _loadingFullReport = false;
 
+  ReportStatusPoller<PremiumReportResult>? _premiumPoller;
+
   @override
   void initState() {
     super.initState();
     _checkPremiumStatus();
+  }
+
+  @override
+  void dispose() {
+    _premiumPoller?.cancel();
+    super.dispose();
   }
 
   Future<void> _checkPremiumStatus() async {
@@ -191,48 +201,17 @@ class _MentorReportSimplifiedScreenState extends State<MentorReportSimplifiedScr
 
   Future<void> _fetchAndShowFullReport(BuildContext context) async {
     if (_loadingFullReport) return;
-    
+
     // Capture navigator and scaffold messenger before async gap
     final navigator = Navigator.of(context);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    
+
     setState(() => _loadingFullReport = true);
-    
+
     try {
-      final response = await ApiService().fetchFullReport(draftId: widget.draftId!);
-      
+      final result = await ApiService().fetchMentorPremiumReport(draftId: widget.draftId!);
       if (!mounted) return;
-      setState(() => _loadingFullReport = false);
-      
-      final report = response['report'] as Map<String, dynamic>?;
-      final status = response['status'] as String?;
-      
-      dev.log('Full report fetched: status=$status, hasReport=${report != null}');
-      
-      if (report == null) {
-        if (!mounted) return;
-        navigator.push(
-          MaterialPageRoute(
-            builder: (_) => _buildBasicFullReportScaffold(),
-          ),
-        );
-        return;
-      }
-      
-      // Navigate to premium full report screen using captured navigator
-      navigator.push(
-        MaterialPageRoute(
-          builder: (_) => _PremiumFullReportScreen(
-            report: report,
-            apprenticeName: widget.apprenticeName,
-            isCached: status == 'cached',
-          ),
-        ),
-      );
-    } on PremiumRequiredException {
-      if (!mounted) return;
-      setState(() => _loadingFullReport = false);
-      _showPremiumUpgradeDialogSync(navigator);
+      _handlePremiumResult(result, navigator, scaffoldMessenger);
     } catch (e) {
       if (!mounted) return;
       setState(() => _loadingFullReport = false);
@@ -247,6 +226,60 @@ class _MentorReportSimplifiedScreenState extends State<MentorReportSimplifiedScr
         ),
       );
     }
+  }
+
+  /// Premium outcomes (specs/003-report-status-states): open when ready, keep checking while it's
+  /// being generated, offer "Try again" when unavailable or still preparing after 5 minutes.
+  void _handlePremiumResult(PremiumReportResult result, NavigatorState navigator, ScaffoldMessengerState messenger) {
+    if (result.kind != PremiumReportKind.generating) _premiumPoller?.cancel();
+    switch (result.kind) {
+      case PremiumReportKind.ready:
+        setState(() => _loadingFullReport = false);
+        navigator.push(
+          MaterialPageRoute(
+            builder: (_) => _PremiumFullReportScreen(
+              report: result.report!,
+              apprenticeName: widget.apprenticeName,
+              isCached: result.cached,
+            ),
+          ),
+        );
+      case PremiumReportKind.generating:
+        // Keep the button's progress indicator up and check every 10 s for up to 5 minutes
+        if (_premiumPoller?.isRunning ?? false) return;
+        _premiumPoller = ReportStatusPoller<PremiumReportResult>.fixed(
+          every: const Duration(seconds: 10),
+          cap: const Duration(minutes: 5),
+          check: () => ApiService().fetchMentorPremiumReport(draftId: widget.draftId!),
+          onResult: (r) {
+            if (mounted) _handlePremiumResult(r, navigator, messenger);
+          },
+          onError: (e) => dev.log('Premium report check failed: $e'),
+          onCapped: () {
+            if (!mounted) return;
+            setState(() => _loadingFullReport = false);
+            _showPremiumRetry(messenger, 'Your Premium report is still being prepared.');
+          },
+        )..start();
+      case PremiumReportKind.unavailable:
+        setState(() => _loadingFullReport = false);
+        _showPremiumRetry(messenger, 'Your Premium report is temporarily unavailable.');
+      case PremiumReportKind.premiumRequired:
+        setState(() => _loadingFullReport = false);
+        _showPremiumUpgradeDialogSync(navigator);
+    }
+  }
+
+  void _showPremiumRetry(ScaffoldMessengerState messenger, String message) {
+    messenger.showSnackBar(SnackBar(
+      content: Text(message),
+      action: SnackBarAction(
+        label: 'Try again',
+        onPressed: () {
+          if (mounted) _fetchAndShowFullReport(context);
+        },
+      ),
+    ));
   }
 
   /// Shows premium upgrade dialog using NavigatorState instead of BuildContext

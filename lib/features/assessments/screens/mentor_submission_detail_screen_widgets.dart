@@ -11,7 +11,7 @@ extension _MentorSubmissionDetailScreenStateWidgets on _MentorSubmissionDetailSc
           child: Row(children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: _emailReport, 
+                onPressed: _isDone ? _emailReport : _reportNotReady, 
                 icon: const Icon(Icons.mail_outline, color: Colors.white70), 
                 label: const Text('Email report', style: TextStyle(color: Colors.white)),
                 style: OutlinedButton.styleFrom(
@@ -22,7 +22,7 @@ extension _MentorSubmissionDetailScreenStateWidgets on _MentorSubmissionDetailSc
             const SizedBox(width: 12),
             Expanded(
               child: FilledButton.icon(
-                onPressed: _showExportOptions, 
+                onPressed: _isDone ? _showExportOptions : _reportNotReady, 
                 icon: const Icon(Icons.ios_share, color: Colors.black), 
                 label: const Text('Export PDF', style: TextStyle(color: Colors.black)),
                 style: FilledButton.styleFrom(backgroundColor: Colors.amber),
@@ -98,8 +98,25 @@ extension _MentorSubmissionDetailScreenStateWidgets on _MentorSubmissionDetailSc
   }
 
   Widget _reportTab() {
-    // If still loading, show loading state
-    if (_checkingPremium) {
+    switch (_status?.phase) {
+      case ReportPhase.preparing:
+        return ReportPreparingView(slow: _poller?.isSlow ?? false, onCheckAgain: _checkNow, checking: _checking);
+      case ReportPhase.delayed:
+        return ReportDelayedView(reason: _status!.reason, onCheckAgain: _checkNow, checking: _checking);
+      case ReportPhase.done:
+      case null:
+        break;
+    }
+    if (_reportError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(_reportError!, style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center),
+        ),
+      );
+    }
+    // Still checking status, loading the report, or checking premium
+    if (_status == null || _report == null || _checkingPremium) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -173,6 +190,14 @@ extension _MentorSubmissionDetailScreenStateWidgets on _MentorSubmissionDetailSc
   }
 
   Widget _buildPremiumReportButton() {
+    if (_premiumState == PremiumReportKind.unavailable) {
+      return PremiumStatusCard.unavailable(onTryAgain: _retryPremium);
+    }
+    if (_premiumState == PremiumReportKind.generating) {
+      return _premiumCapped
+          ? PremiumStatusCard.stillPreparing(onTryAgain: _retryPremium)
+          : const PremiumStatusCard.generating();
+    }
     final isLoading = _loadingFullReport;
     final isPremium = _isPremium;
     final hasFullReport = _fullReport != null;
