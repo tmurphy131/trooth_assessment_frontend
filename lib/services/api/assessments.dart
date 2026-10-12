@@ -69,6 +69,18 @@ extension AssessmentsApi on ApiService {
     throw ApiException(r.statusCode, 'getAssessmentStatus failed (${r.statusCode})');
   }
 
+  /// The report state for [assessmentId]: preparing, done or delayed (with a reason).
+  /// Only `status == 'done'` counts as finished; placeholder scores stored at submit don't.
+  Future<ReportStatus> getReportStatus(String assessmentId) async {
+    final path = '/assessments/$assessmentId/status';
+    final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
+    if (r.statusCode == 200) {
+      final body = jsonDecode(r.body);
+      return ReportStatus.fromJson(body is Map<String, dynamic> ? body : const {});
+    }
+    throw ApiException(r.statusCode, 'getReportStatus failed (${r.statusCode})');
+  }
+
   Future<Map<String, dynamic>> resumeDraft() async {
     final r = await _http.get(
       Uri.parse('$_base/assessment-drafts/resume'),

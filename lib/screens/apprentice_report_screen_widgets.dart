@@ -2,32 +2,6 @@ part of 'apprentice_report_screen.dart';
 
 // Widget builders for _ApprenticeReportScreenState. State and logic live in apprentice_report_screen.dart.
 extension _ApprenticeReportScreenStateWidgets on _ApprenticeReportScreenState {
-  Widget _generatingView() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(color: Colors.amber, strokeWidth: 3),
-            const SizedBox(height: 24),
-            const Text(
-              'Generating your report...',
-              style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 18),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Our AI is analyzing your assessment. This usually takes 15–30 seconds.',
-              style: TextStyle(color: Colors.white54, fontFamily: 'Poppins', fontSize: 13),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _errorView() {
     return Center(
       child: Padding(
@@ -111,6 +85,7 @@ extension _ApprenticeReportScreenStateWidgets on _ApprenticeReportScreenState {
           // Premium upsell — shown when backend confirmed 403 (not premium)
           if (_showPremiumUpsell)
             _buildPremiumUpsellCard(),
+          ?_premiumStatusCard(),
 
           const SizedBox(height: 24),
         ],

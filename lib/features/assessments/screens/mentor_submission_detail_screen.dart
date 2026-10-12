@@ -18,6 +18,9 @@ import '../widgets/insight_card.dart';
 import 'mentor_report_simplified_screen.dart';
 import '../../../screens/subscription_screen.dart';
 import '../../../utils/errors.dart';
+import '../data/report_status_poller.dart';
+import '../models/report_status.dart';
+import '../widgets/report_status_views.dart';
 
 part 'mentor_submission_detail_screen_widgets.dart';
 part 'mentor_submission_premium_report.dart';
@@ -65,7 +68,7 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
   
   // Premium state
   bool _isPremium = false;
-  bool _checkingPremium = true;
+  bool _checkingPremium = false;
   Map<String, dynamic>? _fullReport;
   bool _loadingFullReport = false;
   bool _fullReportCached = false;
@@ -79,10 +82,107 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
       // Trigger rebuild to show/hide FAB based on current tab
       if (mounted) setState(() {});
     });
+    _lifecycle = AppLifecycleListener(onResume: _onResume);
     _load();
     _loadMentorEmail();
     _loadNotes();
-    _checkPremiumAndLoadFullReport();
+    _checkStatus(); // the report and the Premium report load once the status is done
+  }
+
+  @override
+  void dispose() {
+    _poller?.cancel();
+    _premiumPoller?.cancel();
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
+  // Report status (specs/003-report-status-states): null until the first check returns
+  ReportStatus? _status;
+  ReportStatusPoller<ReportStatus>? _poller;
+  bool _checking = false;
+  String? _reportError;
+  late final AppLifecycleListener _lifecycle;
+
+  // Premium report while it isn't ready
+  PremiumReportKind? _premiumState;
+  bool _premiumCapped = false;
+  ReportStatusPoller<PremiumReportResult>? _premiumPoller;
+
+  bool get _isDone => _status?.phase == ReportPhase.done;
+
+  void _onResume() {
+    if (!_isDone) _checkNow();
+  }
+
+  /// First status check. A failure never loads the report early: the Report tab shows the
+  /// preparing view and keeps checking.
+  Future<void> _checkStatus() async {
+    try {
+      final status = await ApiService().getReportStatus(widget.assessmentId);
+      if (!mounted) return;
+      _applyStatus(status);
+    } catch (e) {
+      if (!mounted) return;
+      _applyStatus(const ReportStatus(ReportPhase.preparing));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Couldn't check the report: ${friendlyError(e)}")),
+      );
+    }
+  }
+
+  Future<void> _checkNow() async {
+    if (_checking) return;
+    setState(() => _checking = true);
+    try {
+      final status = await ApiService().getReportStatus(widget.assessmentId);
+      if (!mounted) return;
+      _applyStatus(status);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Couldn't check the report: ${friendlyError(e)}")),
+      );
+    } finally {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
+
+  void _applyStatus(ReportStatus status) {
+    final wasDone = _isDone;
+    switch (status.phase) {
+      case ReportPhase.done:
+        _poller?.cancel();
+        setState(() => _status = status);
+        if (!wasDone) {
+          _loadReport();
+          _checkPremiumAndLoadFullReport();
+        }
+      case ReportPhase.preparing:
+        setState(() => _status = status);
+        if (!(_poller?.isRunning ?? false)) {
+          _poller = ReportStatusPoller<ReportStatus>(
+            check: () => ApiService().getReportStatus(widget.assessmentId),
+            onResult: (s) {
+              if (mounted) _applyStatus(s);
+            },
+            onError: (e) => dev.log('[MentorSubmissionDetail] status check failed: $e'),
+            onCapped: () {
+              if (mounted) setState(() {});
+            },
+          )..start();
+        }
+      case ReportPhase.delayed:
+        _poller?.cancel();
+        setState(() => _status = status);
+    }
+  }
+
+  /// Snackbar for report actions tapped before the report is done.
+  void _reportNotReady() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('The report is still being prepared.')),
+    );
   }
 
   /// Check if user is premium and load full report if so
@@ -114,39 +214,58 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
   Future<void> _loadFullReport() async {
     setState(() => _loadingFullReport = true);
     try {
-      final response = await ApiService().fetchFullReport(draftId: widget.assessmentId);
+      final result = await ApiService().fetchMentorPremiumReport(draftId: widget.assessmentId);
       if (!mounted) return;
-      
-      dev.log('[MentorSubmissionDetail] Full report response keys: ${response.keys.toList()}');
-      
-      final report = response['report'] as Map<String, dynamic>?;
-      final cached = response['cached'] as bool? ?? false;
-      
-      if (report != null) {
-        dev.log('[MentorSubmissionDetail] Report keys: ${report.keys.toList()}');
-      } else {
-        dev.log('[MentorSubmissionDetail] Report is null! Response: $response');
-      }
-      
-      setState(() {
-        _fullReport = report;
-        _fullReportCached = cached;
-        _loadingFullReport = false;
-      });
-      dev.log('[MentorSubmissionDetail] Full report loaded, cached: $cached');
-    } on PremiumRequiredException {
-      // Premium lapsed since the screen opened; switch to the upgrade path.
-      if (!mounted) return;
-      setState(() {
-        _isPremium = false;
-        _loadingFullReport = false;
-      });
+      _applyPremium(result);
+      if (result.kind == PremiumReportKind.generating) _startPremiumPolling();
     } catch (e) {
       dev.log('[MentorSubmissionDetail] Error loading full report: $e');
       if (!mounted) return;
       setState(() => _loadingFullReport = false);
       _fullReportError = e;
     }
+  }
+
+  void _applyPremium(PremiumReportResult result) {
+    if (result.kind != PremiumReportKind.generating) _premiumPoller?.cancel();
+    setState(() {
+      _loadingFullReport = false;
+      switch (result.kind) {
+        case PremiumReportKind.ready:
+          _fullReport = result.report;
+          _fullReportCached = result.cached;
+          _premiumState = null;
+        case PremiumReportKind.generating:
+        case PremiumReportKind.unavailable:
+          _premiumState = result.kind;
+        case PremiumReportKind.premiumRequired:
+          // Premium lapsed since the screen opened; switch to the upgrade path.
+          _isPremium = false;
+          _premiumState = null;
+      }
+    });
+  }
+
+  void _startPremiumPolling() {
+    if (_premiumPoller?.isRunning ?? false) return;
+    setState(() => _premiumCapped = false);
+    _premiumPoller = ReportStatusPoller<PremiumReportResult>.fixed(
+      every: const Duration(seconds: 10),
+      cap: const Duration(minutes: 5),
+      check: () => ApiService().fetchMentorPremiumReport(draftId: widget.assessmentId),
+      onResult: (result) {
+        if (mounted) _applyPremium(result);
+      },
+      onError: (e) => dev.log('[MentorSubmissionDetail] Premium check failed: $e'),
+      onCapped: () {
+        if (mounted) setState(() => _premiumCapped = true);
+      },
+    )..start();
+  }
+
+  void _retryPremium() {
+    setState(() { _premiumState = PremiumReportKind.generating; _premiumCapped = false; });
+    _loadFullReport();
   }
 
   /// Set when the last full-report load failed for a reason other than
@@ -298,9 +417,8 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
     setState(() { _loading = true; _error = null; });
     try {
       final d = await _repo.getSubmissionDetail(widget.assessmentId);
-      final r = await _repo.getMentorReportV2(widget.assessmentId);
       if (!mounted) return;
-      setState(() { _detail = d; _report = r; _loading = false; });
+      setState(() { _detail = d; _loading = false; });
     } catch (e) {
       if (!mounted) return;
       setState(() { _error = 'Failed to load: ${friendlyError(e)}'; _loading = false; });
@@ -560,9 +678,22 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
     }
   }
 
+  /// Loads the AI report; called only once the status is done.
+  Future<void> _loadReport() async {
+    setState(() => _reportError = null);
+    try {
+      final r = await _repo.getMentorReportV2(widget.assessmentId);
+      if (!mounted) return;
+      setState(() => _report = r);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _reportError = 'Failed to load the report: ${friendlyError(e)}');
+    }
+  }
+
   void _openSimplifiedReport() {
-    if (_report == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Report not loaded yet')));
+    if (!_isDone || _report == null) {
+      _reportNotReady();
       return;
     }
     Navigator.of(context).push(
@@ -597,9 +728,13 @@ class _MentorSubmissionDetailScreenState extends State<MentorSubmissionDetailScr
             _showPremiumGate();
           } else {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(_fullReportError != null
-                  ? "Couldn't load the premium report: ${friendlyError(_fullReportError!)}"
-                  : "The premium report isn't available yet. Please try again shortly."),
+              content: Text(switch (_premiumState) {
+                PremiumReportKind.generating => 'Your Premium report is still being prepared.',
+                PremiumReportKind.unavailable => 'Your Premium report is temporarily unavailable.',
+                _ => _fullReportError != null
+                    ? "Couldn't load the premium report: ${friendlyError(_fullReportError!)}"
+                    : "The premium report isn't available yet. Please try again shortly.",
+              }),
             ));
           }
         });
