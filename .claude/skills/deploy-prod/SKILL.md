@@ -113,9 +113,17 @@ Then:
 cd "/Users/tmoney/Developer/trooth_assessment" && flutter build ios --config-only
 ```
 
-iOS uses Swift Package Manager (no CocoaPods, no Podfile): this regenerates Flutter's iOS config and Swift package integration. Xcode fetches the packages on the next build.
+iOS uses Swift Package Manager (no CocoaPods, no Podfile): this regenerates Flutter's iOS config and Swift package integration.
 
-If either command fails, report the error and stop.
+Then resolve the Swift packages, so Xcode doesn't have to on the next build:
+
+```
+cd "/Users/tmoney/Developer/trooth_assessment/ios" && xcodebuild -workspace Runner.xcworkspace -scheme Runner -resolvePackageDependencies 2>&1 | tail -3
+```
+
+The SPM checkout cache lives in `DerivedData/Runner-*/SourcePackages`, so after Step 4 deletes it every remote package (Firebase, GoogleSignIn, RevenueCat, gRPC, ...) must be fetched again. Left to Xcode, that first fetch can fail with "Could not resolve package dependencies". Run this step even when Step 4 skipped the cleanup (it's quick when the cache is warm). If it fails, run it once more; if it fails again, report the error and stop.
+
+If any command in this step fails, report the error and stop.
 
 ---
 
@@ -133,6 +141,7 @@ After all steps complete, print a summary:
 - [x] DerivedData: [cleaned / skipped — X GB free]
 - [x] flutter clean + pub get
 - [x] iOS config regenerated (Swift Package Manager)
+- [x] Swift packages resolved (xcodebuild -resolvePackageDependencies)
 ```
 
 Replace any skipped or failed steps with `[ ]` and a short note.
