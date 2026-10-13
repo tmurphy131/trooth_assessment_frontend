@@ -54,6 +54,12 @@ Future<void> waitFor(WidgetTester tester, bool Function() condition, String what
 Future<void> signInThroughUi(WidgetTester tester, String email) async {
   await pumpUntil(tester, find.byType(SimpleLoginScreen));
   await tester.pump(const Duration(seconds: 1)); // let the route transition finish
+  // The email form sits behind "Continue with email" (spec 004).
+  final continueWithEmail = find.text('Continue with email');
+  if (continueWithEmail.evaluate().isNotEmpty) {
+    await tester.tap(continueWithEmail);
+    await tester.pump(const Duration(milliseconds: 500));
+  }
   final fields = find.byType(TextFormField);
   await tester.enterText(fields.at(0), email);
   await tester.enterText(fields.at(1), password);

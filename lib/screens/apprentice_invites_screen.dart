@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/api_service.dart';
 import '../utils/errors.dart';
+import '../utils/invite_codes.dart';
+import '../widgets/invite_code_entry.dart';
+import '../models/invite_redemption.dart';
 
 class ApprenticeInvitesScreen extends StatefulWidget {
   final User? user;
@@ -88,15 +91,32 @@ class _ApprenticeInvitesScreenState extends State<ApprenticeInvitesScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Colors.amber))
-          : _error != null
-              ? _buildErrorView(_error!, _loadPendingInvites)
-              : _buildInvitesList(),
+          // Code entry comes first in every state, so an apprentice can always join
+          // with a code even when the email-matched invite list fails to load.
+          : ListView(
+              padding: const EdgeInsets.all(16.0),
+              children: [
+                InviteCodeEntry(onRedeemed: _onCodeRedeemed),
+                if (_error != null)
+                  _buildErrorView(_error!, _loadPendingInvites)
+                else
+                  ..._buildInvitesList(),
+              ],
+            ),
     );
+  }
+
+  Future<void> _onCodeRedeemed(InviteRedemption redemption) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(inviteRedeemedMessage(redemption)), backgroundColor: Colors.green),
+    );
+    await _loadPendingInvites();
   }
 
   Widget _buildErrorView(String error, VoidCallback retry) {
     return Center(
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(Icons.error_outline, color: Colors.red, size: 64),
@@ -130,9 +150,9 @@ class _ApprenticeInvitesScreenState extends State<ApprenticeInvitesScreen> {
     );
   }
 
-  Widget _buildInvitesList() {
+  List<Widget> _buildInvitesList() {
     if (_pendingInvites.isEmpty) {
-      return Center(
+      return [Center(
         child: Card(
           elevation: 2,
           color: Colors.grey[900],
@@ -171,18 +191,10 @@ class _ApprenticeInvitesScreenState extends State<ApprenticeInvitesScreen> {
             ),
           ),
         ),
-      );
+      )];
     }
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: ListView.builder(
-        itemCount: _pendingInvites.length,
-        itemBuilder: (context, index) {
-          return _buildInviteCard(_pendingInvites[index]);
-        },
-      ),
-    );
+    return [for (final invite in _pendingInvites) _buildInviteCard(invite)];
   }
 
   Widget _buildInviteCard(Map<String, dynamic> invite) {

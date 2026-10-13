@@ -2,6 +2,9 @@ part of 'apprentice_dashboard_new.dart';
 
 // Widget builders for _ApprenticeDashboardNewState. State and logic live in apprentice_dashboard_new.dart.
 extension _ApprenticeDashboardNewStateWidgets on _ApprenticeDashboardNewState {
+  /// Shown only to apprentices without an active mentor (backend spec 006 invite codes).
+  Widget _buildInviteCodeCard() => InviteCodeEntry(onRedeemed: _onInviteRedeemed);
+
   Widget _buildWelcomeCard() {
     return Card(
       key: welcomeCardKey,

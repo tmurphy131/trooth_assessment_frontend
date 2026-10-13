@@ -19,6 +19,9 @@ import 'subscription_screen.dart';
 import 'trivia_home_screen.dart';
 import '../utils/errors.dart';
 import '../widgets/daily_trivia_pill.dart';
+import '../widgets/invite_code_entry.dart';
+import '../models/invite_redemption.dart';
+import '../utils/invite_codes.dart';
 
 part 'apprentice_dashboard_new_widgets.dart';
 
@@ -185,6 +188,8 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew>
   String? _error;
   String? _name; // backend 'name' field
   int _inviteCount = 0;
+  // null until known; the invite-code card shows only when this is false.
+  bool? _hasActiveMentor;
   int _triviaPendingCount = 0;
 
   @override
@@ -199,8 +204,26 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew>
       _loadUserProfile(),
       _loadAssessments(),
       _loadInviteCount(),
+      _loadMentorStatus(),
       _loadTriviaPendingCount(),
     ]);
+  }
+
+  Future<void> _loadMentorStatus() async {
+    try {
+      final status = await _apiService.getMentorStatus();
+      if (mounted) setState(() => _hasActiveMentor = status['has_active'] == true);
+    } catch (e) {
+      // Leave it unknown so the card stays hidden; the invitations screen still offers code entry.
+      debugPrint('Failed to load mentor status: $e');
+    }
+  }
+
+  Future<void> _onInviteRedeemed(InviteRedemption redemption) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(inviteRedeemedMessage(redemption)), backgroundColor: Colors.green),
+    );
+    await Future.wait([_loadMentorStatus(), _loadInviteCount(), _loadAssessments()]);
   }
 
   Future<void> _loadInviteCount() async {
@@ -325,6 +348,7 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew>
         children: [
           _buildWelcomeCard(),
           const SizedBox(height: 12),
+          if (_hasActiveMentor == false) _buildInviteCodeCard(),
           _buildQuickActions(),
           const SizedBox(height: 12),
           _buildTriviaTile(),

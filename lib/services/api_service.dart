@@ -17,6 +17,7 @@ import '../models/mentor_note.dart';
 import '../models/prayer_entry.dart';
 import '../models/trivia_session.dart';
 import '../models/daily_trivia.dart';
+import '../models/invite_redemption.dart';
 import '../features/assessments/models/report_status.dart';
 
 part 'api/users_mentorship.dart';
