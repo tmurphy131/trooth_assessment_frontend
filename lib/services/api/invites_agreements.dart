@@ -6,7 +6,9 @@ extension InvitesAgreementsApi on ApiService {
   /*  ✉️  Invites                                                        */
   /* ─────────────────────────────────────────────────────────────────── */
 
-  Future<void> sendInvite(Map<String, dynamic> payload) async {
+  /// Sends an invite and returns its display code (`XXXX-XXXX`), or null if the
+  /// backend didn't return one (backend spec 006 adds it).
+  Future<String?> sendInvite(Map<String, dynamic> payload) async {
     final r = await _http.post(
       Uri.parse('$_base/invitations/invite-apprentice'),
       headers: _headers(),
@@ -14,6 +16,31 @@ extension InvitesAgreementsApi on ApiService {
     );
     if (r.statusCode != 200) {
       throw ApiException(r.statusCode, 'sendInvite failed (${r.statusCode})');
+    }
+    try {
+      final body = jsonDecode(r.body);
+      final code = body is Map ? body['code'] : null;
+      return code is String && code.isNotEmpty ? code : null;
+    } on FormatException {
+      return null;
+    }
+  }
+
+  /// Joins the mentor whose invite code this is (backend spec 006). Callers react
+  /// to [ApiException.statusCode] only; see `inviteCodeErrorMessage`.
+  Future<InviteRedemption> redeemInviteCode(String code) async {
+    final r = await _http.post(
+      Uri.parse('$_base/invitations/redeem'),
+      headers: _headers(),
+      body: jsonEncode({'code': code.trim()}),
+    );
+    if (r.statusCode != 200) {
+      throw ApiException(r.statusCode, 'redeemInviteCode failed (${r.statusCode})');
+    }
+    try {
+      return InviteRedemption.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+    } catch (_) {
+      throw ApiException(r.statusCode, 'redeemInviteCode: malformed response');
     }
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/api_service.dart';
 import '../utils/errors.dart';
+import '../widgets/invite_code_share.dart';
 
 class ApprenticeInviteScreen extends StatefulWidget {
   final User? user;
@@ -21,6 +22,7 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
   List<Map<String, dynamic>> _pendingInvites = [];
   bool _isLoading = true;
   String? _error;
+  String? _mentorName; // for shared invite text; see _loadMentorName
 
   @override
   void initState() {
@@ -33,6 +35,7 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
       await Future.wait([
         _loadPendingInvites(),
         _primeInactiveCount(),
+        _loadMentorName(),
       ]);
     } catch (e) {
       setState(() {
@@ -41,6 +44,26 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
       });
     }
   }
+
+  /// The name apprentices see in shared invites. The backend profile has it even for
+  /// email sign-ups, where the Firebase display name is often empty.
+  Future<void> _loadMentorName() async {
+    String? name;
+    final uid = user?.uid;
+    if (uid != null) {
+      try {
+        final profile = await _apiService.getUserProfile(uid);
+        name = (profile['name'] as String?)?.trim();
+      } catch (e) {
+        debugPrint('Failed to load mentor name: $e');
+      }
+    }
+    if (name == null || name.isEmpty) name = user?.displayName?.trim();
+    if (!mounted) return;
+    setState(() => _mentorName = (name == null || name.isEmpty) ? 'Your mentor' : name);
+  }
+
+  String get _shareName => _mentorName ?? 'Your mentor';
 
   Future<void> _loadPendingInvites() async {
     try {
@@ -332,28 +355,16 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
                 ),
               ),
             
+            // Invites from before backend spec 006 have no code; show nothing then.
+            if (invite['code'] is String && (invite['code'] as String).isNotEmpty) ...[
+              const SizedBox(height: 12),
+              InviteCodeShare(code: invite['code'] as String, mentorName: _shareName),
+            ],
+
             const SizedBox(height: 16),
             
             Row(
               children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _copyInviteLink(invite['token'] ?? ''),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[700],
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    icon: const Icon(Icons.copy, size: 16),
-                    label: const Text(
-                      'Copy Link',
-                      style: TextStyle(fontFamily: 'Poppins'),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () => _revokeInvite(invite),
@@ -465,9 +476,14 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
         'apprentice_email': email.trim(),
       };
 
-      await _apiService.sendInvite(payload);
+      final code = await _apiService.sendInvite(payload);
       await _loadPendingInvites();
-      _showMessage('Invitation sent successfully!');
+      if (!mounted) return;
+      if (code != null) {
+        _showInviteCodeDialog(name.trim(), code);
+      } else {
+        _showMessage('Invitation sent successfully!');
+      }
       
     } catch (e) {
       _showMessage('Failed to send invitation: ${friendlyError(e)}', isError: true);
@@ -491,9 +507,37 @@ class _ApprenticeInviteScreenState extends State<ApprenticeInviteScreen> {
     }
   }
 
-  void _copyInviteLink(String token) {
-    // For now, just show the token. In a real app, you'd copy the full invite URL
-    _showMessage('Invite link: https://yourapp.com/accept-invite?token=$token');
+  void _showInviteCodeDialog(String apprenticeName, String code) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: Text(
+          'Invite sent to $apprenticeName',
+          style: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              InviteCodeShare(code: code, mentorName: _shareName, large: true),
+              const SizedBox(height: 12),
+              Text(
+                'Your apprentice enters this code in the T[root]H app. It expires in 7 days.',
+                style: TextStyle(color: Colors.grey[300], fontFamily: 'Poppins', fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Done', style: TextStyle(color: Colors.amber)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<bool> _showConfirmDialog(String title, String content) async {
