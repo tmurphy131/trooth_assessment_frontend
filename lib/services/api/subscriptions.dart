@@ -39,6 +39,24 @@ extension SubscriptionsApi on ApiService {
   /* ── Mentor Gift Seats ────────────────────────────────────────────── */
 
   /// Get list of gift seats created by the current mentor
+  /// Redeems a mentor's gift code (`TROOTH-XXXX-XXXX`). Business failures come back
+  /// as 200 with `success: false`; anything else throws [ApiException].
+  Future<GiftCodeRedemption> redeemGiftCode(String code) async {
+    final r = await _http.post(
+      Uri.parse('$_base/apprentice/redeem-code'),
+      headers: _headers(),
+      body: jsonEncode({'code': code}),
+    );
+    if (r.statusCode != 200) {
+      throw ApiException(r.statusCode, 'redeemGiftCode failed (${r.statusCode})');
+    }
+    try {
+      return GiftCodeRedemption.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+    } catch (_) {
+      throw ApiException(r.statusCode, 'redeemGiftCode: malformed response');
+    }
+  }
+
   Future<List<dynamic>> getMentorGiftSeats() async {
     const path = '/mentor/seats';
     final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
