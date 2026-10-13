@@ -134,9 +134,12 @@ extension InvitesAgreementsApi on ApiService {
     throw ApiException(r.statusCode, 'listAgreementTemplates failed (${r.statusCode})');
   }
 
+  /// Creates an agreement for a connected apprentice ([apprenticeId], preferred) or,
+  /// for someone not connected yet, by [apprenticeEmail] (backend spec 007).
   Future<Map<String, dynamic>> createAgreement({
     required int templateVersion,
-    required String apprenticeEmail,
+    String? apprenticeId,
+    String? apprenticeEmail,
     String? apprenticeName,
     required Map<String, dynamic> fields,
     bool apprenticeIsMinor = false,
@@ -145,7 +148,7 @@ extension InvitesAgreementsApi on ApiService {
   }) async {
     final payload = {
       'template_version': templateVersion,
-      'apprentice_email': apprenticeEmail,
+      if (apprenticeId != null) 'apprentice_id': apprenticeId else if (apprenticeEmail != null) 'apprentice_email': apprenticeEmail,
       if (apprenticeName != null && apprenticeName.trim().isNotEmpty) 'apprentice_name': apprenticeName.trim(),
       'apprentice_is_minor': apprenticeIsMinor,
       'parent_required': parentRequired,

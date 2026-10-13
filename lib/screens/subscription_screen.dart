@@ -14,6 +14,7 @@ import '../services/subscription_service.dart';
 import '../services/api_service.dart';
 import 'mentor_gift_seats_screen.dart';
 import '../utils/errors.dart';
+import '../widgets/gift_code_sheet.dart';
 
 class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({super.key});
@@ -170,6 +171,13 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     }
   }
 
+  Future<void> _openGiftCode() async {
+    final ok = await showGiftCodeSheet(context);
+    if (!mounted) return;
+    // Now Premium: close the upgrade offer; `true` tells callers to refresh.
+    if (ok) Navigator.of(context).pop(true);
+  }
+
   Future<void> _restorePurchases() async {
     setState(() => _isLoading = true);
 
@@ -316,6 +324,20 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             _buildFeaturesList(),
             const SizedBox(height: 24),
             _buildPricingOptions(),
+            // Apprentices can redeem a mentor's gift code instead of paying (spec 005).
+            if (_userRole == 'apprentice') ...[
+              const SizedBox(height: 16),
+              Center(
+                child: TextButton.icon(
+                  onPressed: _openGiftCode,
+                  icon: const Icon(Icons.card_giftcard, color: Colors.amber),
+                  label: const Text(
+                    'Have a gift code from your mentor?',
+                    style: TextStyle(color: Colors.amber, fontFamily: 'Poppins'),
+                  ),
+                ),
+              ),
+            ],
           ],
 
           const SizedBox(height: 24),

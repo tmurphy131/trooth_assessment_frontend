@@ -4,6 +4,8 @@ import '../services/api_service.dart';
 import 'agreement_preview_screen.dart';
 import 'apprentice_invite_screen.dart';
 import '../utils/errors.dart';
+import '../utils/agreement_errors.dart';
+import '../widgets/apprentice_picker.dart';
 
 class MentorAgreementsScreen extends StatefulWidget {
   const MentorAgreementsScreen({super.key});
@@ -23,6 +25,10 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
 
   // Form fields
   int? _selectedVersion;
+  // The mentor's current apprentices; picking one sends apprentice_id (spec 005).
+  // null = "Someone else" (email entry). Empty list = plain email form.
+  List<Map<String, dynamic>> _apprentices = [];
+  String? _selectedApprenticeId;
   final _apprenticeNameCtrl = TextEditingController();
   final _apprenticeEmailCtrl = TextEditingController();
   final _meetingLocationCtrl = TextEditingController();
@@ -52,6 +58,31 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
     super.initState();
     _loadTemplates();
     _loadExisting();
+    _loadApprentices();
+  }
+
+  Future<void> _loadApprentices() async {
+    try {
+      final list = await _api.listApprentices();
+      if (!mounted) return;
+      setState(() => _apprentices = list.cast<Map<String, dynamic>>());
+    } catch (e) {
+      // Fall back to email entry.
+      debugPrint('Failed to load apprentices for agreement picker: $e');
+    }
+  }
+
+  void _onApprenticePicked(String? id) {
+    setState(() {
+      _selectedApprenticeId = id;
+      if (id != null) {
+        final match = _apprentices.where((a) => a['id'] == id);
+        final name = match.isEmpty ? null : (match.first['name'] as String?)?.trim();
+        if (name != null && name.isNotEmpty) _apprenticeNameCtrl.text = name;
+      } else {
+        _apprenticeEmailCtrl.clear();
+      }
+    });
   }
 
   Future<void> _loadTemplates() async {
@@ -73,12 +104,14 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
   }
 
   Future<void> _createAgreement() async {
-    if (_selectedVersion == null || _apprenticeEmailCtrl.text.isEmpty) return;
+    final hasRecipient = _selectedApprenticeId != null || _apprenticeEmailCtrl.text.trim().isNotEmpty;
+    if (_selectedVersion == null || !hasRecipient) return;
     setState(() { _creating = true; _error = null; _currentAgreement = null; });
     try {
       final ag = await _api.createAgreement(
         templateVersion: _selectedVersion!,
-        apprenticeEmail: _apprenticeEmailCtrl.text.trim(),
+        apprenticeId: _selectedApprenticeId,
+        apprenticeEmail: _selectedApprenticeId == null ? _apprenticeEmailCtrl.text.trim() : null,
         apprenticeName: _apprenticeNameCtrl.text.trim().isEmpty ? null : _apprenticeNameCtrl.text.trim(),
         fields: {
           'meeting_location': _meetingLocationCtrl.text.trim().isEmpty ? 'TBD' : _meetingLocationCtrl.text.trim(),
@@ -93,9 +126,11 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
         parentRequired: _parentRequired,
         parentEmail: _parentRequired ? _parentEmailCtrl.text.trim() : null,
       );
-  setState(() { _currentAgreement = ag; });
-  _resetForm();
+      if (!mounted) return;
+      setState(() { _currentAgreement = ag; });
+      _resetForm();
       await _loadExisting(refresh: true);
+      if (!mounted) return;
       // Auto scroll to status card
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_statusCardKey.currentContext != null) {
@@ -107,9 +142,10 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
         }
       });
     } catch (e) {
-      setState(() { _error = 'Create failed: ${friendlyError(e)}'; });
+      if (!mounted) return;
+      setState(() { _error = 'Create failed: ${agreementCreateErrorMessage(e)}'; });
     } finally {
-      setState(() { _creating = false; });
+      if (mounted) setState(() { _creating = false; });
     }
   }
 
@@ -117,6 +153,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
     setState(() {
       _apprenticeNameCtrl.clear();
       _apprenticeEmailCtrl.clear();
+      _selectedApprenticeId = null;
       _meetingLocationCtrl.clear();
       _meetingDurationCtrl.text = '60';
       _meetingDayCtrl.clear();
@@ -288,19 +325,29 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
+            if (_apprentices.isNotEmpty) ...[
+              ApprenticePicker(
+                apprentices: _apprentices,
+                value: _selectedApprenticeId,
+                onChanged: _onApprenticePicked,
+                enabled: !_creating,
+              ),
+              const SizedBox(height: 12),
+            ],
             TextFormField(
               controller: _apprenticeNameCtrl,
               style: const TextStyle(color: Colors.white),
               decoration: const InputDecoration(labelText: 'Apprentice Full Name', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white60)),
             ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _apprenticeEmailCtrl,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Apprentice Email', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white60)),
-              keyboardType: TextInputType.emailAddress,
-            ),
+            if (_selectedApprenticeId == null) ...[
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _apprenticeEmailCtrl,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(labelText: 'Apprentice Email', labelStyle: TextStyle(color: Colors.white70), hintStyle: TextStyle(color: Colors.white60)),
+                keyboardType: TextInputType.emailAddress,
+              ),
+            ],
             const SizedBox(height: 12),
             TextFormField(
               controller: _meetingLocationCtrl,

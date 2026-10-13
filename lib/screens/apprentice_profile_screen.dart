@@ -8,6 +8,7 @@ import 'support_screen.dart';
 import 'subscription_screen.dart';
 import '../utils/errors.dart';
 import '../widgets/daily_trivia_profile_card.dart';
+import '../widgets/gift_code_sheet.dart';
 
 class ApprenticeProfileScreen extends StatefulWidget {
   const ApprenticeProfileScreen({super.key});
@@ -117,6 +118,19 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
                     const SizedBox(height: 12),
                     // Subscription Status
                     _buildSubscriptionCard(),
+                    // Free apprentices can redeem a mentor's gift code (spec 005).
+                    if (_subscriptionService.tier == SubscriptionTier.free)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: _openGiftCode,
+                          icon: const Icon(Icons.card_giftcard, color: Colors.amber),
+                          label: const Text(
+                            'Have a gift code from your mentor?',
+                            style: TextStyle(color: Colors.amber, fontFamily: 'Poppins'),
+                          ),
+                        ),
+                      ),
                     const SizedBox(height: 40),
                     const Divider(color: Colors.grey),
                     const SizedBox(height: 16),
@@ -381,6 +395,12 @@ class _ApprenticeProfileScreenState extends State<ApprenticeProfileScreen> {
   String _capitalizeFirst(String s) {
     if (s.isEmpty) return s;
     return s[0].toUpperCase() + s.substring(1);
+  }
+
+  Future<void> _openGiftCode() async {
+    final ok = await showGiftCodeSheet(context);
+    if (!mounted) return;
+    if (ok) _load();
   }
 
   Future<void> _showCloseAccountDialog() async {
