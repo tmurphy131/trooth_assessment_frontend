@@ -542,8 +542,8 @@ extension _TemplateManagementScreenStateWidgets on _TemplateManagementScreenStat
                 child: Row(
                   children: [
                     Icon(
-                      option['is_correct'] ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                      color: option['is_correct'] ? Colors.green : Colors.grey,
+                      option['is_correct'] == true ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                      color: option['is_correct'] == true ? Colors.green : Colors.grey,
                       size: 16,
                     ),
                     const SizedBox(width: 8),
