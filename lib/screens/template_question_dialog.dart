@@ -387,7 +387,7 @@ class _QuestionCreationDialogState extends State<_QuestionCreationDialog> {
                   style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontSize: 12),
                 ),
                 Checkbox(
-                  value: option['is_correct'],
+                  value: option['is_correct'] == true,
                   onChanged: (value) {
                     setState(() {
                       // Only one option can be correct
