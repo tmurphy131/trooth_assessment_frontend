@@ -14,7 +14,7 @@ class MentorAgreementsScreen extends StatefulWidget {
   State<MentorAgreementsScreen> createState() => _MentorAgreementsScreenState();
 }
 
-class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
+class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> with WidgetsBindingObserver {
   final _api = ApiService();
   final _scrollController = ScrollController();
   final _statusCardKey = GlobalKey();
@@ -56,6 +56,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadTemplates();
     _loadExisting();
     _loadApprentices();
@@ -172,19 +173,29 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
     setState(() { _loadingExisting = true; });
     try {
       final list = await _api.listAgreements(skip: _agreementsSkip, limit: _agreementsLimit);
+      if (!mounted) return;
       setState(() {
         if (refresh) {
           _agreements = list.cast<Map<String,dynamic>>();
         } else {
           _agreements.addAll(list.cast<Map<String,dynamic>>());
         }
+        // Keep the status card in step with the refreshed list (e.g. signed by email link).
+        final current = _currentAgreement;
+        if (current != null) {
+          for (final a in _agreements) {
+            if (a['id'] == current['id']) { _currentAgreement = a; break; }
+          }
+        }
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() { _error = 'Load agreements failed: ${friendlyError(e)}'; });
     } finally {
-      setState(() { _loadingExisting = false; });
+      if (mounted) setState(() { _loadingExisting = false; });
     }
   }
+
 
   Future<void> _submitAgreement() async {
     if (_currentAgreement == null) return;
@@ -305,8 +316,12 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
       ),
       body: _loadingTemplates
           ? const Center(child: CircularProgressIndicator(color: Colors.amber))
-          : SingleChildScrollView(
+          : RefreshIndicator(
+              color: Colors.amber,
+              onRefresh: () => _loadExisting(refresh: true),
+              child: SingleChildScrollView(
               controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,6 +344,7 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
                 ],
               ),
             ),
+          ),
     );
   }
 
@@ -714,6 +730,16 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
   _startDateCtrl.dispose();
   _additionalNotesCtrl.dispose();
   _scrollController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  // Signing happens in the browser (emailed links), so pick up new statuses when the
+  // mentor comes back to the app.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && !_loadingExisting) {
+      _loadExisting(refresh: true);
+    }
   }
 }
