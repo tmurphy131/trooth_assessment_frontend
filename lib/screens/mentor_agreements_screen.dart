@@ -241,28 +241,44 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
 
   Future<void> _revokeAgreement() async {
     if (_currentAgreement == null) return;
+    // A draft was never sent: the backend deletes it and leaves the mentorship alone.
+    final isDraft = _currentAgreement!['status'] == 'draft';
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text('Revoke Agreement', style: TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
-        content: const Text('Are you sure you want to revoke this agreement?', style: TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+        title: Text(isDraft ? 'Delete Draft' : 'Revoke Agreement', style: const TextStyle(color: Colors.amber, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+        content: Text(
+          isDraft
+              ? 'Delete this draft? It was never sent, so your apprentice won\'t be notified and your mentorship stays as it is.'
+              : 'Are you sure you want to revoke this agreement?',
+          style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'),
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel', style: TextStyle(color: Colors.amber))),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Revoke', style: TextStyle(color: Colors.red))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(isDraft ? 'Delete' : 'Revoke', style: const TextStyle(color: Colors.red))),
         ],
       ),
     );
     if (confirm != true) return;
+    if (!mounted) return;
     setState(() { _revoking = true; _error = null; });
     try {
       final updated = await _api.revokeAgreement(_currentAgreement!['id']);
-      setState(() { _currentAgreement = updated; });
-      _showSnack('Agreement revoked');
+      if (!mounted) return;
+      if (updated['deleted'] == true) {
+        setState(() { _currentAgreement = null; });
+        _showSnack('Draft deleted');
+        await _loadExisting(refresh: true);
+      } else {
+        setState(() { _currentAgreement = updated; });
+        _showSnack('Agreement revoked');
+      }
     } catch (e) {
-      setState(() { _error = 'Revoke failed: ${friendlyError(e)}'; });
+      if (!mounted) return;
+      setState(() { _error = '${isDraft ? 'Delete' : 'Revoke'} failed: ${friendlyError(e)}'; });
     } finally {
-      setState(() { _revoking = false; });
+      if (mounted) setState(() { _revoking = false; });
     }
   }
 
@@ -505,10 +521,12 @@ class _MentorAgreementsScreenState extends State<MentorAgreementsScreen> {
                   ),
                 if (status != 'revoked' && status != 'expired')
                   ElevatedButton.icon(
-                    icon: const Icon(Icons.block),
+                    icon: Icon(status == 'draft' ? Icons.delete_outline : Icons.block),
                     onPressed: _revoking ? null : _revokeAgreement,
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-                    label: Text(_revoking ? 'Revoking...' : 'Revoke'),
+                    label: Text(status == 'draft'
+                        ? (_revoking ? 'Deleting...' : 'Delete Draft')
+                        : (_revoking ? 'Revoking...' : 'Revoke')),
                   ),
                 if (status == 'fully_signed')
                   ElevatedButton.icon(
