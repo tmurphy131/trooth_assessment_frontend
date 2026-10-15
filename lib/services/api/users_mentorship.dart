@@ -44,22 +44,6 @@ extension UsersApi on ApiService {
     }
   }
 
-  Future<void> assignApprentice({
-    required String mentorId,
-    required String apprenticeId,
-  }) async {
-    final p = {'mentor_id': mentorId, 'apprentice_id': apprenticeId};
-
-    final r = await _http.post(
-      Uri.parse('$_base/users/assign-apprentice'),
-      headers: _headers(),
-      body: jsonEncode(p),
-    );
-    if (r.statusCode != 200) {
-      throw ApiException(r.statusCode, 'assignApprentice failed (${r.statusCode})');
-    }
-  }
-
   Future<Map<String, dynamic>> getUserProfile(String uid) async {
     final body = await _cachedBody('/users/$uid', const Duration(minutes: 5), () => _fetchUserProfile(uid));
     return jsonDecode(body) as Map<String, dynamic>;

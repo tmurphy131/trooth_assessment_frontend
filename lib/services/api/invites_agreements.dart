@@ -199,17 +199,6 @@ extension InvitesAgreementsApi on ApiService {
     throw ApiException(r.statusCode, 'apprenticeSignAgreement failed (${r.statusCode})');
   }
 
-  Future<Map<String, dynamic>> parentSignAgreement({
-    required String agreementId,
-    required String typedName,
-  }) async {
-    final path = '/agreements/$agreementId/sign/parent';
-    final payload = { 'typed_name': typedName };
-    final r = await _http.post(Uri.parse('$_base$path'), headers: _headers(), body: jsonEncode(payload));
-    if (r.statusCode == 200) return jsonDecode(r.body);
-    throw ApiException(r.statusCode, 'parentSignAgreement failed (${r.statusCode})');
-  }
-
   Future<Map<String, dynamic>> resendParentToken({
     required String agreementId,
     String? reason,
