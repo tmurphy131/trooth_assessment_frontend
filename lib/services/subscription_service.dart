@@ -221,6 +221,12 @@ class SubscriptionService extends ChangeNotifier {
   static const String _revenueCatAppleApiKey = 'appl_lCFeOlOIrgjWmFfbnOpfChlwIzX';
   static const String _revenueCatGoogleApiKey = 'goog_lWDiKQFGjNEuhnkVOoowvfUOSPz';
 
+  /// The purchase call, swappable in tests. Defaults to RevenueCat.
+  @visibleForTesting
+  static Future<PurchaseResult> Function(PurchaseParams params) purchaseFn = Purchases.purchase;
+
+  Future<PurchaseResult> _purchase(PurchaseParams params) => purchaseFn(params);
+
   /* ── Getters ──────────────────────────────────────────────────────── */
   SubscriptionStatus get status => _status;
   bool get isInitialized => _isInitialized;
@@ -359,9 +365,8 @@ class SubscriptionService extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      // purchases_flutter 9+ returns a PurchaseResult; the updated
-      // CustomerInfo lives on the .customerInfo field.
-      final purchaseResult = await Purchases.purchasePackage(package);
+      // The updated CustomerInfo lives on PurchaseResult.customerInfo.
+      final purchaseResult = await _purchase(PurchaseParams.package(package));
       final customerInfo = purchaseResult.customerInfo;
 
       // Check if purchase granted premium entitlement
@@ -495,8 +500,8 @@ class SubscriptionService extends ChangeNotifier {
       dev.log('SubscriptionService: Purchasing gift seat package: ${giftSeatPackage.storeProduct.identifier}');
 
       // Purchase the gift seat subscription
-      // purchases_flutter 9+ returns a PurchaseResult; unwrap the CustomerInfo.
-      final purchaseResult = await Purchases.purchasePackage(giftSeatPackage);
+      // The updated CustomerInfo lives on PurchaseResult.customerInfo.
+      final purchaseResult = await _purchase(PurchaseParams.package(giftSeatPackage));
       final result = purchaseResult.customerInfo;
 
       // Debug: Log all entitlements after purchase
