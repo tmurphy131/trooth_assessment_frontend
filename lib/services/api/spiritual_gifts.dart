@@ -181,14 +181,14 @@ extension SpiritualGiftsApi on ApiService {
   }
 
   Future<Map<String, dynamic>> getSpiritualGiftsTemplateMetadata() async {
-    const path = '/spiritual-gifts/template/metadata';
+    const path = '/assessments/spiritual-gifts/template/metadata';
     final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     throw ApiException(r.statusCode, 'getSpiritualGiftsTemplateMetadata failed (${r.statusCode}) ${r.body}');
   }
 
   Future<List<Map<String, dynamic>>> getSpiritualGiftsDefinitions() async {
-    const path = '/spiritual-gifts/definitions';
+    const path = '/assessments/spiritual-gifts/definitions';
     final r = await _http.get(Uri.parse('$_base$path'), headers: _headers());
     if (r.statusCode == 200) {
       final decoded = jsonDecode(r.body);
