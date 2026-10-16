@@ -19,13 +19,13 @@ Android reads version from `pubspec.yaml` automatically — no separate Android 
 ## Step 1 — Parse the Version Argument
 
 `$ARGUMENTS` will be one of:
-- `1.0.36` — semver only; derive build number as the patch number (36)
+- `1.0.36` — semver only; build number = current build in `pubspec.yaml` + 1 (e.g. `+50` → `51`)
 - `1.0.36+36` — explicit semver+build; use both as given
 - `1.0.36+42` — semver with a different build number; use both as given
 
 Extract:
 - `SEMVER` = the part before `+` (e.g., `1.0.36`)
-- `BUILD` = the part after `+`, or the patch number if no `+` given (e.g., `36`)
+- `BUILD` = the part after `+`, or the current `pubspec.yaml` build number + 1 if no `+` given. Build numbers must always increase (stores reject lower ones)
 
 If `$ARGUMENTS` is empty or unparseable, stop and ask the user: "What version should I bump to? (e.g. 1.0.36)"
 

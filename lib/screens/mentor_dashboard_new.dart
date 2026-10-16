@@ -355,8 +355,8 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
       final isGrandfathered = status.isGrandfathered;
       
       // Use print() to ensure visibility in console
-      print('🔒 FREEMIUM CHECK: isPremium=$isPremium, isGrandfathered=$isGrandfathered, tier=${status.tier}');
-      print('🔒 FREEMIUM CHECK: total apprentices=${_apprentices.length}, targets before filter=${targets.length}');
+      dev.log('🔒 FREEMIUM CHECK: isPremium=$isPremium, isGrandfathered=$isGrandfathered, tier=${status.tier}');
+      dev.log('🔒 FREEMIUM CHECK: total apprentices=${_apprentices.length}, targets before filter=${targets.length}');
       
       if (!isPremium && !isGrandfathered) {
         // Free user - only allow first apprentice
@@ -364,9 +364,9 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
           final firstApprenticeId = _apprentices[0]['id'];
           targets = targets.where((a) => a['id'] == firstApprenticeId).toList();
         }
-        print('🔒 FREEMIUM CHECK: FREE USER → filtered to ${targets.length} apprentice(s)');
+        dev.log('🔒 FREEMIUM CHECK: FREE USER → filtered to ${targets.length} apprentice(s)');
       } else {
-        print('🔒 FREEMIUM CHECK: PREMIUM/GRANDFATHERED → all ${targets.length} apprentice(s) allowed');
+        dev.log('🔒 FREEMIUM CHECK: PREMIUM/GRANDFATHERED → all ${targets.length} apprentice(s) allowed');
       }
       
       final results = await Future.wait(targets.map((apprentice) async {
@@ -981,7 +981,7 @@ class _MentorDashboardNewState extends State<MentorDashboardNew> with TickerProv
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
                 onPressed: submitting ? null : () async {
                   if (!formKey.currentState!.validate()) return;
-                  print('[UI] Terminate pressed for apprentice=$apprenticeId reasonLen=${controller.text.trim().length}');
+                  dev.log('[UI] Terminate pressed for apprentice=$apprenticeId reasonLen=${controller.text.trim().length}');
                   setState(() => submitting = true);
                   try {
                     await _apiService.terminateApprenticeship(apprenticeId, controller.text.trim());

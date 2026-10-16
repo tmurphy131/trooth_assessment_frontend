@@ -131,7 +131,7 @@ extension AssessmentsApi on ApiService {
       if (r.statusCode == 200) return jsonDecode(r.body);
       throw ApiException(r.statusCode, 'createTemplate failed (${r.statusCode})');
     } catch (e) {
-      print('❌ $tag Network Error Details: $e');
+      dev.log('❌ $tag Network Error Details: $e');
       if (e.toString().contains('Failed to fetch')) {
       }
       rethrow;
@@ -153,7 +153,7 @@ extension AssessmentsApi on ApiService {
       if (r.statusCode == 200) return jsonDecode(r.body);
       throw ApiException(r.statusCode, 'updateTemplate failed (${r.statusCode})');
     } catch (e) {
-      print('❌ $tag Network Error Details: $e');
+      dev.log('❌ $tag Network Error Details: $e');
       rethrow;
     }
   }
@@ -172,7 +172,7 @@ extension AssessmentsApi on ApiService {
       if (r.statusCode == 200) return;
       throw ApiException(r.statusCode, 'deleteTemplate failed (${r.statusCode})');
     } catch (e) {
-      print('❌ $tag Network Error Details: $e');
+      dev.log('❌ $tag Network Error Details: $e');
       rethrow;
     }
   }
@@ -187,7 +187,7 @@ extension AssessmentsApi on ApiService {
       if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
       throw ApiException(r.statusCode, 'getAllTemplates failed (${r.statusCode})');
     } catch (e) {
-      print('❌ $tag Network Error: $e');
+      dev.log('❌ $tag Network Error: $e');
       rethrow;
     }
   }
@@ -455,7 +455,7 @@ extension AssessmentsApi on ApiService {
       if (r.statusCode == 200) return jsonDecode(r.body);
       throw ApiException(r.statusCode, 'createQuestion failed (${r.statusCode})');
     } catch (e) {
-      print('❌ $tag Network Error Details: $e');
+      dev.log('❌ $tag Network Error Details: $e');
       rethrow;
     }
   }
@@ -474,7 +474,7 @@ extension AssessmentsApi on ApiService {
       if (r.statusCode == 200) return jsonDecode(r.body);
       throw ApiException(r.statusCode, 'updateQuestion failed (${r.statusCode})');
     } catch (e) {
-      print('❌ $tag Network Error Details: $e');
+      dev.log('❌ $tag Network Error Details: $e');
       rethrow;
     }
   }
@@ -492,7 +492,7 @@ extension AssessmentsApi on ApiService {
       if (r.statusCode == 200) return;
       throw ApiException(r.statusCode, 'deleteQuestion failed (${r.statusCode})');
     } catch (e) {
-      print('❌ $tag Network Error Details: $e');
+      dev.log('❌ $tag Network Error Details: $e');
       rethrow;
     }
   }
