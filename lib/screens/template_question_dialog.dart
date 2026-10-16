@@ -42,7 +42,7 @@ class _QuestionCreationDialogState extends State<_QuestionCreationDialog> {
         }
       });
     } catch (e) {
-      print('Failed to load categories: $e');
+      debugPrint('Failed to load categories: $e');
       setState(() {
         _isLoadingCategories = false;
       });

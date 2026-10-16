@@ -990,9 +990,9 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew>
 
   void _navigateToAssessment(Map<String, dynamic> assessment) {
     // Debug: Print the assessment data to see what we're getting
-    print('=== ASSESSMENT DEBUG ===');
-    print('Full assessment data: $assessment');
-    print('Keys: ${assessment.keys.toList()}');
+    debugPrint('=== ASSESSMENT DEBUG ===');
+    debugPrint('Full assessment data: $assessment');
+    debugPrint('Keys: ${assessment.keys.toList()}');
 
     final assessmentId = assessment['id'] as String?;
     final templateId = assessment['template_id'] as String?;
@@ -1002,11 +1002,11 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew>
     final submittedAt = assessment['submitted_at'];
     final status = assessment['status'];
 
-    print(
+    debugPrint(
       'Raw is_submitted value: $isSubmittedRaw (type: ${isSubmittedRaw.runtimeType})',
     );
-    print('submitted_at: $submittedAt');
-    print('status: $status');
+    debugPrint('submitted_at: $submittedAt');
+    debugPrint('status: $status');
 
     // Handle different possible formats for submission status
     bool isSubmitted = false;
@@ -1020,10 +1020,10 @@ class _ApprenticeDashboardNewState extends State<ApprenticeDashboardNew>
       isSubmitted = true;
     }
 
-    print('Final isSubmitted: $isSubmitted');
-    print('Assessment ID: $assessmentId');
-    print('Template ID: $templateId');
-    print('=== END DEBUG ===');
+    debugPrint('Final isSubmitted: $isSubmitted');
+    debugPrint('Assessment ID: $assessmentId');
+    debugPrint('Template ID: $templateId');
+    debugPrint('=== END DEBUG ===');
 
     if (assessmentId == null || templateId == null) {
       ScaffoldMessenger.of(context).showSnackBar(

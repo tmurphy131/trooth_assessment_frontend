@@ -107,7 +107,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
       }
 
     } catch (e) {
-      print('Error initializing assessment: $e');
+      debugPrint('Error initializing assessment: $e');
       if (widget.templateId != null || widget.draftId != null) {
         final errStr = e.toString();
         final isPremiumError = errStr.contains('403') || errStr.toLowerCase().contains('premium');
@@ -140,9 +140,9 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
         final questionsFromDraft = draft['questions'] as List<dynamic>? ?? [];
         _questions = questionsFromDraft.cast<Map<String, dynamic>>();
         _isLoading = false;
-        print('📝 Loaded ${_questions.length} questions from draft ${widget.draftId}');
+        debugPrint('📝 Loaded ${_questions.length} questions from draft ${widget.draftId}');
         if (_questions.isNotEmpty) {
-          print('🔍 First question structure: ${_questions[0]}');
+          debugPrint('🔍 First question structure: ${_questions[0]}');
         }
         _updateTextControllers();
         // Jump to first unanswered question
@@ -167,9 +167,9 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
     // ── Specific template ID path ───────────────────────────────────────────
     // Same: no try-catch so failures surface as error UI, not 600+ questions.
     if (widget.templateId != null) {
-      print('🔄 Starting draft for template: ${widget.templateId}');
+      debugPrint('🔄 Starting draft for template: ${widget.templateId}');
       final draft = await _apiService.startDraft(widget.templateId!);
-      print('✅ Draft started successfully: ${draft['id']}');
+      debugPrint('✅ Draft started successfully: ${draft['id']}');
       setState(() {
         _currentDraft = draft;
         final existingAnswers = draft['answers'] as Map<String, dynamic>? ?? {};
@@ -177,9 +177,9 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
         final questionsFromDraft = draft['questions'] as List<dynamic>? ?? [];
         _questions = questionsFromDraft.cast<Map<String, dynamic>>();
         _isLoading = false;
-        print('📝 Loaded ${_questions.length} questions from draft for template ${widget.templateId}');
+        debugPrint('📝 Loaded ${_questions.length} questions from draft for template ${widget.templateId}');
         if (_questions.isNotEmpty) {
-          print('🔍 First question structure: ${_questions[0]}');
+          debugPrint('🔍 First question structure: ${_questions[0]}');
         }
         _updateTextControllers();
         // Restore position when resuming an existing draft (same logic as draftId path)
@@ -214,7 +214,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
         _updateTextControllers();
       });
     } catch (e) {
-      print('No existing draft found, will create one when saving: $e');
+      debugPrint('No existing draft found, will create one when saving: $e');
     }
   }
 
@@ -238,7 +238,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
       _restoreQuestionPosition();
       
     } catch (e) {
-      print('Failed to load questions: $e');
+      debugPrint('Failed to load questions: $e');
       // Use sample questions as fallback
       setState(() {
         _questions = _sampleQuestions;
@@ -768,10 +768,10 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
 
       // If we have an existing draft, update it
       if (_currentDraft != null && _currentDraft!['id'] != null) {
-        print('💾 Updating existing draft: ${_currentDraft!['id']}');
+        debugPrint('💾 Updating existing draft: ${_currentDraft!['id']}');
         await _apiService.updateDraft(payload, draftId: _currentDraft!['id']);
       } else {
-        print('⚠️  No current draft found, creating new one. _currentDraft: $_currentDraft');
+        debugPrint('⚠️  No current draft found, creating new one. _currentDraft: $_currentDraft');
         // Prevent multiple simultaneous draft creation
         if (_isCreatingDraft) {
           _showMessage('Already creating draft, please wait...', isError: true);
@@ -800,7 +800,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
 
           // Create/get draft using the start endpoint (which handles existing drafts)
           final newDraft = await _apiService.startDraft(templateId);
-          print('✅ Draft created/retrieved: ${newDraft['id']}');
+          debugPrint('✅ Draft created/retrieved: ${newDraft['id']}');
           
           // Update the draft with current answers
           await _apiService.updateDraft(payload, draftId: newDraft['id']);
@@ -858,7 +858,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
           await _apiService.updateDraft(payload, draftId: _currentDraft!['id']);
         } catch (e) {
           // If update fails (e.g., already submitted), continue with submission
-          print('Warning: Could not update draft before submission: $e');
+          debugPrint('Warning: Could not update draft before submission: $e');
         }
       }
 

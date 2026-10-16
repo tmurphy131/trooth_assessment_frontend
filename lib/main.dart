@@ -119,14 +119,14 @@ void main() {
       _handleIncomingUri(initialUri);
     }
   } catch (e) {
-    print('⚠️ Failed to get initial URI: $e');
+    debugPrint('⚠️ Failed to get initial URI: $e');
   }
 
   // Listen to incoming links (warm / background)
   appLinks.uriLinkStream.listen((uri) {
     _handleIncomingUri(uri);
   }, onError: (err) {
-    print('⚠️ URI stream error: $err');
+    debugPrint('⚠️ URI stream error: $err');
   });
 
     // Note: Native splash is removed in AuthGate after auth state is resolved

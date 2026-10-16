@@ -274,7 +274,7 @@ class ApiService {
       if (r.statusCode == 200) return jsonDecode(r.body);
       throw ApiException(r.statusCode, 'Health check failed (${r.statusCode})');
     } catch (e) {
-      print('❌ $tag Network Error: $e');
+      dev.log('❌ $tag Network Error: $e');
       throw Exception('Health check network error: $e');
     }
   }

@@ -227,7 +227,7 @@ extension _TemplateManagementScreenStateWidgets on _TemplateManagementScreenStat
                     const SizedBox(width: 8),
                     ElevatedButton(
                       onPressed: () {
-                        print('🧪 Testing template creation dialog');
+                        debugPrint('🧪 Testing template creation dialog');
                         _showCreateTemplateDialog();
                       },
                       style: ElevatedButton.styleFrom(

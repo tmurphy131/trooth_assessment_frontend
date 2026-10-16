@@ -35,15 +35,15 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
 
   Future<void> _initializeData() async {
     try {
-      print('🔄 Template Management: Initializing...');
-      print('👤 User: ${user?.email ?? 'null'}');
+      debugPrint('🔄 Template Management: Initializing...');
+      debugPrint('👤 User: ${user?.email ?? 'null'}');
       
       // Check premium status from API service (which checks backend)
       await _subscriptionService.refreshStatus();
       
       // Use ApiService.isPremiumUser() which checks the actual backend tier
       _isPremium = await _apiService.isPremiumUser();
-      print('💎 Premium status: $_isPremium');
+      debugPrint('💎 Premium status: $_isPremium');
       
       // If not premium, don't load templates - show gate instead
       if (!_isPremium) {
@@ -55,11 +55,11 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
       
       // Test basic connectivity first
       try {
-        print('🏥 Testing backend connectivity...');
+        debugPrint('🏥 Testing backend connectivity...');
         await _apiService.healthCheck();
-        print('✅ Backend connectivity confirmed');
+        debugPrint('✅ Backend connectivity confirmed');
       } catch (e) {
-        print('❌ Backend connectivity failed: $e');
+        debugPrint('❌ Backend connectivity failed: $e');
         setState(() {
           _error = 'Cannot connect to backend: ${friendlyError(e)}';
           _isLoading = false;
@@ -68,7 +68,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
       }
       
       if (user == null) {
-        print('❌ No user found! Cannot authenticate API calls.');
+        debugPrint('❌ No user found! Cannot authenticate API calls.');
         setState(() {
           _error = 'No authenticated user found';
           _isLoading = false;
@@ -77,9 +77,9 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
       }
       
       await _loadTemplates();
-      print('✅ Template Management: Initialization complete');
+      debugPrint('✅ Template Management: Initialization complete');
     } catch (e) {
-      print('❌ Template Management: Failed to initialize: $e');
+      debugPrint('❌ Template Management: Failed to initialize: $e');
       setState(() {
         _error = 'Failed to initialize: ${friendlyError(e)}';
         _isLoading = false;
@@ -94,16 +94,16 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
         _error = null;
       });
 
-      print('🔄 Loading templates...');
+      debugPrint('🔄 Loading templates...');
       final templates = await _apiService.getAllTemplates();
-      print('✅ Loaded ${templates.length} templates');
+      debugPrint('✅ Loaded ${templates.length} templates');
       
       setState(() {
         _templates = templates.cast<Map<String, dynamic>>();
         _isLoading = false;
       });
     } catch (e) {
-      print('❌ Failed to load templates: $e');
+      debugPrint('❌ Failed to load templates: $e');
       setState(() {
         _error = 'Failed to load templates: ${friendlyError(e)}';
         _isLoading = false;
@@ -288,7 +288,7 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
     try {
       Navigator.pop(context); // Close dialog
       
-      print('🔄 Creating template: $name');
+      debugPrint('🔄 Creating template: $name');
       final payload = {
         'name': name.trim(),
         'description': description.trim(),
@@ -296,13 +296,13 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
       };
 
       final result = await _apiService.createTemplate(payload);
-      print('✅ Template created: $result');
+      debugPrint('✅ Template created: $result');
       
       await _loadTemplates();
       _showMessage('Template created successfully!');
       
     } catch (e) {
-      print('❌ Failed to create template: $e');
+      debugPrint('❌ Failed to create template: $e');
       _showMessage('Failed to create template: ${friendlyError(e)}', isError: true);
     }
   }
@@ -462,19 +462,19 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
     Navigator.pop(context); // Close dialog
     
     try {
-      print('🔄 Updating template: $templateId');
+      debugPrint('🔄 Updating template: $templateId');
       final payload = {
         'name': name.trim(),
         'description': description.trim().isNotEmpty ? description.trim() : null,
         'is_published': isPublished,
       };
       
-      print('📤 Update payload: $payload');
+      debugPrint('📤 Update payload: $payload');
       await _apiService.updateTemplate(templateId, payload);
       await _loadTemplates();
       _showMessage('Template updated successfully!');
     } catch (e) {
-      print('❌ Template update failed: $e');
+      debugPrint('❌ Template update failed: $e');
       _showMessage('Failed to update template: ${friendlyError(e)}', isError: true);
     }
   }
@@ -521,12 +521,12 @@ class _TemplateManagementScreenState extends State<TemplateManagementScreen> {
 
     if (shouldDelete == true) {
       try {
-        print('🗑️ Deleting template: ${template['id']}');
+        debugPrint('🗑️ Deleting template: ${template['id']}');
         await _apiService.deleteTemplate(template['id'] as String);
         await _loadTemplates();
         _showMessage('Template deleted successfully!');
       } catch (e) {
-        print('❌ Template deletion failed: $e');
+        debugPrint('❌ Template deletion failed: $e');
         _showMessage('Failed to delete template: ${friendlyError(e)}', isError: true);
       }
     }

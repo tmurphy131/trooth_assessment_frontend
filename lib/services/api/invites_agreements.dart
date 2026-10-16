@@ -244,7 +244,7 @@ extension InvitesAgreementsApi on ApiService {
     // Debug instrumentation
     // (Will print once per attempt; safe for temporary troubleshooting.)
     // Shows token presence but not the token value.
-    print('[terminateApprenticeship] path=$path reasonLen=${reason.length} tokenSet=${bearerToken != null}');
+    dev.log('[terminateApprenticeship] path=$path reasonLen=${reason.length} tokenSet=${bearerToken != null}');
     http.Response r;
     try {
       r = await _http.post(
@@ -253,11 +253,11 @@ extension InvitesAgreementsApi on ApiService {
         body: jsonEncode({ 'reason': reason }),
       );
     } catch (e) {
-      print('[terminateApprenticeship][network_error] $e');
+      dev.log('[terminateApprenticeship][network_error] $e');
       rethrow;
     }
     if (r.statusCode == 200) return jsonDecode(r.body);
-    print('[terminateApprenticeship][failure] code=${r.statusCode} body=${r.body}');
+    dev.log('[terminateApprenticeship][failure] code=${r.statusCode} body=${r.body}');
     throw ApiException(r.statusCode, 'terminateApprenticeship failed (${r.statusCode}) ${r.body}');
   }
 
